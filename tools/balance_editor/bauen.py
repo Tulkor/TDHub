@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEFAULT = Path("/mnt/project-files/balance-editor/balance_editor.html")
-FILES = ["data/waves/classic.json", "data/maul/shops.json", "data/maul/waves.json", "data/roguelike_enemies.json", "data/eeve_items.json", "data/leveling.json"]
+FILES = ["data/waves/classic.json", "data/maul/shops.json", "data/maul/waves.json", "data/roguelike_enemies.json", "data/eeve_items.json", "data/leveling.json", "data/ascension.json"]
 
 
 def data_texts():
@@ -44,6 +44,20 @@ def abilities():
         if m:
             labels[m.group(1)] = json.loads(m.group(2))
     return schema, labels
+
+
+def difficulties():
+    """Namen der Schwierigkeiten je Modus (Reiter Aufstieg zeigt sie bei den angebotenen Stufen)."""
+    out = {"gemtd": ["Einfach", "Mittel", "Schwer"]}
+    m = re.search(r"const DIFFICULTIES := \[(.*?)\]", (ROOT / "scripts/autoload/session.gd").read_text(encoding="utf-8"), re.S)
+    if m:
+        out["gemtd"] = re.findall(r'"name": "([^"]+)"', m.group(1))
+    for mode, rel in (("eeve", "data/eeve.json"), ("randgruppen", "data/randgruppen.json"), ("maul", "data/maul/rules.json"), ("youtd", "data/youtd/rules.json")):
+        try:
+            out[mode] = [d.get("name", "") for d in json.loads((ROOT / rel).read_text(encoding="utf-8")).get("difficulties", [])]
+        except (OSError, ValueError):
+            pass
+    return out
 
 
 def stand():
@@ -72,7 +86,7 @@ def main():
         if a.startswith("--ziel="):
             ziel = Path(a.split("=", 1)[1])
     schema, labels = abilities()
-    data = {"stand": stand(), "texts": data_texts(), "schema": schema, "labels": labels}
+    data = {"stand": stand(), "texts": data_texts(), "schema": schema, "labels": labels, "difficulties": difficulties()}
     html = (HERE / "balance_editor.html").read_text(encoding="utf-8")
     # </ im JSON würde das <script> beenden
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")

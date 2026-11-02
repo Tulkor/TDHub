@@ -16,6 +16,7 @@ var foreign := false
 var _mode_text: Label
 var _builder_text: Label
 var _diff_text: Label
+var _asc: AscensionPicker
 var _wisdom_head: Label
 var _wisdom_buttons := {}
 var _sent := false
@@ -29,7 +30,7 @@ func _ready() -> void:
 	var last: Dictionary = Session.get_meta("youtd_choice", {})
 	mode = int(last.get("mode", game.mode_index))
 	length = int(last.get("length", game.length_index))
-	difficulty = int(last.get("difficulty", game.difficulty))
+	difficulty = Ascension.snap("youtd", int(last.get("difficulty", game.difficulty)), game.difficulty_count())
 	wisdom = YoutdProgress.wisdom()
 	builder = YoutdProgress.last_builder() if YoutdProgress.builder_open(YoutdProgress.last_builder()) else ""
 	var center := CenterContainer.new()
@@ -94,13 +95,16 @@ func _ready() -> void:
 	v.add_child(row)
 	group = ButtonGroup.new()
 	var diffs: Array = game.rules.get("difficulties", [])
-	for i in diffs.size():
-		var idx := i
+	for i in Ascension.choices("youtd", diffs.size()):
+		var idx: int = i
 		host_only.append(_toggle(str(diffs[i].name), row, group, i == difficulty, func():
 			difficulty = idx
+			_asc.set_difficulty(idx)
 			_update_text()))
 	_diff_text = UiUtil.wrap_label("", v, 700)
 	_diff_text.add_theme_color_override("font_color", UiTheme.DIM)
+	_asc = AscensionPicker.new().setup("youtd", diffs.size(), difficulty, int(Session.ascension_choice.get("youtd", 0)), not game.mirror, false, 700)
+	v.add_child(_asc)
 	foreign = Session.foreign_build
 	host_only.append_array(SetupPanel.add_foreign_choice(self, v, true))
 
@@ -156,14 +160,16 @@ func _ready() -> void:
 	if game.mirror:
 		for b in host_only:
 			b.disabled = true
-		var rb := UiUtil.button("Bereit", v, _ready_up)
+		var rb := UiUtil.button("Bereit", SetupPanel.bottom_row(game, v), _ready_up)
+		rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rb.custom_minimum_size.y = 50
 		rb.add_theme_font_size_override("font_size", 20)
 		UiTheme.accent_button(rb, UiTheme.GOLD, UiTheme.GOLD_DARK)
 		_wait = UiUtil.wrap_label(tr("Modus, Länge und Schwierigkeit wählt der Host."), v, 700)
 		_wait.add_theme_color_override("font_color", UiTheme.MUTED)
 		return
-	var go := UiUtil.button("Los geht's", v, _start)
+	var go := UiUtil.button("Los geht's", SetupPanel.bottom_row(game, v), _start)
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.custom_minimum_size.y = 50
 	go.add_theme_font_size_override("font_size", 20)
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
@@ -172,8 +178,9 @@ func _ready() -> void:
 func _start() -> void:
 	YoutdProgress.set_wisdom(wisdom)
 	YoutdProgress.set_last_builder(builder)
+	Session.ascension_choice["youtd"] = _asc.level
 	game.submit({"type": "setup", "mode": mode, "length": length, "difficulty": difficulty, "seed": randi(), "wisdom": wisdom.duplicate(),
-			"builder": builder, "foreign": foreign, "level": YoutdProgress.level()})
+			"builder": builder, "foreign": foreign, "level": YoutdProgress.level(), "ascension": _asc.chosen()})
 
 
 ## Mitspieler: eigene Weisheit und eigenen Baumeister an den Host schicken.

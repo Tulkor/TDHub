@@ -285,6 +285,7 @@ func _execute(cmd: Dictionary) -> bool:
 			if setup_done or acting != 0:
 				return false
 			_apply_setup(int(cmd.get("difficulty", 2)), int(cmd.get("field", 0)))
+			take_ascension(cmd)
 			return true
 		"build":
 			return build_barricade(cmd.get("cell", NO_CELL))
@@ -664,6 +665,18 @@ func score_summary(victory: bool) -> Dictionary:
 
 func profile_mode() -> String:
 	return "eeve"
+
+
+func difficulty_index() -> int:
+	return difficulty
+
+
+func difficulty_count() -> int:
+	return (rules.get("difficulties", []) as Array).size()
+
+
+func difficulty_label() -> String:
+	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 ## Zusätzlich fürs Profil: Elemente, Holz und Feld.

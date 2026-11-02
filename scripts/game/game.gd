@@ -75,6 +75,10 @@ var wave_index := 0
 var lives := 50
 ## Punkte-Modus (Session.score_mode): statt Leben zählen Punkte, das Spiel endet erst nach der letzten Welle.
 var score_mode := false
+## Aufstiegsstufe (+1, +2, …) auf der höchsten Schwierigkeit, siehe ascension.gd; wählt der Host vor Runde 1.
+var ascension := 0
+## Nach dem Run neu freigeschaltete Stufe (0 = keine), fürs Ende-Fenster.
+var ascension_unlocked := 0
 ## Option „Überall bauen“ (Host, Startfenster): in Karten mit Gebieten auch in fremden Gebieten bauen
 var foreign_build := false
 var score := 0.0
@@ -1327,6 +1331,7 @@ func _execute(cmd: Dictionary) -> bool:
 			take_foreign_build(cmd)
 			if Session.rogue:
 				enable_rogue()
+			take_ascension(cmd)
 			setup_done = true
 			_refresh_hud()
 			return true
@@ -1606,6 +1611,7 @@ func _spawn_enemy(g: Dictionary, lane := -1) -> void:
 		var lp: Dictionary = lane_paths[i]
 		e.setup(self, def, g, lp.air if def.get("flying", false) else lp.ground)
 		_apply_enemy_difficulty(e, g)
+		_apply_ascension(e)
 		setup_score(e, g)
 		# Eine Welle ist gleich viele Punkte wert, egal an wie vielen Bahnen sie läuft
 		e.score_value /= lanes.size()
@@ -1617,6 +1623,45 @@ func _spawn_enemy(g: Dictionary, lane := -1) -> void:
 ## Schwierigkeit auf einen neuen Gegner der Gruppe g anwenden.
 func _apply_enemy_difficulty(e: Enemy, _g: Dictionary) -> void:
 	e.apply_difficulty(Session.difficulty_factor())
+
+
+## Aufstiegsstufe auf einen neuen Gegner anwenden (nach der Schwierigkeit).
+func _apply_ascension(e: Enemy) -> void:
+	if ascension > 0:
+		Ascension.apply(e, ascension_mods())
+
+
+## Was die gewählte Aufstiegsstufe ändert (ascension.gd), einmal je Run ausgerechnet.
+var _asc_cache := {}
+func ascension_mods() -> Dictionary:
+	if int(_asc_cache.get("level", -1)) != ascension:
+		_asc_cache = Ascension.mods(profile_mode(), ascension)
+		_asc_cache.level = ascension
+	return _asc_cache
+
+
+## Index der gewählten Schwierigkeit in der Liste des Modus (eeveTD, Randgruppen, YouTD haben eigene).
+func difficulty_index() -> int:
+	return Session.difficulty
+
+
+## Name der gewählten Schwierigkeit mit Aufstiegsstufe, z. B. „Schwer +3“ (übersetzt).
+func difficulty_label() -> String:
+	return Ascension.full_name(Session.difficulty_name(), ascension)
+
+
+## Anzahl der Schwierigkeiten des Modus.
+func difficulty_count() -> int:
+	return Session.DIFFICULTIES.size()
+
+
+## Aufstiegsstufe aus dem Setup-Befehl übernehmen: nur auf der höchsten angebotenen Schwierigkeit.
+func take_ascension(cmd: Dictionary) -> void:
+	var on_top := difficulty_index() == Ascension.top(profile_mode(), difficulty_count())
+	ascension = maxi(int(cmd.get("ascension", 0)), 0) if on_top else 0
+	var cap := Ascension.max_level(profile_mode())
+	if cap > 0:
+		ascension = mini(ascension, cap)
 
 
 ## Ist der Gegner in Reichweite eines Towers, der ihn angreifen oder mit einer Aura treffen kann?
@@ -1936,8 +1981,12 @@ func record_profile(victory: bool) -> Dictionary:
 	info.debug = debug_run()
 	info.time_counted = profile_time
 	info.merge(profile_extra(), true)
+	info.difficulty = difficulty_index()
+	info.ascension = ascension
 	profile_time = roundi(play_time)
-	return Profile.record_run(profile_mode(), info, run_stats.result(all_towers().filter(func(t): return not t.is_new)))
+	var news := Profile.record_run(profile_mode(), info, run_stats.result(all_towers().filter(func(t): return not t.is_new)))
+	ascension_unlocked = int(news.get("ascension_unlocked", 0))
+	return news
 
 
 ## Hilft hier eine Debug-Hilfe? Dann gibt der Run keine EP und zählt nicht für Siege und Rekorde (nur die
@@ -1956,6 +2005,8 @@ func record_profile_abort() -> void:
 	info.time_counted = profile_time
 	info.saved = SaveGame.writes > _saves_at_start
 	info.merge(profile_extra(), true)
+	info.difficulty = difficulty_index()
+	info.ascension = ascension
 	Profile.record_abort(profile_mode(), info)
 	profile_time = roundi(play_time)
 

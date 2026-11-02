@@ -14,6 +14,7 @@ const LANE_GAP := 0.45  ## Sekunden zwischen zwei Runden von Gegnern; eine Runde
 
 var rules: Dictionary = {}
 var difficulty := 2         ## Index in rules.difficulties
+var _setup_cmd := {}        ## Setup-Befehl, der gerade ausgeführt wird (Aufstiegsstufe des Hosts)
 var level_pause := 0.0      ## Sekunden bis zum nächsten Level (nur Phase BUILD)
 var share_gold := false     ## Option „Geldteilen“ (Host): Kopfgeld jedes Kills gleich an alle
 var placing := ""           ## Tower, der gerade gesetzt wird (Knopf in der Seitenleiste), "" = keiner
@@ -211,6 +212,7 @@ func _execute(cmd: Dictionary) -> bool:
 			take_foreign_build(cmd)
 			if acting == 0 and cmd.has("share"):
 				share_gold = bool(cmd.share)
+			_setup_cmd = cmd
 			return _apply_setup(str(cmd.get("race", "")), int(cmd.get("difficulty", difficulty)))
 		"build":
 			return build_tower(str(cmd.get("id", "")), cmd.get("cell", NO_CELL))
@@ -246,6 +248,7 @@ func _apply_setup(race_id: String, diff: int) -> bool:
 	rp().chosen = true
 	if acting == 0:
 		difficulty = clampi(diff, 0, (rules.get("difficulties", []) as Array).size() - 1)
+		take_ascension(_setup_cmd)
 		_apply_lives()
 	if acting == local_player:
 		Session.rg_choice = {"race": race_id, "difficulty": difficulty, "share": share_gold}
@@ -401,6 +404,18 @@ func _finish(p: Phase) -> void:
 
 func profile_mode() -> String:
 	return "randgruppen"
+
+
+func difficulty_index() -> int:
+	return difficulty
+
+
+func difficulty_count() -> int:
+	return (rules.get("difficulties", []) as Array).size()
+
+
+func difficulty_label() -> String:
+	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 func profile_extra() -> Dictionary:

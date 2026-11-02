@@ -88,6 +88,10 @@ var level_save := {}        ## Einzelspiel: Stand vom Beginn des laufenden Level
 
 var phase := Phase.SETUP
 var difficulty := 1
+## Aufstiegsstufe (+1, +2, …) auf der höchsten Schwierigkeit (ascension.gd), wählt der Host im Startfenster.
+var ascension := 0
+## Nach der Partie neu freigeschaltete Stufe (0 = keine), fürs Ende-Fenster.
+var ascension_unlocked := 0
 var mode := "group"
 var level := 0               ## zuletzt gestartetes Level (1-basiert)
 var countdown := 0.0
@@ -224,6 +228,8 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	if phase != Phase.SETUP:
 		return
 	difficulty = clampi(diff, 0, rules.get("difficulties", []).size() - 1)
+	if difficulty != Ascension.top("maul", rules.get("difficulties", []).size()):
+		ascension = 0
 	mode = play_mode
 	sandbox = sandbox_on
 	foreign_build = foreign_on
@@ -460,6 +466,7 @@ func _spawn(index: int) -> void:
 	var route: Dictionary = map.maul.routes[s.route]
 	var lv := level_def(level)
 	var e := MaulEnemy.new()
+	var asc := Ascension.mods("maul", ascension)
 	e.net_id = _next_enemy_id
 	_next_enemy_id += 1
 	e.route = str(s.route)
@@ -500,9 +507,9 @@ func _spawn(index: int) -> void:
 		"color": _enemy_color(),
 	}
 	var o := {
-		"hp": level_hp,
-		"speed": speed / 128.0,
-		"armor": armor,
+		"hp": level_hp * float(asc.hp) + float(asc.hp_add),
+		"speed": (speed / 128.0) * float(asc.speed) + float(asc.speed_add),
+		"armor": armor * float(asc.armor) + float(asc.armor_add),
 		"bounty": float(lv.get("bounty", 1)),
 		"armor_type": str(lv.get("armor_type", "medium")),
 		"size": 1.6 if boss else 1.0,
@@ -641,13 +648,13 @@ func _record_profile(won: bool) -> void:
 ## Run ins allgemeine Profil (profile.gd), auch mit Sandbox und Debug (dann nur in der Liste).
 func _record_run(won: bool) -> void:
 	var me = players[local_player]
-	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "victory": won,
+	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension, "victory": won,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "max_lives": max_lives, "kills": enemies_killed,
 		"play_time": roundi(play_time), "coop": players.size() > 1, "players": players.size(),
 		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox,
 		"debug": debug_run(), "time_counted": profile_time}
 	profile_time = roundi(play_time)
-	Profile.record_run("maul", info, run_stats.result(_my_towers()))
+	ascension_unlocked = int(Profile.record_run("maul", info, run_stats.result(_my_towers())).get("ascension_unlocked", 0))
 
 
 ## Debug-Menü, Sandbox oder Unsterblich in diesem Run: keine XP, zählt nicht für Siege und Rekorde (nur die Zeit).
@@ -659,7 +666,7 @@ func debug_run() -> bool:
 func _record_abort() -> void:
 	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0 or roundi(play_time) - profile_time < 10:
 		return
-	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty,
+	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time),
 		"debug": debug_run(), "time_counted": profile_time, "saved": SaveGame.writes > _saves_at_start})
 	profile_time = roundi(play_time)
