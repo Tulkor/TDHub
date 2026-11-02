@@ -49,16 +49,17 @@ void fragment() {
 	vec3 col = base_color * brightness * mix(1.0, lum * 1.9, tex_strength);
 	vec3 nm = tri(detail_n, p, w).rgb;
 	if (moss > 0.0) {
-		float n = vnoise(wpos * 1.7) * 0.6 + vnoise(wpos * 5.3) * 0.4;
+		// grobes, weiches Rauschen: große zusammenhängende Polster statt Sprenkel (Lukas 2026-11-02)
+		float n = vnoise(wpos * 0.9) * 0.75 + vnoise(wpos * 2.3) * 0.25;
 		// unten am Boden und auf nach oben zeigenden Flächen, mit Flecken
 		float low = 1.0 - smoothstep(0.0, moss_height, wpos.y + (n - 0.5) * 1.4);
 		float top = smoothstep(0.45, 0.85, wnrm.y);
 		// Flecken: nur wo das Rauschen hoch ist, unten dichter; feine Ränder aus einem zweiten Rauschen
-		float patch = smoothstep(0.42, 0.62, n + (vnoise(wpos * 11.0) - 0.5) * 0.18);
+		float patch = smoothstep(0.45, 0.6, n);
 		float m = clamp((low * 1.3 + top * 0.7) * moss, 0.0, 1.0) * patch;
-		vec3 mc = moss_color * (0.6 + 0.8 * tri(moss_tex, wpos * 0.6, w).rgb);
+		vec3 mc = moss_color * (0.85 + 0.3 * tri(moss_tex, wpos * 0.35, w).rgb);
 		col = mix(col, mc, m);
-		nm = mix(nm, tri(moss_n, wpos * 0.6, w).rgb, m);
+		nm = mix(nm, mix(vec3(0.5, 0.5, 1.0), tri(moss_n, wpos * 0.35, w).rgb, 0.4), m);
 		ROUGHNESS = mix(0.85, 1.0, m);
 	} else {
 		ROUGHNESS = 0.85;

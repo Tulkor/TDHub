@@ -39,6 +39,8 @@ const PLAZA_R := 5.6
 const PATH: Array[Vector2] = [Vector2(4.5, 32), Vector2(2.6, 21), Vector2(0.4, 12), Vector2(-2.4, 5.5), Vector2(-3.5, 0),
 	Vector2(-3.1, -10), Vector2(-2.2, -21)]
 const CHURCH := Vector3(-2, 0, -26)
+## Höhe des breiten Kirchenschiffs (ohne Turm)
+const CHURCH_NAVE := 6.0
 ## Friedhof links hinter dem Schrein, neben dem Weg zur Kirche: Ecke hinten links (x, z) und Größe
 const GRAVEYARD := Rect2(-31.0, -27.5, 12.0, 10.0)
 ## Hier laufen die Tiere quer durchs Bild (z), weit hinter dem Schrein
@@ -156,9 +158,11 @@ func _path_dist(p: Vector3) -> float:
 ## Schrein: großer Kristall auf Sockel mit leuchtendem Kern, Säulenring, kleine Kristalle.
 func _shrine() -> void:
 	var c := SHRINE
-	_place("nature/statue_block.glb", c, 1.0, 0.0, 0.7)
+	# Sockel so breit wie der Kristall, sonst wirkt er schwebend (Lukas 2026-11-02)
+	var base := _place("nature/statue_block.glb", c, 0.9, 0.4, 0.7)
+	base.scale *= Vector3(3.4, 1.0, 3.4)
 	# Hülle wie geschliffenes Glas (wc3_kristall.gdshader): bricht den Kern und den Wald dahinter
-	var shell := _place("crystals/quaternius_big_crystal.glb", c + Vector3(0, 1.0, 0), 3.2, 0.4)
+	var shell := _place("crystals/quaternius_big_crystal.glb", c + Vector3(0, 0.9, 0), 3.2, 0.4)
 	var sm := ShaderMaterial.new()
 	sm.shader = CRYSTAL
 	_recolor(shell, sm)
@@ -261,14 +265,27 @@ func _forest() -> void:
 		if _path_dist(p) < 1.5 or absf(p.z - ANIMAL_Z) < 1.8:
 			continue
 		# Sichtachse zur Kirche frei, zum Friedhof nur lichter
-		if p.z < -4 and p.z > CHURCH.z - 9 and Geometry2D.get_closest_point_to_segment(q, cam, church).distance_to(q) < 7.0:
+		# Kirche zwischen den Bäumen, aber nicht verdeckt: vorn breite Gasse, an der Kirche schmal, dort stehen Stämme daneben
+		var lane := 3.5 if p.z < CHURCH.z + 7 else 7.0
+		if p.z < -4 and p.z > CHURCH.z - 9 and Geometry2D.get_closest_point_to_segment(q, cam, church).distance_to(q) < lane:
 			continue
 		if GRAVEYARD.grow(1.0).has_point(q):
 			continue
 		if p.z < -4 and Geometry2D.get_closest_point_to_segment(q, cam, yard).distance_to(q) < 5.0 and rng.randf() < 0.75:
 			continue
 		var h := rng.randf_range(7, 13) if r < 33 else rng.randf_range(9, 21)
+		# rechts neben der Kirche nur knapp über das Kirchenschiff (Lukas 2026-11-02)
+		var ang := _view_angle(p)
+		if p.z < -14 and ang > 2.0 and ang < 12.0:
+			h = minf(h, _church_line(p))
 		_place("nature/%s.glb" % trees[rng.randi() % trees.size()], p, h, rng.randf() * TAU)
+	# Von Hand: Nadelbäume links hinten in die Lücke, zwei flankieren die Kirche, rechts ein niedriger davor
+	_place("nature/pine_2.glb", Vector3(-27, 0, -35), 17.0, 0.7)
+	_place("nature/pine_3.glb", Vector3(-35, 0, -30), 14.5, 2.1)
+	_place("nature/pine_1.glb", Vector3(-41, 0, -27), 16.0, 0.2)
+	_place("nature/pine_1.glb", Vector3(-8.5, 0, -21), 11.0, 1.3)
+	_place("nature/pine_5.glb", Vector3(4.2, 0, -21), _church_line(Vector3(4.2, 0, -21)), 0.4)
+	_place("nature/pine_2.glb", Vector3(1.6, 0, -17.5), 5.5, 2.8)
 	# Unterholz im hinteren Ring: große Büsche zwischen den Stämmen
 	for i in 110:
 		var a := rng.randf() * TAU
@@ -279,6 +296,20 @@ func _forest() -> void:
 		if GRAVEYARD.grow(1.0).has_point(Vector2(p.x, p.z)) or absf(p.z - ANIMAL_Z) < 1.8:
 			continue
 		_place("nature/%s.glb" % bushes[rng.randi() % bushes.size()], p, rng.randf_range(1.6, 4.5), rng.randf() * TAU)
+
+
+## Waagrechter Blickwinkel (Grad) von der Kamera aus, rechts von der Kirche positiv.
+func _view_angle(p: Vector3) -> float:
+	var vc := Vector2(CHURCH.x - CAM_POS.x, CHURCH.z - CAM_POS.z)
+	var vp := Vector2(p.x - CAM_POS.x, p.z - CAM_POS.z)
+	return rad_to_deg(atan2(vc.cross(vp), vc.dot(vp)))
+
+
+## Baumhöhe an Stelle p, deren Spitze von der Kamera aus knapp über dem Kirchenschiff (CHURCH_NAVE) liegt.
+func _church_line(p: Vector3) -> float:
+	var dc := Vector2(CHURCH.x - CAM_POS.x, CHURCH.z - CAM_POS.z).length()
+	var dp := Vector2(p.x - CAM_POS.x, p.z - CAM_POS.z).length()
+	return CAM_POS.y + (CHURCH_NAVE + 0.8 - CAM_POS.y) * dp / dc
 
 
 ## Tiere, die hinter dem Schrein quer durchs Bild laufen (Lukas 2026-11-02): Hirsch und Reh zusammen von links,
@@ -380,6 +411,10 @@ func _texturize(n: Node, scale: float, moss: float) -> void:
 				m.set_shader_parameter("tex_scale", scale)
 				m.set_shader_parameter("moss", moss)
 				if moss > 0.0:
+					# Säulen und Sockel: deutlich mehr Steinstruktur (Lukas 2026-11-02)
+					m.set_shader_parameter("tex_strength", 0.85)
+					m.set_shader_parameter("normal_strength", 1.3)
+					m.set_shader_parameter("tex_scale", 0.35)
 					m.set_shader_parameter("moss_tex", load(GT + "grass_b.jpg"))
 					m.set_shader_parameter("moss_n", load(GT + "grass_b_normal.jpg"))
 				_tex_cache[key] = m
