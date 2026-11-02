@@ -1,5 +1,5 @@
 extends Control
-## Hauptmenü als Hub: zuerst Einzelspieler oder Mehrspieler, darunter Laden, Run-History, Editoren, Einstellungen.
+## Hauptmenü als Hub: zuerst Einzelspieler oder Mehrspieler, darunter Laden, Profil, Editoren, Einstellungen.
 ## Einzelspieler: TD-Modus (data/modes.json) und Map wählen, dann Spielen.
 ## Mehrspieler: Lobby (lobby_panel.gd), dort stimmen alle über den Modus ab.
 
@@ -27,7 +27,6 @@ var profile_page: Control
 var credits_page: Control
 var hub: Control
 var hub_bg: Wc3MenuBg
-var hub_tip: Label
 var hub_buttons: Array[Wc3Button] = []
 
 const SHADE := preload("res://scripts/ui/wc3_shade.gdshader")
@@ -101,7 +100,7 @@ func show_page(page: String) -> void:
 
 
 ## Hub im Warcraft-III-Stil (Wc3Theme, Lukas 2026-10-30): 3D-Nachtszene, Logo links oben, Steinsäule mit Knöpfen
-## rechts, darunter links eine Hinweiszeile zum Knopf unter der Maus. Hotkeys wie in WC3 (heller Buchstabe).
+## rechts. Hotkeys wie in WC3 (heller Buchstabe).
 func _build_hub() -> void:
 	hub_bg = Wc3MenuBg.new()
 	add_child(hub_bg)
@@ -115,7 +114,7 @@ func _build_hub() -> void:
 	shade.material = ShaderMaterial.new()
 	shade.material.shader = SHADE
 	hub.add_child(shade)
-	# Linke Spalte: Logo, Untertitel, Modi; so breit, wie neben der Säule Platz ist
+	# Linke Spalte: Logo; so breit, wie neben der Säule Platz ist
 	var left := VBoxContainer.new()
 	left.anchor_bottom = 1.0
 	left.anchor_right = 1.0
@@ -134,36 +133,13 @@ func _build_hub() -> void:
 	left.add_child(logo_box)
 	logo_box.add_child(logo)
 	logo_box.resized.connect(func(): logo.custom_minimum_size.x = minf(logo_box.size.x, 640))
-	# Anzahl und Namen der Modi aus data/modes.json, damit neue Modi von selbst dazukommen
-	var names := Database.modes.filter(func(m): return bool(m.get("ready", false))).map(func(m): return str(m.get("name", m.id)))
-	var count_words := ["Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Neun"]
-	var count := tr(count_words[clampi(names.size() - 2, 0, count_words.size() - 1)]) if names.size() >= 2 else str(names.size())
-	var rule := HBoxContainer.new()
-	rule.alignment = BoxContainer.ALIGNMENT_CENTER
-	rule.add_theme_constant_override("separation", 12)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	left.add_child(rule)
-	rule.add_child(_rule_line())
-	Wc3Theme.label("◆  " + tr("%s Tower-Defense-Spiele") % count + "  ◆", rule, 19, Wc3Theme.CREAM, 5)
-	rule.add_child(_rule_line())
-	var modes := Wc3Theme.label(" · ".join(names), left, 15, Wc3Theme.MODES, 3)
-	modes.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	modes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	left.add_child(spacer)
-	hub_tip = Wc3Theme.label("", left, 17, Wc3Theme.CREAM, 1)
-	hub_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hub_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Unten links: Version, bei offener Sitzung die Zahl der Verbundenen
+	# Untertitel, Hinweiszeile und Versionsnummer sind weg (Lukas 2026-11-02), unten links nur noch bei offener
+	# Sitzung die Zahl der Verbundenen
 	var foot := HBoxContainer.new()
 	foot.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.offset_left = 24
 	foot.offset_top = -38
-	foot.add_theme_constant_override("separation", 18)
 	hub.add_child(foot)
-	Wc3Theme.label(CreditsPanel.version_text(), foot, 14, Wc3Theme.MUTED, 1)
 	net_tile_text = Wc3Theme.label("", foot, 14, Wc3Theme.HAVE, 1)
 	# Säule rechts, senkrecht mittig
 	var pillar := Wc3Pillar.new()
@@ -182,10 +158,9 @@ func _build_hub() -> void:
 	hub_buttons.append(net_tile)
 	hub_buttons.append(pillar.button("Spiel laden", true, "Einen gespeicherten Spielstand fortsetzen.", func(): loader.show()))
 	pillar.separator()
+	# Run-History steckt im Profil (Knopf unten links), eigener Knopf weg (Lukas 2026-11-02)
+	hub_buttons.append(pillar.button("Profil", false, "Erfahrung, Rekorde und Werte aus allen Modi.", func(): show_page("profile")))
 	var row := pillar.row()
-	hub_buttons.append(pillar.button("Profil", false, "Erfahrung, Rekorde und Werte aus allen Modi.", func(): show_page("profile"), row))
-	hub_buttons.append(pillar.button("Run-History", false, "Frühere Läufe ansehen und eine Map nochmal spielen.", func(): show_page("history"), row))
-	row = pillar.row()
 	hub_buttons.append(pillar.button("Map-Editor", false, "Eigene Maps bauen und bearbeiten.", _open_map_editor, row))
 	hub_buttons.append(pillar.button("Tower-Editor", false, "Tower und ihre Fähigkeiten bearbeiten.", _open_tower_editor, row))
 	pillar.separator()
@@ -193,25 +168,16 @@ func _build_hub() -> void:
 	hub_buttons.append(pillar.button("Mitwirkende", false, "Wer am Spiel mitgewirkt hat, mit allen Lizenzen.", func(): show_page("credits")))
 	hub_buttons.append(pillar.button("Daten neu laden", false, "JSON-Dateien unter data/ neu einlesen", _reload))
 	hub_buttons.append(pillar.button("Beenden", true, "Das Spiel beenden.", func(): get_tree().quit()))
-	for b in hub_buttons:
-		b.mouse_entered.connect(func(): hub_tip.text = tr(b.description))
-		b.mouse_exited.connect(_reset_tip)
 	_assign_hotkeys()
-	_reset_tip()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and not hub_buttons.is_empty():
 		_assign_hotkeys()
-		_reset_tip()
 
 
 func _rule_line() -> Control:
 	return Wc3Theme.Rule.new(110, 6.0, false)
-
-
-func _reset_tip() -> void:
-	hub_tip.text = tr(hub_buttons[0].description)
 
 
 ## Hotkey je Knopf: erster freier Wortanfang im übersetzten Text, sonst der erste freie Buchstabe.
