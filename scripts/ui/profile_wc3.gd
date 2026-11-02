@@ -58,13 +58,7 @@ static func body(text: String, parent: Node, size := 16, color := Wc3Theme.CREAM
 
 
 static func rule() -> Control:
-	var line := ColorRect.new()
-	line.color = Wc3Theme.GOLD
-	line.custom_minimum_size = Vector2(30, 2)
-	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return line
+	return Wc3Theme.Rule.new()
 
 
 ## Abschnittstitel: Cinzel in Großbuchstaben zwischen zwei Messinglinien.
