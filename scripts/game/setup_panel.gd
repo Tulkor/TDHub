@@ -22,6 +22,7 @@ var rogue := false
 var foreign := false
 var _mode_text: Label
 var _variant_text: Label
+var _asc: AscensionPicker
 
 
 func _ready() -> void:
@@ -29,7 +30,7 @@ func _ready() -> void:
 	theme = UiTheme.get_theme()
 	# Nur das Fenster fängt Klicks, die Leiste oben (Menü) bleibt bedienbar; das Feld sperrt game.gd
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	difficulty = Session.difficulty
+	difficulty = Ascension.snap("gemtd", Session.difficulty, Session.DIFFICULTIES.size())
 	score_mode = Session.score_mode
 	rogue = Session.rogue
 	foreign = Session.foreign_build
@@ -54,12 +55,17 @@ func _ready() -> void:
 	UiTheme.caption("Schwierigkeit", v)
 	var h := _row(v)
 	var group := ButtonGroup.new()
-	for i in Session.DIFFICULTIES.size():
+	for i in Ascension.choices("gemtd", Session.DIFFICULTIES.size()):
 		var d: Dictionary = Session.DIFFICULTIES[i]
-		var idx := i
-		var b := _toggle(str(d.name), h, group, i == difficulty, func(): difficulty = idx)
+		var idx: int = i
+		var b := _toggle(str(d.name), h, group, i == difficulty, func():
+			difficulty = idx
+			_asc.set_difficulty(idx))
 		b.tooltip_text = tr("Gegner: Leben und Rüstung ×%s") % str(d.factor)
 		b.disabled = not host
+	_asc = AscensionPicker.new().setup(_asc_mode(), Session.DIFFICULTIES.size(), difficulty,
+		int(Session.ascension_choice.get(_asc_mode(), 0)), host)
+	v.add_child(_asc)
 
 	UiTheme.caption("Wertung", v)
 	h = _row(v)
@@ -82,6 +88,7 @@ func _ready() -> void:
 		var on: bool = m[1]
 		var b := _toggle(str(m[0]), h, group, on == rogue, func():
 			rogue = on
+			_asc.set_mode(_asc_mode())
 			_update_text())
 		b.tooltip_text = str(m[2])
 		b.disabled = not host
@@ -91,15 +98,34 @@ func _ready() -> void:
 
 	add_foreign_choice(self, v, host)
 
-	if host:
-		var go := UiUtil.button("Los geht's", v, func(): game.submit({"type": "setup", "difficulty": difficulty, "score_mode": score_mode, "rogue": rogue,
-				"foreign": foreign}))
-		go.custom_minimum_size.y = 50
-		go.add_theme_font_size_override("font_size", 20)
-		UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
-	else:
+	if not host:
 		var wait := UiUtil.wrap_label("Der Host wählt die Einstellungen, gleich geht es los …", v, 470)
 		wait.add_theme_color_override("font_color", UiTheme.CYAN)
+	var bottom := bottom_row(game, v)
+	if host:
+		var go := UiUtil.button("Los geht's", bottom, func():
+			Session.ascension_choice[_asc_mode()] = _asc.level
+			game.submit({"type": "setup", "difficulty": difficulty, "score_mode": score_mode, "rogue": rogue,
+				"foreign": foreign, "ascension": _asc.chosen()}))
+		go.custom_minimum_size.y = 50
+		go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		go.add_theme_font_size_override("font_size", 20)
+		UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
+
+
+func _asc_mode() -> String:
+	return "roguelike" if rogue else "gemtd"
+
+
+## Untere Zeile aller Startfenster (Arcade-Stil und Skins): links „Zurück zum Menü“, rechts kommt der Startknopf hin.
+static func bottom_row(g, v: Node) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	v.add_child(h)
+	var back := UiUtil.button("Zurück zum Menü", h, func(): g.leave(false))
+	back.custom_minimum_size = Vector2(190, 50)
+	back.tooltip_text = "Zurück ins Hauptmenü, ohne zu starten."
+	return h
 
 
 func _process(_delta: float) -> void:

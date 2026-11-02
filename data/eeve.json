@@ -27,7 +27,7 @@
 	],
 	"difficulties": [
 		{"name": "Anfänger", "hp": 0.35, "armor": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "spells": 1.0, "score": 0.65, "pause": 30},
-		{"name": "Leicht", "hp": 0.55, "armor": [1, 1, 1, 2, 2, 3, 3, 4, 4, 5], "spells": 0.9, "score": 1.0, "pause": 30},
+		{"name": "Einfach", "hp": 0.55, "armor": [1, 1, 1, 2, 2, 3, 3, 4, 4, 5], "spells": 0.9, "score": 1.0, "pause": 30},
 		{"name": "Mittel", "hp": 0.8, "armor": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "spells": 0.8, "score": 1.5, "pause": 20},
 		{"name": "Schwer", "hp": 1.0, "armor": [5, 6, 7, 9, 11, 13, 15, 17, 19, 22], "spells": 0.67, "score": 2.0, "pause": 15},
 		{"name": "SICK!", "hp": 1.0, "armor": [7, 8, 10, 12, 14, 16, 19, 23, 27, 32], "spells": 0.5, "score": 3.25, "pause": 15},

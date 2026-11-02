@@ -1,0 +1,145 @@
+{
+	"_info": "Aufstiegsstufen (+1, +2, …) nach der höchsten Schwierigkeit, für alle Modi; siehe scripts/game/ascension.gd, bearbeiten im Balance-Editor (Reiter Aufstieg). Je Modus: choices = welche Schwierigkeiten (Index in der Liste des Modus) im Startfenster stehen, die letzte ist die Grundlage für den Aufstieg; max_level = höchste Stufe (0 = ohne Ende). Wer die höchste Schwierigkeit auf der höchsten freigeschalteten Stufe gewinnt (Leben-Wertung, ohne Debug), schaltet die nächste frei (Profil: modes.<modus>.progress.ascension). rules: jede Regel wirkt ab Stufe from (Standard = every) alle every Stufen einmal. type stat: stat hp|speed|armor (Gegner), percent = +Prozent je Mal (aufaddiert), add = +Wert je Mal. type flag: setzt flag (für spätere Sonderregeln, die der Modus mit Ascension.flag() abfragt), text = Anzeige. Roguelike nutzt gemtd, wenn es keinen eigenen Eintrag hat.",
+	"modes": {
+		"gemtd": {
+			"choices": [
+				0,
+				1,
+				2
+			],
+			"max_level": 0,
+			"rules": [
+				{
+					"type": "stat",
+					"stat": "hp",
+					"every": 1,
+					"percent": 5.0
+				},
+				{
+					"type": "stat",
+					"stat": "speed",
+					"every": 3,
+					"percent": 3.0
+				},
+				{
+					"type": "stat",
+					"stat": "armor",
+					"every": 5,
+					"add": 1.0
+				}
+			]
+		},
+		"eeve": {
+			"choices": [
+				1,
+				2,
+				3
+			],
+			"max_level": 0,
+			"rules": [
+				{
+					"type": "stat",
+					"stat": "hp",
+					"every": 1,
+					"percent": 5.0
+				},
+				{
+					"type": "stat",
+					"stat": "speed",
+					"every": 3,
+					"percent": 3.0
+				},
+				{
+					"type": "stat",
+					"stat": "armor",
+					"every": 5,
+					"add": 1.0
+				}
+			]
+		},
+		"maul": {
+			"choices": [
+				0,
+				1,
+				2
+			],
+			"max_level": 0,
+			"rules": [
+				{
+					"type": "stat",
+					"stat": "hp",
+					"every": 1,
+					"percent": 5.0
+				},
+				{
+					"type": "stat",
+					"stat": "speed",
+					"every": 3,
+					"percent": 3.0
+				},
+				{
+					"type": "stat",
+					"stat": "armor",
+					"every": 5,
+					"add": 1.0
+				}
+			]
+		},
+		"randgruppen": {
+			"choices": [
+				0,
+				2,
+				3
+			],
+			"max_level": 0,
+			"rules": [
+				{
+					"type": "stat",
+					"stat": "hp",
+					"every": 1,
+					"percent": 5.0
+				},
+				{
+					"type": "stat",
+					"stat": "speed",
+					"every": 3,
+					"percent": 3.0
+				},
+				{
+					"type": "stat",
+					"stat": "armor",
+					"every": 5,
+					"add": 1.0
+				}
+			]
+		},
+		"youtd": {
+			"choices": [
+				1,
+				2,
+				3
+			],
+			"max_level": 0,
+			"rules": [
+				{
+					"type": "stat",
+					"stat": "hp",
+					"every": 1,
+					"percent": 5.0
+				},
+				{
+					"type": "stat",
+					"stat": "speed",
+					"every": 3,
+					"percent": 3.0
+				},
+				{
+					"type": "stat",
+					"stat": "armor",
+					"every": 5,
+					"add": 1.0
+				}
+			]
+		}
+	}
+}

@@ -22,12 +22,12 @@ var debug_gems_per_round := 0   ## Debug: Gems pro Runde, 0 = Wert aus balance.j
 ## Schwierigkeitsstufen: Faktor auf Leben und Rüstung der Gegner.
 const DIFFICULTIES := [
 	{"name": "Einfach", "factor": 0.8, "score": 0.8},
-	{"name": "Normal", "factor": 0.9, "score": 1.0},
+	{"name": "Mittel", "factor": 0.9, "score": 1.0},
 	{"name": "Schwer", "factor": 1.15, "score": 1.25},
 ]
 ## Gewählter TD-Modus (ID aus data/modes.json, siehe Database.modes).
 var game_kind := "gemtd"
-## Gewählte Stufe (Index in DIFFICULTIES), Standard „Normal“.
+## Gewählte Stufe (Index in DIFFICULTIES), Standard „Mittel“.
 var difficulty := 1
 ## eeveTD: zuletzt gewählte Schwierigkeit und Feldtyp ({difficulty, field}), beim Neustart vorausgewählt.
 var eeve_choice: Dictionary = {}
@@ -35,6 +35,8 @@ var eeve_choice: Dictionary = {}
 var maul_choice: Dictionary = {}
 ## Randgruppen TD: zuletzt gewählte Rasse und Schwierigkeit ({race, difficulty}), beim Neustart vorausgewählt.
 var rg_choice: Dictionary = {}
+## Zuletzt gewählte Aufstiegsstufe je Modus ({modus: stufe}), beim nächsten Startfenster vorausgewählt.
+var ascension_choice: Dictionary = {}
 ## Wertung: false = Leben (Spiel endet bei 0), true = Punkte (Kills geben Punkte, Durchbrüche kosten welche).
 var score_mode := false
 ## GemTD-Variante Roguelike: alle zehn Wellen einen von drei Boni wählen (rogue.gd).

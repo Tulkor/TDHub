@@ -60,6 +60,7 @@ static func meta_for(g: MaulGame) -> Dictionary:
 		"wave_label": "Level %d/%d",
 		"lives": g.lives,
 		"difficulty_name": str(MaulData.difficulty(g.difficulty).get("name", "")),
+		"ascension": g.ascension,
 		"shop": g.shop_of(g.local_player),
 		"time": int(Time.get_unix_time_from_system()),
 	}

@@ -15,7 +15,7 @@
 	},
 	"difficulties": [
 		{
-			"name": "Gemütlich",
+			"name": "Einfach",
 			"lives": 50
 		},
 		{
@@ -23,11 +23,11 @@
 			"lives": 35
 		},
 		{
-			"name": "Normal",
+			"name": "Mittel",
 			"lives": 25
 		},
 		{
-			"name": "Hart",
+			"name": "Schwer",
 			"lives": 10
 		},
 		{
