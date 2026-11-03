@@ -55,9 +55,22 @@ var skip_setup := false
 var coop: Dictionary = {}
 ## Wohin "Zurück" im Spiel führt.
 var return_scene := MAIN_MENU
+## Zuletzt gewähltes Tempo (1, 2 oder 4); neue Einzelspiele starten damit (Lukas 2026-11-03).
+var speed := 1.0
+## Je Modus: nächste Welle automatisch starten (Schalter „Auto“ neben dem Tempo), {mode_id: bool}.
+var auto_wave: Dictionary = {}
+## Rechte Spalte im Spiel: "alle", "dps", "gegner" oder "tower" (Reiter über dem DPS-Meter).
+var side_tab := "alle"
+
+## Letzte Wahl über Neustarts hinweg (user://last_choice.cfg): Modus, Map, Schwierigkeit, Varianten, Tempo.
+const LAST_FILE := "user://last_choice.cfg"
+const LAST_KEYS := ["game_kind", "map_path", "difficulty", "score_mode", "rogue", "foreign_build", "eeve_choice",
+		"maul_choice", "rg_choice", "speed", "auto_wave", "side_tab", "pinned_recipes"]
+var _last_loaded := false
 
 
 func goto(scene: String) -> void:
+	save_last()
 	Engine.time_scale = 1.0
 	get_tree().paused = false
 	get_tree().change_scene_to_file(scene)
@@ -80,3 +93,43 @@ func score_factor() -> float:
 
 func difficulty_name() -> String:
 	return str(DIFFICULTIES[clampi(difficulty, 0, DIFFICULTIES.size() - 1)].name)
+
+
+## Letzte Wahl laden (einmal, beim ersten Öffnen des Hauptmenüs). Tests und Screenshots, die direkt ins
+## Spiel starten, bleiben davon unberührt.
+func load_last() -> void:
+	if _last_loaded:
+		return
+	_last_loaded = true
+	var cfg := ConfigFile.new()
+	if cfg.load(LAST_FILE) != OK:
+		return
+	for k in LAST_KEYS:
+		if not cfg.has_section_key("last", k):
+			continue
+		var v = cfg.get_value("last", k)
+		if typeof(v) == typeof(get(k)):
+			set(k, v)
+	if cfg.has_section_key("last", "youtd_choice"):
+		set_meta("youtd_choice", cfg.get_value("last", "youtd_choice"))
+	if map_path != "" and not FileAccess.file_exists(map_path):
+		map_path = ""
+	if not Database.modes.any(func(m): return str(m.id) == game_kind):
+		game_kind = "gemtd"
+	difficulty = clampi(difficulty, 0, DIFFICULTIES.size() - 1)
+	if not speed in [1.0, 2.0, 4.0]:
+		speed = 1.0
+
+
+func save_last() -> void:
+	var cfg := ConfigFile.new()
+	for k in LAST_KEYS:
+		cfg.set_value("last", k, get(k))
+	if has_meta("youtd_choice"):
+		cfg.set_value("last", "youtd_choice", get_meta("youtd_choice"))
+	cfg.save(LAST_FILE)
+
+
+## Schalter „Auto“ (nächste Welle sofort) für den laufenden Modus.
+func auto_wave_on() -> bool:
+	return bool(auto_wave.get(game_kind, false))

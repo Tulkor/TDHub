@@ -17,7 +17,8 @@ const VIEWS := [
 ]
 
 var game  # game.gd
-var avoid: Control  ## rutscht darunter, solange dieses Panel offen ist (Debug-Menü)
+var avoid: Control  ## rutscht darunter, solange dieses Panel offen ist (Reiter, darüber das Debug-Menü)
+var tabs: SideTabs  ## Reiter der rechten Spalte: nur sichtbar, wenn „Alle“ oder „DPS“ gewählt ist
 var view := "now"
 var select: OptionButton
 var info: Label
@@ -115,7 +116,9 @@ func _row() -> Dictionary:
 
 func _process(delta: float) -> void:
 	if avoid != null:
-		offset_top = avoid.get_rect().end.y + 12 if avoid.visible else TOP_Y
+		offset_top = avoid.get_rect().end.y + 8 if avoid.visible else TOP_Y
+	if tabs != null:
+		visible = tabs.shows("dps")
 	if game == null or not game.has_method("is_wave_running"):
 		return
 	var running: bool = game.is_wave_running()
