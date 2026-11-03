@@ -89,6 +89,7 @@ func _ready() -> void:
 	look.select(0 if Display.style_filter else 1)
 	look.tooltip_text = tr("Bildfilter passend zum Modus: Retro-Synthwave in GemTD, Messing-Glanz in Shopping Maul, Nebelwald in eeveTD und YouTD, warme Töne in Randgruppen TD.")
 	look.item_selected.connect(func(i): Display.set_style_filter(i == 0))
+	_cursor_rows(grid)
 	VolumeRows.add(grid, DecoTheme.font(true) if deco else UiTheme.font(true), DecoTheme.BRASS_LIGHT if deco else UiTheme.CYAN)
 	var text := "Änderungen gelten sofort und bleiben gespeichert."
 	if in_game:
@@ -178,3 +179,46 @@ func _option(text: String, grid: GridContainer) -> OptionButton:
 	o.add_theme_font_size_override("font_size", 16)
 	grid.add_child(o)
 	return o
+
+
+## Cursor: Stil (mit Vorschaubild, „Passend zum Modus“ zuerst), Größe 75–300 %, Umriss dunkel/hell/aus.
+func _cursor_rows(grid: GridContainer) -> void:
+	var cur := _option(tr("Cursor"), grid)
+	var styles: Array = [Cursor.AUTO] + Cursor.STYLES
+	for st in styles:
+		var shown: String = Cursor.active_style() if st == Cursor.AUTO else st
+		cur.add_icon_item(Cursor.texture(shown, "arrow", 26), tr(Cursor.NAMES[st]))
+	cur.select(maxi(styles.find(Cursor.style), 0))
+	cur.tooltip_text = tr("Eigener Mauszeiger. „Passend zum Modus“ wechselt mit dem Stil des Spiels, die Kontrast-Zeiger sind auf jedem Boden gut sichtbar.")
+	cur.item_selected.connect(func(i): Cursor.set_style(styles[i]))
+	var l := UiUtil.label(tr("Cursorgröße"), grid, 15)
+	l.custom_minimum_size.x = 150
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(h)
+	var s := HSlider.new()
+	s.min_value = Cursor.SIZE_MIN * 100.0
+	s.max_value = Cursor.SIZE_MAX * 100.0
+	s.step = 25
+	s.value = roundf(Cursor.size * 100.0)
+	s.focus_mode = Control.FOCUS_NONE
+	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	s.custom_minimum_size.y = 24
+	s.tooltip_text = tr("Größe des Mauszeigers, 100 % sind 32 Pixel.")
+	h.add_child(s)
+	var n := UiUtil.label("%d %%" % roundi(s.value), h, 16)
+	n.custom_minimum_size.x = 64
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	n.add_theme_font_override("font", DecoTheme.font(true) if deco else UiTheme.font(true))
+	n.add_theme_color_override("font_color", DecoTheme.BRASS_LIGHT if deco else UiTheme.CYAN)
+	s.value_changed.connect(func(val):
+		n.text = "%d %%" % roundi(val)
+		Cursor.set_size(val / 100.0))
+	var ol := _option(tr("Cursor-Umriss"), grid)
+	for o in Cursor.OUTLINE_NAMES:
+		ol.add_item(tr(o))
+	ol.select(maxi(Cursor.OUTLINES.find(Cursor.outline), 0))
+	ol.tooltip_text = tr("Heller oder dunkler Rand um den Zeiger, damit er sich vom Hintergrund abhebt.")
+	ol.item_selected.connect(func(i): Cursor.set_outline(Cursor.OUTLINES[i]))

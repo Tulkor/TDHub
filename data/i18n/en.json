@@ -2616,5 +2616,21 @@
 	"Zuletzt gespielt": "Last played",
 	"Verschoben": "Moved",
 	"Getauscht": "Swapped",
-	"Zurückgenommen": "Taken back"
+	"Zurückgenommen": "Taken back",
+	"Cursor": "Cursor",
+	"Eigener Mauszeiger. „Passend zum Modus“ wechselt mit dem Stil des Spiels, die Kontrast-Zeiger sind auf jedem Boden gut sichtbar.": "Custom mouse pointer. “Match game mode” follows the style of the game, the contrast pointers stay visible on any ground.",
+	"Cursorgröße": "Cursor size",
+	"Größe des Mauszeigers, 100 % sind 32 Pixel.": "Size of the mouse pointer, 100 % is 32 pixels.",
+	"Cursor-Umriss": "Cursor outline",
+	"Heller oder dunkler Rand um den Zeiger, damit er sich vom Hintergrund abhebt.": "Light or dark edge around the pointer so it stands out from the background.",
+	"Passend zum Modus": "Match game mode",
+	"GemTD Arcade": "GemTD Arcade",
+	"Druidenhain": "Druid Grove",
+	"Plakatwand": "Billboard",
+	"Art déco": "Art Deco",
+	"Hub (Messing)": "Hub (brass)",
+	"Kontrast Weiß": "Contrast white",
+	"Kontrast Signalgelb": "Contrast signal yellow",
+	"Dunkel": "Dark",
+	"Hell": "Light"
 }

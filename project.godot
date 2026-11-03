@@ -20,6 +20,7 @@ Database="*res://scripts/autoload/database.gd"
 Session="*res://scripts/autoload/session.gd"
 Loc="*res://scripts/autoload/loc.gd"
 Display="*res://scripts/autoload/display.gd"
+Cursor="*res://scripts/autoload/cursor.gd"
 Net="*res://scripts/autoload/net.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
 
