@@ -392,6 +392,7 @@ func _note(text: String, p := -1) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	record_profile(p == Phase.VICTORY)
 	Engine.time_scale = 1.0
 	hud.show_game_over(p == Phase.VICTORY, mini(wave_index + 1, waves.size()), waves.size(), lives, enemies_killed, path_length,
@@ -495,13 +496,29 @@ func _select_rocks(list: Array, t: Tower = null) -> void:
 
 # --- Eingabe -------------------------------------------------------------------------------
 
+func has_auto_wave() -> bool:
+	return true
+
+
+## Auto: nach jeder Welle gleich die nächste, ohne die Pause abzuwarten (wie Taste N).
+func auto_wave_due() -> bool:
+	return phase == Phase.BUILD and wave_index > 0
+
+
+func next_wave_now() -> void:
+	submit({"type": "start_level"})
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	var c := NO_CELL
 	if placing != "" and setup_done and phase < Phase.GAME_OVER:
 		c = board.mouse_anchor(camera_rig.camera, Board3D.TOWER_CELLS)
-	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS:
+	var r := Tower.ring_radius(Database.tower_tier(placing, 0), false) if placing != "" else 0.0
+	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS or r != board.hover_range:
 		board.hover_cell = c
 		board.hover_size = Board3D.TOWER_CELLS
+		board.hover_range = r
 		board.hover_ok = can_build_tower(placing, c)
 		board.refresh_hover()
 

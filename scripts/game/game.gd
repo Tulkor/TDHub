@@ -106,6 +106,11 @@ var run_stats := RunStats.new()  ## Statistik fürs Profil (profile.gd)
 var debug_used := false   ## Debug-Menü geöffnet: der Run zählt nicht für Summen und Rekorde im Profil, keine EP
 var profile_time := 0      ## Sekunden dieses Runs, die schon im Profil stehen (Verlassen und später Laden)
 var _saves_at_start := 0
+var _speed_applied := false   ## Session.speed einmal nach den Einstellungen vor Runde 1 gesetzt
+var auto_wave := false        ## Schalter „Auto“: nächste Welle ohne Pause (Session.auto_wave je Modus)
+var _hover_tower: Tower = null
+var _pause_input: PauseInput = null
+var _hover_time := 0.0
 var spawn_timer := 0.0
 var debug_tower := ""
 var rng := RandomNumberGenerator.new()
@@ -174,6 +179,8 @@ func _ready() -> void:
 	hud.option_chosen.connect(_on_option_chosen)
 	hud.preview_range_requested.connect(func(r): if selected != null and is_instance_valid(selected): selected.show_preview_range(r))
 	hud.round_gem_selected.connect(func(i): if i < round_towers.size(): _select(round_towers[i]))
+	hud.next_gem_requested.connect(select_next_gem)
+	hud.pause_toggled.connect(_on_pause_toggled)
 	hud.extra_chance_requested.connect(func(): hud.extra_chance_panel.open(extra_chance_cfg(), gold, pl(local_player).extra_chance))
 	hud.extra_chance_panel.chosen.connect(func(id): submit({"type": "extra_chance", "id": id}))
 	hud.speed_selected.connect(func(f): submit({"type": "speed", "factor": f}))
@@ -244,6 +251,14 @@ func _ready() -> void:
 		net_panel.avoid = hud.bottom
 		add_child(net_panel)
 		hud.tower_list.limits.append(net_panel.panel)
+	# Einzelspiel: Pause (Taste P) und, wo es Pausen zwischen den Wellen gibt, der Schalter „Auto“
+	hud.pause_button.visible = solo()
+	auto_wave = Session.auto_wave_on() and solo()
+	if has_auto_wave() and solo():
+		hud.add_auto_toggle(auto_wave, set_auto_wave)
+	_pause_input = PauseInput.new()
+	_pause_input.on_event = func(e): if hud.user_paused: paused_input(e)
+	add_child(_pause_input)
 
 
 func _exit_tree() -> void:
@@ -285,6 +300,23 @@ func save_mode() -> String:
 	if Net.is_active():
 		return "host" if Net.is_host() else "client"
 	return "single"
+
+
+## Nach jeder Welle still speichern (Einzelspiel, Lukas 2026-11-03): „Weiterspielen“ im Hub setzt hier fort,
+## auch nach einem Absturz. Überschreibt nur den Spielstand dieser Partie. Nicht im Mehrspieler, nicht beim
+## Testen aus dem Map-Editor und nicht in Tests/Screenshots (Session.skip_setup).
+func autosave() -> bool:
+	if not setup_done or not solo() or phase >= Phase.GAME_OVER or Session.return_scene != Session.MAIN_MENU or Session.skip_setup:
+		return false
+	return save_game()
+
+
+## Partie vorbei: den Spielstand dieser Partie löschen, damit „Weiterspielen“ keine beendete Partie anbietet
+## (wie Shopping Maul).
+func drop_autosave() -> void:
+	if solo() and Session.save_id != "" and Session.return_scene == Session.MAIN_MENU:
+		SaveGame.remove(Session.save_id)
+		Session.save_id = ""
 
 
 ## Einzelspiel speichern; dieselbe Partie überschreibt ihren Spielstand.
@@ -479,6 +511,7 @@ func inv_drop_on_tower(_t: Tower, _data: Dictionary) -> void:
 # --- Eingabe -----------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	_ux_tick()
 	if phase < Phase.GAME_OVER:
 		play_time += delta / maxf(Engine.time_scale, 0.001)
 	_update_hover()
@@ -491,7 +524,94 @@ func _process(delta: float) -> void:
 		_process_wave(delta)
 
 
+## Einmal pro Bild (auch aus youtd_game.gd): gemerktes Tempo nach den Einstellungen vor Runde 1 setzen,
+## Auto-Start der nächsten Welle.
+func _ux_tick() -> void:
+	if setup_done and not _speed_applied:
+		_speed_applied = true
+		if solo() and phase < Phase.GAME_OVER:
+			Engine.time_scale = Session.speed
+	if auto_wave and setup_done and solo() and phase < Phase.GAME_OVER and auto_wave_due():
+		next_wave_now()
+
+
+## Einzelspiel ohne Netz und ohne Koop: nur dort gibt es Pause, Auto-Start und gemerktes Tempo.
+func solo() -> bool:
+	return not Net.is_active() and coop == null and not mirror and players.size() <= 1
+
+
+# --- Auto-Start der nächsten Welle (Schalter „Auto“ neben dem Tempo) -------------------------
+
+## Hat der Modus Pausen zwischen den Wellen, die man mit N abkürzen kann? (GemTD startet die Welle selbst.)
+func has_auto_wave() -> bool:
+	return false
+
+
+## Soll die nächste Welle jetzt automatisch starten (Auto an)?
+func auto_wave_due() -> bool:
+	return false
+
+
+## Nächste Welle sofort (wie Taste N).
+func next_wave_now() -> void:
+	pass
+
+
+func set_auto_wave(on: bool) -> void:
+	auto_wave = on
+	Session.auto_wave[Session.game_kind] = on
+	Session.save_last()
+
+
+# --- Hover: Reichweite und Kurzinfo ohne Klick ----------------------------------------------
+
+const HOVER_DELAY := 0.3
+
+
+## Tower unter der Maus nach kurzer Zeit: Reichweitenring und kleine Karte an der Maus.
+func _update_tower_hover(delta: float) -> void:
+	var t: Tower = null
+	if inv_drop == null or not inv_drop.active():
+		var c := board.mouse_cell(camera_rig.camera)
+		var a: Vector2i = occupied.get(c, NO_CELL)
+		t = towers.get(a, null)
+		if t == null:
+			t = traps.get(trap_cells.get(c, NO_CELL), null)
+	if t != null and (t == selected or not is_instance_valid(t)):
+		t = null
+	var vp := get_viewport()
+	if t != null and vp != null and vp.gui_get_hovered_control() != null:
+		t = null  # Maus über einem Fenster
+	if t != _hover_tower:
+		if _hover_tower != null and is_instance_valid(_hover_tower):
+			_hover_tower.set_hovered(false)
+		_hover_tower = t
+		_hover_time = 0.0
+		hud.show_hover_card("", Vector2.ZERO)
+	if t == null:
+		return
+	_hover_time += delta / maxf(Engine.time_scale, 0.001)
+	if _hover_time >= HOVER_DELAY and not t.hovered:
+		t.set_hovered(true)
+		hud.show_hover_card(hover_text(t), vp.get_mouse_position())
+
+
+## Kurzinfo für die Karte an der Maus: Name, Untertitel (Art · Ziele), Reichweite und Schaden, Kills.
+func hover_text(t: Tower) -> String:
+	var st: Dictionary = t.view() if t.has_method("view") else TowerStats.view(t)
+	var lines := [t.label(), str(st.get("subtitle", ""))]
+	var parts := []
+	for tile in st.get("tiles", []):
+		if str(tile.get("key", "")) in ["range", "damage"]:
+			parts.append("%s %s" % [tile.caption, tile.value])
+	if not parts.is_empty():
+		lines.append(" · ".join(parts))
+	lines.append(tr("Kills %d") % t.kills)
+	return "\n".join(lines.filter(func(l): return l != ""))
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	if inv_drop != null and inv_drop.active():
 		return  # beim Ziehen eines Items markiert inv_drop den Tower unter der Maus
 	var c := NO_CELL
@@ -1347,6 +1467,8 @@ func _execute(cmd: Dictionary) -> bool:
 			if not f in [1.0, 2.0, 4.0]:
 				return false
 			Engine.time_scale = f
+			if solo():
+				Session.speed = f
 			return true
 		"option":
 			var t := tower_from_ref(cmd.get("tower", {}))
@@ -1588,6 +1710,7 @@ func _process_wave(delta: float) -> void:
 			_finish(Phase.VICTORY)
 		else:
 			_enter_build()
+			autosave.call_deferred()
 
 
 ## Gegner der Gruppe g erscheinen an jeder aktiven Bahn (lane < 0) oder nur an Bahn lane.
@@ -1919,6 +2042,7 @@ func _remove_enemy(e: Enemy) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	RunHistory.record(RunHistory.entry_from(self, p == Phase.VICTORY))
 	record_profile(p == Phase.VICTORY)
 	Engine.time_scale = 1.0
@@ -2016,6 +2140,7 @@ func _refresh_hud_local() -> void:
 	if not specials.is_empty():
 		shot_text = tr("One-Shot möglich: " if my_stage == Phase.BUILD else "Spezial möglich: ") + ", ".join(specials)
 	hud.set_round_gems(gems if my_stage <= Phase.CHOOSE else [], tr("Hellblauer Rand: Zutat für ") + ", ".join(specials) if not specials.is_empty() else "")
+	hud.set_gem_tags(gem_tags() if my_stage == Phase.CHOOSE else [])
 
 	if phase <= Phase.CHOOSE and my_stage == Phase.WAVE:
 		hud.set_phase(tr("Warten"), tr("Dein Gem ist gewählt. Die Welle startet, sobald alle Mitspieler fertig sind."), "")
@@ -2221,3 +2346,123 @@ func _option_view(t: Tower, o: Dictionary) -> Dictionary:
 		v.preview_range = Tower.ring_radius(Database.tower_tier(o.id, o.tier), trap)
 		v.diff = TowerStats.diff(t, o.id, o.tier)
 	return v
+
+
+# --- GemTD-Auswahlphase: Schilder über den neuen Gems (Lukas 2026-11-03) ---------------------
+
+## Für jeden neuen Gem der Runde die beste Option als kurzes Schild: Spezial-Tower (pink), Kombinieren (grün),
+## Zutat eines angepinnten Rezepts (gold), sonst nur der Name (grau).
+func gem_tags() -> Array:
+	var out := []
+	if round_towers.size() < 2:
+		return out
+	for i in round_towers.size():
+		var t: Tower = round_towers[i]
+		if not is_instance_valid(t):
+			continue
+		var tag := {"tower": t, "index": i, "text": t.label(), "style": "keep"}
+		var best_same := 0
+		for o in choice_options(t):
+			if _is_special_option(t, o):
+				tag.text = "★ " + Database.tower_label(o.id, o.tier)
+				tag.style = "special"
+				break
+			if int(o.get("same", 0)) > best_same:
+				best_same = int(o.same)
+				tag.text = "▲ " + Database.tower_label(o.id, o.tier)
+				tag.style = "combine"
+		if tag.style == "keep":
+			for sid in Session.pinned_recipes:
+				var def: Dictionary = Database.towers.get(sid, {})
+				if def.get("recipe", []).any(func(ing): return _ingredient_matches(ing, t)):
+					tag.text = "◆ " + Database.tower_label(sid, 0)
+					tag.style = "pinned"
+					break
+		out.append(tag)
+	return out
+
+
+## Tab: nächster neuer Gem der Runde auswählen.
+func select_next_gem() -> void:
+	var list := round_towers.filter(func(t): return is_instance_valid(t))
+	if list.is_empty():
+		return
+	var i := list.find(selected)
+	_select(list[(i + 1) % list.size()])
+
+
+# --- Pause (Taste P, nur Einzelspiel) ------------------------------------------------------
+
+## Pausiert (SceneTree.paused) laufen nur Oberfläche, Kamera und PauseInput: Tower lassen sich auswählen und
+## ansehen, die Welt steht.
+func _on_pause_toggled(on: bool) -> void:
+	camera_rig.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.show_hover_card("", Vector2.ZERO)
+
+
+## Klick während der Pause: nur auswählen (Tower, Stein), nichts bauen.
+func paused_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and not event.pressed):
+		return
+	if event.button_index == MOUSE_BUTTON_LEFT:
+		var c := board.mouse_cell(camera_rig.camera)
+		var a: Vector2i = occupied.get(c, NO_CELL)
+		var trap: Tower = traps.get(trap_cells.get(c, NO_CELL), null)
+		if towers.has(a):
+			_select(towers[a])
+		elif trap != null:
+			_select(trap)
+		elif rocks.has(a):
+			_select(null, a)
+		else:
+			_select(null)
+	elif event.button_index == MOUSE_BUTTON_RIGHT and not camera_rig.right_dragged:
+		_select(null)
+
+
+# --- Warnung vor Luftwellen (Lukas 2026-11-03) ---------------------------------------------
+
+const AIR_WARN_SHARE := 0.35  ## weniger als dieser Anteil des Flugwegs in Reichweite eines Luft-Towers: Warnung
+
+
+## Anteil des Flugwegs (erste Bahn), den mindestens ein Tower erreicht, der Luft trifft (0..1).
+func air_cover_share() -> float:
+	if air_path.size() < 2:
+		return 1.0
+	_refresh_cover()
+	var key := [_cover_sig, air_path.size()]
+	if _air_share_key == key:
+		return _air_share
+	var total := 0.0
+	for i in range(1, air_path.size()):
+		total += air_path[i - 1].distance_to(air_path[i])
+	var free := 0.0
+	for st in _free_stretches(Array(air_path), true):
+		free += float(st[1]) - float(st[0])
+	_air_share_key = key
+	_air_share = clampf(1.0 - free / maxf(total, 0.001), 0.0, 1.0)
+	return _air_share
+
+
+var _air_share := 1.0
+var _air_share_key := []
+
+
+## Warnung unter einer Zeile der Wellenliste (hud.set_waves): nur für die nächste, noch nicht laufende Welle.
+func wave_warning(number: int, type: String) -> String:
+	if phase >= Phase.GAME_OVER or is_wave_running() or number != wave_index + 1:
+		return ""
+	return air_warning(type)
+
+
+## Text, wenn die Welle Flieger hat und man kaum vorbereitet ist ("" = keine Warnung).
+func air_warning(type: String) -> String:
+	if not type in ["Flieger", "Gemischt"]:
+		return ""
+	var air_towers := own_towers().filter(func(t): return is_instance_valid(t) and not t.is_new and t.can_attack() and t.target_mode() != "ground")
+	if air_towers.is_empty():
+		return tr("⚠ Kein Tower trifft Luft")
+	var share := air_cover_share()
+	if share < AIR_WARN_SHARE:
+		return tr("⚠ Nur %d %% des Flugwegs abgedeckt") % roundi(share * 100.0)
+	return ""

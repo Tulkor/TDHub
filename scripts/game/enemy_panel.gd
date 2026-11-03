@@ -10,7 +10,8 @@ var above: Control:  ## sitzt darunter (DPS-Meter)
 		above = v
 		# Sofort nachziehen, wenn das Fenster darüber wächst (sonst liegt es einen Frame lang darüber)
 		if v != null:
-			v.item_rect_changed.connect(func(): offset_top = above.get_rect().end.y + 12)
+			v.item_rect_changed.connect(func(): offset_top = (above.get_rect().end.y + 12) if above.visible else above.offset_top)
+var tabs: SideTabs  ## Reiter der rechten Spalte (hud.side_tabs)
 var title: Label
 var summary: Label  ## eingeklappt: "63 % · vorne 23 Felder"
 var fold: Button
@@ -123,7 +124,7 @@ func toggle() -> void:
 
 func _process(delta: float) -> void:
 	if above != null:
-		offset_top = above.get_rect().end.y + 12
+		offset_top = (above.get_rect().end.y + 12) if above.visible else above.offset_top
 	_refresh_left -= delta
 	if _refresh_left <= 0.0:
 		_refresh_left = 0.25
@@ -212,7 +213,7 @@ func refresh() -> void:
 	if body == null:
 		return
 	var d := data()
-	visible = not d.is_empty()
+	visible = not d.is_empty() and (tabs == null or tabs.shows("gegner"))
 	if d.is_empty():
 		return
 	var share: float = float(d.dealt) / maxf(float(d.total), 1.0)

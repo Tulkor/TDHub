@@ -64,6 +64,11 @@ var path_color := COL_PATH
 var hover_cell := Vector2i(-1, -1)  ## Anker (oben links) der Hover-Markierung
 var hover_size := TOWER_CELLS       ## Kantenlänge der Hover-Markierung in Feldern
 var hover_ok := true
+## Reichweite des Towers, der gerade gesetzt wird: Ring um die Bauvorschau (0 = keiner). Modi setzen sie vor
+## refresh_hover() (YouTD, Randgruppen, eeveTD-Fallen), Lukas 2026-11-03.
+var hover_range := 0.0
+var _hover_ring: MeshInstance3D
+var _hover_ring_r := 0.0
 ## Ausgewählte Steine (Anker), werden türkis umrandet.
 var selected_rocks: Array = []
 var _selection: MultiMeshInstance3D
@@ -563,6 +568,31 @@ func refresh_hover() -> void:
 		_hover.position = to_3d(footprint_center(hover_cell, hover_size), 0.0)
 		_hover.scale = Vector3(hover_size, 1, hover_size)
 		_hover_mat.albedo_color = Color(0.2, 1, 0.2, 0.4) if hover_ok else Color(1, 0.2, 0.2, 0.4)
+	_refresh_hover_ring()
+
+
+func _refresh_hover_ring() -> void:
+	var show := _hover.visible and hover_range > 0.0
+	if not show:
+		if _hover_ring != null:
+			_hover_ring.visible = false
+		return
+	if _hover_ring == null:
+		_hover_ring = MeshInstance3D.new()
+		_hover_ring.material_override = make_material(Color(0.13, 0.77, 0.93, 0.75), true)
+		_hover_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_hover_ring)
+	if not is_equal_approx(hover_range, _hover_ring_r):
+		_hover_ring_r = hover_range
+		var torus := TorusMesh.new()
+		torus.inner_radius = maxf(hover_range - 0.06, 0.01)
+		torus.outer_radius = maxf(hover_range, 0.07)
+		torus.rings = 64
+		torus.ring_segments = 4
+		_hover_ring.mesh = torus
+	var c := footprint_center(hover_cell, hover_size)
+	_hover_ring.position = to_3d(c, 0.06 + ground_y(c))
+	_hover_ring.visible = true
 
 
 ## Nur diese Bahnen beschriften (leer = alle); die Ringe aller Wegpunkte bleiben stehen.

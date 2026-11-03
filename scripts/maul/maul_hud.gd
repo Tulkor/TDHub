@@ -120,6 +120,20 @@ func _build_top_bar() -> void:
 	row.add_child(spacer)
 	_start_button = UiUtil.button("Jetzt starten", row, func(): game.submit({"type": "start_now"}))
 	UiTheme.accent_button(_start_button, UiTheme.GOLD, UiTheme.BAR)
+	Hud.key_badge(_start_button, "N")
+	if game.solo():
+		var auto := UiUtil.button("Auto", row, func(): pass)
+		auto.toggle_mode = true
+		auto.focus_mode = Control.FOCUS_NONE
+		auto.tooltip_text = "Nächstes Level sofort starten, ohne Countdown (sonst Taste N)."
+		auto.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
+		auto.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+		auto.set_pressed_no_signal(Session.auto_wave_on())
+		auto.toggled.connect(game.set_auto_wave)
+		var pause := UiUtil.button("❚❚", row, func(): game.set_user_paused(true))
+		pause.focus_mode = Control.FOCUS_NONE
+		pause.tooltip_text = "Pause (Taste P)"
+		Hud.key_badge(pause, "P")
 	lights_button = UiUtil.button("Lichtpfad", row, func(): pass)
 	lights_button.toggle_mode = true
 	lights_button.focus_mode = Control.FOCUS_NONE
@@ -128,10 +142,12 @@ func _build_top_bar() -> void:
 	lights_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 	lights_button.set_pressed_no_signal(Display.path_lights)
 	lights_button.toggled.connect(func(on: bool): game.set_path_lights(on))
+	Hud.key_badge(lights_button, "L")
 	for f in [1.0, 2.0, 4.0]:
 		var b := UiUtil.button("%d×" % int(f), row, func(): game.set_speed(f))
 		b.toggle_mode = true
 		b.custom_minimum_size.x = 40
+		Hud.key_badge(b, str([1.0, 2.0, 4.0].find(f) + 1))
 		_speed_buttons.append(b)
 	# Debug-Menü nur, wo gerechnet wird (allein oder Host)
 	if not game.mirror:
@@ -141,8 +157,35 @@ func _build_top_bar() -> void:
 		_debug_button.tooltip_text = "Debug-Menü"
 		_debug_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 		_debug_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
-	UiUtil.button("Menü", row, toggle_menu)
+	Hud.key_badge(UiUtil.button("Menü", row, toggle_menu), "Esc")
 	_build_menu()
+
+
+var _pause_banner: PanelContainer
+
+
+## Schild „PAUSE“ oben in der Mitte (Taste P, maul_game.set_user_paused).
+func show_pause(on: bool) -> void:
+	if _pause_banner == null:
+		_pause_banner = PanelContainer.new()
+		_pause_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_pause_banner.add_theme_stylebox_override("panel", UiTheme.panel(16.0, 0.95))
+		_pause_banner.anchor_left = 0.5
+		_pause_banner.anchor_right = 0.5
+		_pause_banner.offset_top = 110
+		_pause_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		root.add_child(_pause_banner)
+		var v := VBoxContainer.new()
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_pause_banner.add_child(v)
+		UiTheme.title(UiUtil.label("PAUSE", v, 28), 28).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var sub := UiUtil.label("P: weiter", v, 14)
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.add_theme_color_override("font_color", UiTheme.MUTED)
+	_pause_banner.visible = on
+	var s := _pause_banner.get_combined_minimum_size()
+	_pause_banner.offset_left = -s.x / 2.0
+	_pause_banner.offset_right = s.x / 2.0
 
 
 func toggle_debug() -> void:
