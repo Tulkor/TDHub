@@ -1,7 +1,7 @@
 {
 	"_info": "Tower Survivors (Arbeitstitel): ein Turm als Waffenplattform in der Mitte, Gegner kommen von allen Seiten. Waffen kaufen und auf Montageplätze setzen (gleiche Waffe nochmal kaufen = Stufe hoch), Upgrades, alle 5 Wellen ein Bonus. Waffenmodelle sind Bausteine (model: s = box|cyl|cone|sphere, size, p = Position, r = Drehung in Grad, c = type|dark|light|glow), Lauf zeigt nach -Z. kind: bullet (Geschoss), lob (Bogen mit Fläche), beam (sofort, chain = Sprünge), line (durchschlagender Strahl), cone (Kegel, tickt), nova (Ring um den Turm). Werte je Stufe: damage * (1 + level_damage * (Stufe-1)).",
-	"arena": {"radius": 24.0, "spawn_radius": 25.0, "tower_radius": 2.7},
-	"start": {"gold": 120, "hp": 500, "armor": 0, "regen": 1.0, "income": 2.0, "slots": 3, "max_slots": 6, "weapon": "mg"},
+	"arena": {"radius": 24.0, "spawn_radius": 25.0, "tower_radius": 4.8},
+	"start": {"gold": 120, "hp": 600, "armor": 2, "regen": 3.0, "income": 2.0, "slots": 3, "max_slots": 6, "weapon": "mg"},
 	"waves": {"count": 30, "duration": 30.0, "spawn_time": 24.0, "hp_growth": 1.085, "budget_base": 14, "budget_growth": 1.09, "boss_every": 10, "perk_every": 5, "wave_bonus": 30, "wave_bonus_growth": 8},
 	"difficulties": [
 		{"name": "Einfach", "hp": 0.75, "dps": 0.8, "score": 0.8},
@@ -203,6 +203,6 @@
 		{"id": "glutling", "name": "Glutling", "shape": "box", "size": 0.7, "color": "ff5a1f", "hp": 60, "speed": 2.4, "dps": 9, "armor": 2, "gold": 4, "cost": 2, "weight": 4, "from_wave": 8, "resist": {"fire": 0.6, "frost": -0.4}},
 		{"id": "frostling", "name": "Frostling", "shape": "box", "size": 0.7, "color": "a8e8ff", "hp": 60, "speed": 2.4, "dps": 9, "armor": 2, "gold": 4, "cost": 2, "weight": 4, "from_wave": 12, "resist": {"frost": 0.6, "fire": -0.4}, "slow_immune": true},
 		{"id": "panzer", "name": "Panzerkäfer", "shape": "box", "size": 0.95, "color": "6a6f7a", "hp": 120, "speed": 1.8, "dps": 14, "armor": 14, "gold": 6, "cost": 4, "weight": 3, "from_wave": 14, "resist": {"phys": 0.4, "shock": -0.3}},
-		{"id": "koloss", "name": "Koloss", "shape": "box", "size": 2.3, "color": "6b1f8f", "hp": 1600, "speed": 0.9, "dps": 30, "armor": 10, "gold": 150, "boss": true}
+		{"id": "koloss", "name": "Koloss", "shape": "box", "size": 2.3, "color": "6b1f8f", "hp": 1200, "speed": 0.9, "dps": 26, "armor": 10, "gold": 150, "boss": true}
 	]
 }

@@ -476,7 +476,7 @@ func _prepare_survivors(game: Node) -> void:
 			t -= 1.0 / 30.0
 		game.paused = true
 	if opts.has("nah"):
-		game.cam_dist = 13.0 if opts.has("klappe") else 15.0
+		game.cam_dist = 17.0 if opts.has("klappe") else 19.0
 		game._place_camera()
 	await _frames(12)
 

@@ -6,7 +6,9 @@ extends Node3D
 ## Waffe fährt auf einer Hebebühne hoch, beim Verkaufen umgekehrt. Leuchtband am Rand: gesperrt rot,
 ## frei grau, belegt in der Seltenheitsfarbe; Stufen-Lämpchen außen. Alles in Dev-Optik.
 
-const PAD_RADIUS := 1.95
+## Groß genug, dass Klappen samt versenkten Hälften und die Waffen ganz auf dem Deck liegen (Lukas 2026-11-04)
+const PAD_RADIUS := 3.0
+const DECK_R := 4.7
 const DECK_Y := 1.5
 const SLOTS := 6
 ## Waffen etwas größer als ihre Bausteine, damit man sie aus der Spielansicht erkennt
@@ -29,8 +31,8 @@ var _t := 0.0
 func _ready() -> void:
 	var base := MeshInstance3D.new()
 	var bm := CylinderMesh.new()
-	bm.top_radius = 2.3
-	bm.bottom_radius = 2.7
+	bm.top_radius = DECK_R - 0.45
+	bm.bottom_radius = DECK_R - 0.05
 	bm.height = 1.3
 	bm.radial_segments = 6
 	base.mesh = bm
@@ -40,34 +42,34 @@ func _ready() -> void:
 
 	var deck := MeshInstance3D.new()
 	var dm := CylinderMesh.new()
-	dm.top_radius = 2.75
-	dm.bottom_radius = 2.6
-	dm.height = 0.25
+	dm.top_radius = DECK_R
+	dm.bottom_radius = DECK_R - 0.15
+	dm.height = 0.45
 	dm.radial_segments = 6
 	deck.mesh = dm
-	deck.position.y = DECK_Y - 0.12
+	deck.position.y = DECK_Y - 0.22
 	deck.material_override = SvDev.mat(Color("8a90a0"))
 	add_child(deck)
 
 	# Reaktor-Kern: Säule mit leuchtendem Ring, zeigt über die Farbe das Leben
 	var core := MeshInstance3D.new()
 	var cm := CylinderMesh.new()
-	cm.top_radius = 0.55
-	cm.bottom_radius = 0.7
-	cm.height = 1.5
+	cm.top_radius = 0.8
+	cm.bottom_radius = 1.0
+	cm.height = 1.9
 	cm.radial_segments = 8
 	core.mesh = cm
-	core.position.y = DECK_Y + 0.75
+	core.position.y = DECK_Y + 0.95
 	core.material_override = SvDev.mat(Color("40465a"))
 	add_child(core)
 	core_glow = MeshInstance3D.new()
 	var gm := CylinderMesh.new()
-	gm.top_radius = 0.62
-	gm.bottom_radius = 0.62
-	gm.height = 0.3
+	gm.top_radius = 0.9
+	gm.bottom_radius = 0.9
+	gm.height = 0.36
 	gm.radial_segments = 16
 	core_glow.mesh = gm
-	core_glow.position.y = DECK_Y + 1.1
+	core_glow.position.y = DECK_Y + 1.35
 	_core_mat = StandardMaterial3D.new()
 	_core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_core_mat.albedo_color = UiTheme.CYAN
@@ -75,10 +77,10 @@ func _ready() -> void:
 	add_child(core_glow)
 	var cap := MeshInstance3D.new()
 	var capm := SphereMesh.new()
-	capm.radius = 0.4
-	capm.height = 0.5
+	capm.radius = 0.58
+	capm.height = 0.7
 	cap.mesh = capm
-	cap.position.y = DECK_Y + 1.55
+	cap.position.y = DECK_Y + 1.9
 	cap.material_override = SvDev.mat(Color("40465a"))
 	add_child(cap)
 

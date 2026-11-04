@@ -1,7 +1,8 @@
 extends Node
 ## Balance-Lauf für Tower Survivors ohne Bild: der Bot (SvGame.bot_turn) spielt je Schwierigkeit
 ## --laeufe=N Partien, Ausgabe je Lauf Welle, Leben, Waffen, Boni und Gold/DPS an Wellen 5/10/20/30.
-##   godot --headless --path . tools/survivors_sim.tscn -- [--laeufe=3] [--stufen=0,1,2]
+##   godot --headless --path . tools/survivors_sim.tscn -- [--laeufe=3] [--stufen=0,1,2] [--verlauf]
+## --verlauf: ab Welle 9 alle 3 s Leben, Gegner, Gegner am Turm, Boss.
 
 func _ready() -> void:
 	var opts := {}
@@ -11,10 +12,14 @@ func _ready() -> void:
 	Profile.dir = "user://sim_survivors_profile"
 	await get_tree().process_frame
 	var runs := int(opts.get("laeufe", "2"))
+	verlauf = opts.has("verlauf")
 	for d in String(opts.get("stufen", "0,1,2")).split(","):
 		for r in runs:
 			await _run(int(d), r + 1)
 	get_tree().quit()
+
+
+var verlauf := false
 
 
 func _run(diff: int, seed_: int) -> void:
@@ -33,6 +38,14 @@ func _run(diff: int, seed_: int) -> void:
 		k += 1
 		if k % 15 == 0:
 			g.bot_turn()
+		if verlauf and g.wave >= 9 and k % 90 == 0:
+			var att := 0
+			var boss := ""
+			for e in g.enemies:
+				att += 1 if e.attacking else 0
+				if e.boss:
+					boss = " Boss %d/%d bei %.1f" % [e.hp, e.max_hp, Vector2(e.position.x, e.position.z).length()]
+			print("  W%d %.0fs: Leben %d, Gegner %d (am Turm %d)%s" % [g.wave, g.wave_time, g.hp, g.enemies.size(), att, boss])
 		if g.wave != last_wave:
 			last_wave = g.wave
 			if g.wave in [5, 10, 15, 20, 25, 30]:

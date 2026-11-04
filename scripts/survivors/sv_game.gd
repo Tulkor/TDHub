@@ -55,7 +55,7 @@ var world: Node3D
 var camera: Camera3D
 var hud  ## SvHud
 var cam_yaw := 0.0
-var cam_dist := 21.0
+var cam_dist := 27.0
 var rng := RandomNumberGenerator.new()
 
 
@@ -665,7 +665,7 @@ func fire(w: SvWeapon, target: SvEnemy) -> void:
 				var used: Array = [target]
 				fx.shoot(w, target, w.muzzle())
 				for k in n - 1:
-					var t2 := nearest(w.origin(), w.range_(), used)
+					var t2 := nearest(w.center(), w.reach(), used)
 					if t2 == null:
 						t2 = target
 					used.append(t2)
@@ -681,13 +681,13 @@ func fire(w: SvWeapon, target: SvEnemy) -> void:
 		"line":
 			var from := w.origin()
 			var dir := w.forward()
-			var to := from + dir * w.range_()
+			var to := from + dir * (w.range_() + SvPlatform.PAD_RADIUS)
 			fx.beam(w.muzzle(), to + Vector3(0, 0.6, 0), col, 0.22, 0.2)
 			for e in enemies.duplicate():
 				var p: Vector3 = e.global_position
 				var rel := Vector2(p.x - from.x, p.z - from.z)
 				var along := rel.dot(Vector2(dir.x, dir.z))
-				if along < 0.0 or along > w.range_():
+				if along < 0.0 or along > w.range_() + SvPlatform.PAD_RADIUS:
 					continue
 				var side := absf(rel.cross(Vector2(dir.x, dir.z)))
 				if side <= 0.6 + e.size * 0.5:
@@ -697,15 +697,15 @@ func fire(w: SvWeapon, target: SvEnemy) -> void:
 			var from := w.origin()
 			var dir := w.forward()
 			var half := deg_to_rad(float(w.data.get("angle", 40)) * 0.5)
-			fx.cone(w.muzzle(), dir, w.range_(), float(w.data.get("angle", 40)), col)
-			for e in in_radius(from, w.range_()):
+			fx.cone(w.muzzle(), dir, w.range_() + SvWeapon.AREA_BONUS, float(w.data.get("angle", 40)), col)
+			for e in in_radius(from, w.range_() + SvWeapon.AREA_BONUS):
 				var p: Vector3 = e.global_position - from
 				if absf(Vector2(dir.x, dir.z).angle_to(Vector2(p.x, p.z))) <= half:
 					damage(e, w.damage(), w.type(), w)
 					_effects(e, w)
 		"nova":
-			fx.ring(w.origin(), w.range_(), col)
-			for e in in_radius(w.origin(), w.range_()):
+			fx.ring(w.origin(), w.range_() + SvWeapon.AREA_BONUS, col)
+			for e in in_radius(w.origin(), w.range_() + SvWeapon.AREA_BONUS):
 				damage(e, w.damage(), w.type(), w)
 				_effects(e, w)
 

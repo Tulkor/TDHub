@@ -19,6 +19,10 @@ var best_wave := 0
 var wave_damage := 0.0
 var _kick := 0.0
 
+## Zuschläge wegen der großen Plattform: Zielsuche ab Turmmitte, Flächen (Kegel, Nova) ab dem Platz
+const REACH_BONUS := 1.5
+const AREA_BONUS := 1.2
+
 
 func _init(g, d: Dictionary, s: int) -> void:
 	game = g
@@ -89,6 +93,16 @@ func dps() -> float:
 	return v
 
 
+## Zielsuche ab der Turmmitte: Reichweite plus ein Stück Deck, damit Waffen auf der Rückseite der
+## großen Plattform (Lukas 2026-11-04) nicht leer ausgehen.
+func reach() -> float:
+	return range_() + REACH_BONUS
+
+
+func center() -> Vector3:
+	return Vector3(0, origin().y, 0)
+
+
 func origin() -> Vector3:
 	return yaw.global_position if yaw else Vector3.ZERO
 
@@ -103,11 +117,11 @@ func step(dt: float) -> void:
 	if kind() == "nova":
 		# Novas drehen sich langsam und feuern, sobald ein Gegner im Ring ist
 		yaw.rotation.y += dt * 1.5
-		if cd_left <= 0.0 and game.nearest(origin(), range_()) != null:
+		if cd_left <= 0.0 and game.nearest(origin(), range_() + AREA_BONUS) != null:
 			cd_left = cooldown()
 			game.fire(self, null)
 		return
-	var target = game.nearest(origin(), range_())
+	var target = game.nearest(center(), reach())
 	if target == null:
 		return
 	var d: Vector3 = target.global_position - origin()
