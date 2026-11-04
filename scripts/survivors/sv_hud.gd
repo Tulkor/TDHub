@@ -1,33 +1,41 @@
 class_name SvHud
 extends CanvasLayer
-## Oberfläche von Tower Survivors im Arcade-Stil (UiTheme): Leiste oben (Welle, Zeit, Gold, Tempo),
-## Turm-Werte links, Laden rechts (Waffen + Upgrades), Montageplätze unten, dazu Startfenster,
-## Bonus-Wahl, Spielmenü und Endbildschirm. Liest SvGame, Aktionen rufen dessen Befehle.
+## Oberfläche von Tower Survivors im Hologramm-Stil (UiTheme.HOLO, Entwurf 1 „Cyan-Kommando“, Lukas 2026-11-04):
+## Kopfleiste oben in der Mitte (Welle, Zeit, Gold, Kills, DPS) mit Tempo-Knöpfen, links Waffensysteme und
+## Hülle, rechts Beschaffung und Aufrüsten, unten die Wellen-Zeitleiste. Auswahlkreis um Turm oder Waffe
+## (SvHolo.SelRing). Dazu Startfenster, Bonus-Wahl, Spielmenü und Endbildschirm. Liest SvGame, Aktionen
+## rufen dessen Befehle.
 
-const SHOP_W := 360.0
+const COL_W := 300.0
+const LINE := HoloTheme.LINE
 
 var game  ## SvGame
 var root: Control
+var sel: SvHolo.SelRing
 var _wave: Label
-var _wave_bar: ProgressBar
+var _next: Label
 var _gold: Label
+var _income: Label
 var _kills: Label
 var _dps: Label
 var _speed_buttons: Array = []
 var _pause_button: Button
-var _hp_bar: ProgressBar
-var _hp_label: Label
+var _gauge: SvHolo.Gauge
 var _stats: Label
+var _graph: SvHolo.Graph
 var _perk_list: Label
+var _ruler: SvHolo.Ruler
 var _offer_cards: Array = []     ## {panel, rarity, name, info, button}
 var _reroll: Button
-var _upgrade_rows: Array = []    ## {id, level, button}
-var _slot_cards: Array = []      ## {panel, name, info, sell}
+var _upgrade_rows: Array = []    ## {id, name, seg, level, button}
+var _slot_cards: Array = []      ## {panel, name, info, seg, sell}
+var _slot_count: Label
 var _banner: Label
 var _banner_t := 0.0
 var _overlay: Control            ## Setup, Bonus, Menü, Ende (eins zur Zeit)
 var _overlay_kind := ""
 var _tick := 0.0
+var _graph_t := 0.0
 
 
 func _ready() -> void:
@@ -36,13 +44,16 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = UiTheme.get_theme()
 	add_child(root)
+	sel = SvHolo.SelRing.new()
+	sel.game = game
+	root.add_child(sel)
 	_build_top()
 	_build_left()
-	_build_shop()
-	_build_slots()
+	_build_right()
+	_build_bottom()
 	_banner = Label.new()
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_banner.position.y = 90
+	_banner.position.y = 132
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	UiTheme.title(_banner, 34)
@@ -55,9 +66,9 @@ func _ready() -> void:
 	_set_play_visible(false)
 
 
-func _panel(parent: Node, pad := 10.0) -> PanelContainer:
+func _panel(parent: Node, pad := 10.0, tab := false, ticks := false) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiTheme.panel(pad))
+	p.add_theme_stylebox_override("panel", HoloTheme.holo(pad, 1.0, LINE, tab, ticks))
 	parent.add_child(p)
 	return p
 
@@ -71,166 +82,267 @@ func _label(text: String, parent: Node, size := 15, color := Color.TRANSPARENT, 
 	return l
 
 
-func _bar(parent: Node, fill: Color, h := 12.0) -> ProgressBar:
-	var b := ProgressBar.new()
-	b.show_percentage = false
-	b.custom_minimum_size.y = h
-	b.add_theme_stylebox_override("background", UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER, 0, 2, 0))
-	b.add_theme_stylebox_override("fill", UiTheme.box(fill, Color.TRANSPARENT, 0, 0, 0))
-	parent.add_child(b)
+## Kleine Schrift in Share Tech Mono (Zahlen, Kürzel).
+func _mono(text: String, parent: Node, size := 12, color: Color = UiTheme.DIM) -> Label:
+	var l := _label(text, parent, size, color)
+	l.add_theme_font_override("font", HoloTheme.mono())
+	return l
+
+
+## Kopfzeile einer Tafel: Titel links, Kennung rechts (Share Tech Mono, Cyan).
+func _head(parent: Node, title: String) -> Label:
+	var h := HBoxContainer.new()
+	parent.add_child(h)
+	var t := _mono(str(tr(title)).to_upper(), h, 12, LINE)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return _mono("", h, 12, LINE)
+
+
+func _small_button(text: String, parent: Node, cb: Callable) -> Button:
+	var b := UiUtil.button(text, parent, cb)
+	b.add_theme_font_override("font", HoloTheme.mono())
+	b.add_theme_font_size_override("font_size", 13)
 	return b
 
 
 # ---------------------------------------------------------------- Aufbau
 
 func _build_top() -> void:
-	var p := _panel(root, 8)
-	p.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	p.offset_left = 12
-	p.offset_right = -12
-	p.offset_top = 10
+	var p := PanelContainer.new()
+	var box := HoloTheme.holo(10)
+	box.shape = "trap"
+	box.content_margin_left = 34
+	box.content_margin_right = 34
+	box.content_margin_top = 4
+	box.content_margin_bottom = 6
+	p.add_theme_stylebox_override("panel", box)
+	p.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.offset_left = -270
+	p.offset_right = 270
+	p.offset_top = 12
+	root.add_child(p)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 22)
+	h.add_theme_constant_override("separation", 26)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	p.add_child(h)
-	var t := Label.new()
-	t.text = "Tower Survivors"
-	UiTheme.title(t, 20)
-	h.add_child(t)
-	var wv := VBoxContainer.new()
-	wv.custom_minimum_size.x = 260
-	h.add_child(wv)
-	_wave = _label("", wv, 15, UiTheme.TEXT, true)
-	_wave_bar = _bar(wv, UiTheme.CYAN, 8)
-	_gold = _label("", h, 18, UiTheme.COIN, true)
-	_kills = _label("", h, 15, UiTheme.TEXT)
-	_dps = _label("", h, 15, UiTheme.MUTED)
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(sp)
-	_pause_button = UiUtil.button("Pause", h, func():
+	var cell := func(cap: String) -> Label:
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", -4)
+		h.add_child(v)
+		_mono(str(tr(cap)).to_upper(), v, 11, LINE)
+		var l := _label("", v, 26, UiTheme.TEXT, true)
+		return l
+	_wave = cell.call("Welle")
+	_next = cell.call("Nächste")
+	_gold = cell.call("Gold")
+	_gold.add_theme_color_override("font_color", UiTheme.COIN)
+	_kills = cell.call("Kills")
+	_dps = cell.call("DPS")
+	# Tempo und Menü darunter
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	row.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	row.offset_top = 84
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	root.add_child(row)
+	_pause_button = _small_button("II", row, func():
 		game.paused = not game.paused
 		refresh())
 	for s in [1, 2, 3]:
-		var b := UiUtil.button("%d×" % s, h, func(): _set_speed(s))
+		var b := _small_button("%d×" % s, row, func(): _set_speed(s))
 		b.toggle_mode = true
 		_speed_buttons.append(b)
-	UiUtil.button("Menü", h, toggle_menu)
+	_small_button(tr("Menü").to_upper(), row, toggle_menu)
+	_income = _mono("", row, 12, UiTheme.COIN)
 
 
 func _build_left() -> void:
-	var p := _panel(root, 12)
-	p.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	p.position = Vector2(12, 78)
-	p.custom_minimum_size = Vector2(270, 0)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	col.position = Vector2(16, 16)
+	col.custom_minimum_size.x = COL_W
+	root.add_child(col)
+	# Waffensysteme: ein Eintrag je Montageplatz, Klick wählt die Waffe aus
+	var p := _panel(col, 12, true, true)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
-	UiTheme.caption("Turm", v)
-	_hp_bar = _bar(v, UiTheme.HAVE, 18)
-	_hp_label = _label("", v, 14, UiTheme.TEXT, true)
-	_stats = _label("", v, 13, UiTheme.DIM)
-	UiTheme.caption("Boni", v)
-	_perk_list = _label("", v, 13, UiTheme.PURPLE_LIGHT)
-	_perk_list.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_perk_list.custom_minimum_size.x = 246
-	var hint := _label("Q/E drehen · Mausrad zoomt · Leertaste Pause · R neu würfeln", v, 11, UiTheme.MUTED)
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.custom_minimum_size.x = 246
-
-
-func _build_shop() -> void:
-	var p := _panel(root, 12)
-	p.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-	p.offset_left = -SHOP_W - 12
-	p.offset_right = -12
-	p.offset_top = 78
-	p.offset_bottom = -12
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	p.add_child(scroll)
-	var v := VBoxContainer.new()
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override("separation", 8)
-	scroll.add_child(v)
-	var head := HBoxContainer.new()
-	v.add_child(head)
-	var cap := UiTheme.caption("Waffen", head)
-	cap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_reroll = UiUtil.button("", head, func(): game.reroll())
-	_reroll.tooltip_text = tr("Neue Auswahl im Laden (R). Jede Welle gibt es eine neue kostenlos.")
-	for i in int(game.cfg.shop.offers):
+	_slot_count = _head(v, "Waffensysteme")
+	for i in game.platform.SLOTS:
 		var card := PanelContainer.new()
+		card.mouse_filter = Control.MOUSE_FILTER_STOP
+		card.gui_input.connect(func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and game.weapons[i] != null:
+				sel.select("slot", i)
+				refresh())
 		v.add_child(card)
 		var cv := VBoxContainer.new()
-		cv.add_theme_constant_override("separation", 2)
+		cv.add_theme_constant_override("separation", 1)
 		card.add_child(cv)
 		var top := HBoxContainer.new()
 		cv.add_child(top)
-		var nm := _label("", top, 15, UiTheme.TEXT, true)
+		var nm := _label("", top, 16, UiTheme.TEXT, true)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var rar := _label("", top, 11)
-		var info := _label("", cv, 12, UiTheme.DIM)
-		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		info.custom_minimum_size.x = SHOP_W - 60
-		var b := Button.new()
-		b.pressed.connect(func(): game.buy_offer(i))
-		cv.add_child(b)
+		nm.clip_text = true
+		var sell := _small_button("", top, func(): game.sell(i))
+		sell.add_theme_font_size_override("font_size", 11)
+		var bot := HBoxContainer.new()
+		bot.add_theme_constant_override("separation", 8)
+		cv.add_child(bot)
+		var seg := SvHolo.Seg.new(int(game.cfg.max_level), Vector2(70, 6))
+		seg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bot.add_child(seg)
+		var info := _mono("", bot, 12)
+		_slot_cards.append({"panel": card, "name": nm, "info": info, "seg": seg, "sell": sell})
+	# Hülle: Ringanzeige, Werte, Schadensverlauf, Boni
+	var hp := _panel(col, 12)
+	var hv := VBoxContainer.new()
+	hv.add_theme_constant_override("separation", 6)
+	hp.add_child(hv)
+	_head(hv, "Hülle / Integrität")
+	var hh := HBoxContainer.new()
+	hh.add_theme_constant_override("separation", 10)
+	hv.add_child(hh)
+	_gauge = SvHolo.Gauge.new(128)
+	hh.add_child(_gauge)
+	_stats = _mono("", hh, 12)
+	_stats.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_mono(tr("SCHADENSVERLAUF"), hv, 10, Color(LINE, 0.8))
+	_graph = SvHolo.Graph.new(Vector2(COL_W - 26, 36))
+	hv.add_child(_graph)
+	_perk_list = _mono("", hv, 12, UiTheme.PURPLE_LIGHT)
+	_perk_list.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_perk_list.custom_minimum_size.x = COL_W - 26
+
+
+func _build_right() -> void:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	col.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	col.offset_left = -COL_W - 16
+	col.offset_right = -16
+	col.offset_top = 16
+	col.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	col.custom_minimum_size.x = COL_W
+	root.add_child(col)
+	var p := _panel(col, 12, true)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 7)
+	p.add_child(v)
+	_head(v, "Beschaffung")
+	for i in int(game.cfg.shop.offers):
+		var card := PanelContainer.new()
+		card.mouse_filter = Control.MOUSE_FILTER_STOP
+		v.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		card.add_child(row)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 0)
+		cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(cv)
+		var nm := _label("", cv, 16, UiTheme.TEXT, true)
+		var rar := _mono("", cv, 11)
+		var info := _mono("", cv, 11, UiTheme.MUTED)
+		var b := _small_button("", row, func(): game.buy_offer(i))
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.add_theme_font_size_override("font_size", 15)
 		_offer_cards.append({"panel": card, "rarity": rar, "name": nm, "info": info, "button": b})
-	UiTheme.caption("Upgrades", v)
+	_reroll = UiUtil.button("", v, func(): game.reroll())
+	UiTheme.accent_button(_reroll, LINE, UiTheme.GOLD_DARK)
+	_reroll.tooltip_text = tr("Neue Auswahl im Laden (R). Jede Welle gibt es eine neue kostenlos.")
+	var up := _panel(col, 12, false, true)
+	var uv := VBoxContainer.new()
+	uv.add_theme_constant_override("separation", 4)
+	up.add_child(uv)
+	_head(uv, "Aufrüsten")
 	for u in game.cfg.upgrades:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
-		v.add_child(row)
-		var lv := VBoxContainer.new()
+		row.tooltip_text = tr(str(u.desc))
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
+		uv.add_child(row)
+		var nm := _label(tr(str(u.name)).to_upper(), row, 14, UiTheme.TEXT, true)
+		nm.custom_minimum_size.x = 104
+		nm.mouse_filter = Control.MOUSE_FILTER_PASS
+		nm.tooltip_text = row.tooltip_text
+		var seg := SvHolo.Seg.new(mini(int(u.max), 10), Vector2(64, 7))
+		seg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(seg)
+		var lv := _mono("", row, 11, UiTheme.MUTED)
 		lv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lv.add_theme_constant_override("separation", 0)
-		row.add_child(lv)
-		var nm := _label("", lv, 14, UiTheme.TEXT, true)
-		var d := _label(str(u.desc), lv, 11, UiTheme.MUTED)
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		d.custom_minimum_size.x = 190
 		var id := str(u.id)
-		var b := Button.new()
-		b.custom_minimum_size.x = 96
-		b.pressed.connect(func(): game.buy_upgrade(id))
-		row.add_child(b)
-		_upgrade_rows.append({"id": id, "name": nm, "button": b})
+		var b := _small_button("", row, func(): game.buy_upgrade(id))
+		b.custom_minimum_size.x = 56
+		b.tooltip_text = row.tooltip_text
+		_upgrade_rows.append({"id": id, "name": nm, "seg": seg, "level": lv, "button": b})
 
 
-func _build_slots() -> void:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 10)
-	h.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	h.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	h.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	h.position.y -= 14
-	h.offset_left -= SHOP_W * 0.5
-	h.offset_right -= SHOP_W * 0.5
-	root.add_child(h)
-	for i in game.platform.SLOTS:
-		var card := PanelContainer.new()
-		card.custom_minimum_size = Vector2(176, 104)
-		h.add_child(card)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 2)
-		card.add_child(v)
-		var nm := _label("", v, 14, UiTheme.TEXT, true)
-		nm.clip_text = true
-		var info := _label("", v, 12, UiTheme.DIM)
-		var sp := Control.new()
-		sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		v.add_child(sp)
-		var sell := Button.new()
-		sell.add_theme_font_size_override("font_size", 12)
-		sell.pressed.connect(func(): game.sell(i))
-		v.add_child(sell)
-		_slot_cards.append({"panel": card, "name": nm, "info": info, "sell": sell})
+func _build_bottom() -> void:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 0)
+	v.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	v.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	v.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	v.offset_bottom = -8
+	root.add_child(v)
+	var cap := _mono(tr("WELLEN-ZEITLEISTE · BOSS ALLE %d · BONUS ALLE %d") % [int(game.cfg.waves.boss_every), int(game.cfg.waves.perk_every)], v, 11, UiTheme.DIM)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ruler = SvHolo.Ruler.new()
+	_ruler.count = int(game.cfg.waves.count)
+	_ruler.boss_every = int(game.cfg.waves.boss_every)
+	_ruler.perk_every = int(game.cfg.waves.perk_every)
+	v.add_child(_ruler)
+	var hint := _mono(tr("Klick wählt aus · Q/E drehen · Mausrad zoomt · Leertaste Pause · R neu würfeln"), v, 11, UiTheme.MUTED)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _set_play_visible(on: bool) -> void:
 	for c in root.get_children():
 		if c != _overlay and c != _banner:
 			c.visible = on
+
+
+# ---------------------------------------------------------------- Auswahl
+
+## Klick ins Spielfeld (von SvGame): Waffe auf ihrem Platz, sonst der Turm, sonst Auswahl aufheben.
+func pick(screen: Vector2) -> void:
+	var cam: Camera3D = game.camera
+	var o := cam.project_ray_origin(screen)
+	var d := cam.project_ray_normal(screen)
+	if absf(d.y) < 0.001:
+		sel.clear()
+		return
+	# Ebene etwas über dem Deck, dort sitzen die Waffen
+	var y := SvPlatform.DECK_Y + 0.5
+	var hit := o + d * ((y - o.y) / d.y)
+	var best := -1
+	var best_d := 1.15
+	for i in game.platform.SLOTS:
+		if game.weapons[i] == null:
+			continue
+		var p: Vector3 = game.platform.pads[i].root.global_position
+		var dist := Vector2(hit.x - p.x, hit.z - p.z).length()
+		if dist < best_d:
+			best_d = dist
+			best = i
+	if best >= 0:
+		sel.select("slot", best)
+	elif Vector2(hit.x, hit.z).length() < SvPlatform.DECK_R + 0.6:
+		sel.select("tower")
+	else:
+		sel.clear()
+	refresh()
+
+
+func deselect() -> bool:
+	if not sel.has_selection():
+		return false
+	sel.clear()
+	refresh()
+	return true
 
 
 # ---------------------------------------------------------------- Anzeige
@@ -247,21 +359,12 @@ func _set_speed(s: int) -> void:
 	for k in _speed_buttons.size():
 		var b: Button = _speed_buttons[k]
 		b.set_pressed_no_signal(k + 1 == s)
-		if k + 1 == s:
-			b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN))
-			b.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN))
-			b.add_theme_color_override("font_color", UiTheme.BG)
-			b.add_theme_color_override("font_pressed_color", UiTheme.BG)
-		else:
-			for k2 in ["normal", "pressed"]:
-				b.remove_theme_stylebox_override(k2)
-			b.remove_theme_color_override("font_color")
-			b.remove_theme_color_override("font_pressed_color")
 
 
 func _process(dt: float) -> void:
+	var real := dt / maxf(Engine.time_scale, 0.01)
 	if _banner_t > 0.0:
-		_banner_t -= dt / maxf(Engine.time_scale, 0.01)
+		_banner_t -= real
 		_banner.modulate.a = clampf(_banner_t, 0.0, 1.0)
 	_tick -= dt
 	if _tick <= 0.0 and game.state != "setup":
@@ -282,114 +385,136 @@ func refresh() -> void:
 		_close_overlay()
 	var wv: Dictionary = game.cfg.waves
 	var dur := float(wv.duration)
-	_wave.text = tr("WELLE %d / %d   noch %ds") % [game.wave, int(wv.count), maxi(0, ceili(dur - game.wave_time))]
-	_wave_bar.max_value = dur
-	_wave_bar.value = minf(game.wave_time, dur)
-	_gold.text = tr("%d Gold  +%.0f/s") % [int(game.gold), game.income()]
-	_kills.text = tr("Kills %d") % game.kills
-	_dps.text = tr("DPS %d") % roundi(game.total_dps())
-	_pause_button.text = tr("Weiter") if game.paused else tr("Pause")
+	var left := maxi(0, ceili(dur - game.wave_time))
+	_wave.text = "%02d/%d" % [game.wave, int(wv.count)]
+	_next.text = "00:%02d" % left if left < 60 else "%d:%02d" % [left / 60, left % 60]
+	_gold.text = "%d" % int(game.gold)
+	_income.text = tr("+%.0f/S") % game.income()
+	_kills.text = "%d" % game.kills
+	_dps.text = "%d" % roundi(game.total_dps())
+	# Schadensverlauf: eine Probe je Spielsekunde (läuft mit dem Spieltempo, auch im Zeitraffer der Bilder)
+	if game.play_time < _graph_t:
+		_graph_t = 0.0
+	if game.state == "play" and game.play_time - _graph_t >= 1.0:
+		_graph_t = game.play_time
+		_graph.push(game.total_dps())
+	_ruler.set_pos(float(game.wave - 1) + minf(game.wave_time / dur, 1.0))
+	_pause_button.text = "▶" if game.paused else "II"
 	var mh: float = game.max_hp()
-	_hp_bar.max_value = mh
-	_hp_bar.value = game.hp
-	_hp_label.text = tr("Leben %d / %d") % [roundi(game.hp), roundi(mh)]
+	var f: float = game.hp / maxf(mh, 1.0)
+	_gauge.set_value(f, "%d%%" % roundi(f * 100.0), "%d/%d" % [roundi(game.hp), roundi(mh)], LINE if f > 0.3 else UiTheme.MISSING)
 	_stats.text = "\n".join([
-		tr("Rüstung %d (−%d %% Schaden)") % [roundi(game.armor()), roundi(100.0 * game.armor() * 0.05 / (1.0 + game.armor() * 0.05))],
-		tr("Reparatur %.1f / s") % game.regen(),
-		tr("Dornen %d %%") % roundi(game.thorns() * 100.0),
-		tr("Schaden +%d %%   Tempo +%d %%") % [roundi(game.mod("damage") * 100.0), roundi(game.mod("rate") * 100.0)],
-		tr("Reichweite +%d %%") % roundi(game.mod("range") * 100.0),
+		tr("PANZ ..... %d") % roundi(game.armor()),
+		tr("REP .. %.1f/S") % game.regen(),
+		tr("DORN ..... %d%%") % roundi(game.thorns() * 100.0),
+		tr("SCHADEN . +%d%%") % roundi(game.mod("damage") * 100.0),
+		tr("TEMPO ... +%d%%") % roundi(game.mod("rate") * 100.0),
+		tr("REICHW .. +%d%%") % roundi(game.mod("range") * 100.0),
 	])
 	var pk: Array = []
 	for id in game.perks:
 		pk.append(tr(str(game.perk_defs[id].name)))
-	_perk_list.text = ", ".join(pk) if not pk.is_empty() else tr("alle 5 Wellen einer aus drei")
-	_reroll.text = tr("Neu würfeln %d") % game.reroll_price()
+	_perk_list.text = tr("BONI: %s") % (", ".join(pk) if not pk.is_empty() else tr("alle 5 Wellen einer aus drei"))
+	_reroll.text = tr("↻ NEU WÜRFELN · %d") % game.reroll_price()
 	_reroll.disabled = game.gold < game.reroll_price() or game.state != "play"
 	for i in _offer_cards.size():
 		_fill_offer(i)
 	for r in _upgrade_rows:
 		var u: Dictionary = game.upgrade_defs[r.id]
 		var lv: int = game.upgrade_level(r.id)
-		r.name.text = "%s  %d/%d" % [tr(str(u.name)), lv, int(u.max)]
+		r.seg.set_value(float(lv) / float(u.max))
+		r.level.text = "%d/%d" % [lv, int(u.max)]
 		var cost: int = game.upgrade_price(r.id)
 		var b: Button = r.button
-		b.text = tr("max") if cost < 0 else "%d" % cost
+		b.text = tr("MAX") if cost < 0 else "%d" % cost
 		b.disabled = cost < 0 or game.gold < cost or game.state != "play"
+	var armed := 0
 	for i in _slot_cards.size():
 		_fill_slot(i)
+		if game.weapons[i] != null:
+			armed += 1
+	_slot_count.text = "%d/%d" % [armed, game.slots_open]
 
 
 func _fill_offer(i: int) -> void:
 	var c: Dictionary = _offer_cards[i]
 	var id: String = game.offers[i] if i < game.offers.size() else ""
 	var b: Button = c.button
+	var p: PanelContainer = c.panel
 	if id == "":
-		c.panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER, 0, 2, 8))
-		c.name.text = tr("gekauft")
+		p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(LINE, 0.03), Color(LINE, 0.25), 9))
+		c.name.text = tr("GEKAUFT")
 		c.name.add_theme_color_override("font_color", UiTheme.MUTED)
 		c.rarity.text = ""
 		c.info.text = ""
+		p.tooltip_text = ""
 		b.visible = false
 		return
 	var w: Dictionary = game.weapon_defs[id]
 	var rc: Color = game.rarity_color(str(w.rarity))
-	c.panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_2, rc, 0, 2, 8))
-	c.name.text = tr(str(w.name))
+	p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(rc, 0.08), rc, 9))
+	c.name.text = tr(str(w.name)).to_upper()
 	c.name.add_theme_color_override("font_color", UiTheme.TEXT)
-	c.rarity.text = tr(str(game.cfg.rarities[str(w.rarity)].name)).to_upper()
-	c.rarity.add_theme_color_override("font_color", rc)
 	var tname := tr(str(game.cfg.damage_types[str(w.type)].name))
-	c.info.text = "%s · %s\n%s" % [tname, _numbers(w), tr(str(w.desc))]
-	c.info.add_theme_color_override("font_color", UiTheme.DIM)
+	c.rarity.text = "%s · %s" % [tr(str(game.cfg.rarities[str(w.rarity)].name)).to_upper(), tname.to_upper()]
+	c.rarity.add_theme_color_override("font_color", rc)
+	c.info.text = _numbers(w)
+	p.tooltip_text = tr(str(w.desc))
 	b.visible = true
 	var cost: int = game.price(id)
 	var slot: int = game.target_slot(id)
 	var owned = game.weapons[slot] if slot >= 0 else null
 	if slot < 0:
-		b.text = tr("Kein freier Platz")
+		b.text = tr("VOLL")
 	elif owned != null:
-		b.text = tr("Stufe %d · %d Gold") % [owned.level + 1, cost]
+		b.text = tr("STF %d · %d") % [owned.level + 1, cost]
 	else:
-		b.text = tr("Kaufen · %d Gold") % cost
+		b.text = "%d" % cost
 	b.disabled = slot < 0 or game.gold < cost or game.state != "play"
 
 
 ## Kurzwerte einer Waffe auf Stufe 1: Schaden, Takt, Reichweite.
 func _numbers(w: Dictionary) -> String:
-	var s := tr("%d Schaden") % int(w.damage)
+	var s := tr("%d SCH") % int(w.damage)
 	if int(w.get("shots", 1)) > 1:
 		s += " ×%d" % int(w.shots)
-	return s + tr(" · alle %.2fs · %d m") % [float(w.cooldown), roundi(float(w.range))]
+	return s + tr(" · %.2fS · %d M") % [float(w.cooldown), roundi(float(w.range))]
 
 
 func _fill_slot(i: int) -> void:
 	var c: Dictionary = _slot_cards[i]
 	var p: PanelContainer = c.panel
 	var sell: Button = c.sell
+	var seg: SvHolo.Seg = c.seg
 	if i >= game.slots_open:
-		p.add_theme_stylebox_override("panel", UiTheme.box(Color(UiTheme.BG, 0.85), UiTheme.BORDER, 0, 2, 8))
-		c.name.text = tr("GESPERRT")
-		c.name.add_theme_color_override("font_color", UiTheme.MUTED)
-		c.info.text = tr("Upgrade Montageplatz")
+		p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(UiTheme.MISSING, 0.05), Color(UiTheme.MISSING, 0.45), 9))
+		c.name.text = tr("P%d · GESPERRT") % (i + 1)
+		c.name.add_theme_color_override("font_color", Color(UiTheme.MISSING, 0.9))
+		c.info.text = tr("AUFRÜSTEN: MONTAGEPLATZ")
+		seg.visible = false
 		sell.visible = false
 		return
 	var w = game.weapons[i]
 	if w == null:
-		p.add_theme_stylebox_override("panel", UiTheme.box(Color(UiTheme.PANEL, 0.9), UiTheme.BORDER_2, 0, 2, 8))
-		c.name.text = tr("FREI")
+		p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(LINE, 0.03), Color(LINE, 0.3), 9))
+		c.name.text = tr("P%d · FREI") % (i + 1)
 		c.name.add_theme_color_override("font_color", UiTheme.MUTED)
-		c.info.text = tr("Waffe im Laden kaufen")
+		c.info.text = tr("WAFFE IM LADEN KAUFEN")
+		seg.visible = false
 		sell.visible = false
 		return
 	var rc: Color = game.rarity_color(str(w.data.rarity))
-	p.add_theme_stylebox_override("panel", UiTheme.panel(8, 0.95, rc))
-	c.name.text = tr(str(w.data.name))
-	c.name.add_theme_color_override("font_color", game.type_color(w.type()))
-	var stars := "■".repeat(w.level) + "□".repeat(int(game.cfg.max_level) - w.level)
-	c.info.text = "%s\n%s" % [stars, tr("DPS %d · %d Kills") % [roundi(w.dps()), w.kills]]
+	var picked := sel.selected_slot() == i
+	p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(rc, 0.22 if picked else 0.08), Color.WHITE if picked else rc, 9))
+	c.name.text = "P%d %s" % [i + 1, tr(str(w.data.name)).to_upper()]
+	c.name.add_theme_color_override("font_color", UiTheme.TEXT)
+	seg.visible = true
+	seg.n = int(game.cfg.max_level)
+	seg.set_value(float(w.level) / float(game.cfg.max_level), rc)
+	c.info.text = tr("%s · %d DPS · %d K") % [tr(str(game.cfg.damage_types[w.type()].name)).to_upper(), roundi(w.dps()), w.kills]
 	sell.visible = true
-	sell.text = tr("Verkaufen +%d") % roundi(float(game.paid[i]) * float(game.cfg.sell_factor))
+	sell.text = "+%d" % roundi(float(game.paid[i]) * float(game.cfg.sell_factor))
+	sell.tooltip_text = tr("Verkaufen")
 	sell.disabled = game.state == "over"
 
 

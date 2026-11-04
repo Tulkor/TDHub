@@ -1,7 +1,7 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad)
+##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad --auswahl=turm|1..6 --abwahl)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -481,6 +481,20 @@ func _prepare_survivors(game: Node) -> void:
 	if opts.has("nah"):
 		game.cam_dist = 17.0 if opts.has("klappe") else 19.0
 		game._place_camera()
+	# --auswahl=turm|1..6 zeigt den Auswahlkreis, --abwahl dazu den Moment beim Abwählen (Kreis wächst und verblasst)
+	if opts.has("auswahl"):
+		var a := str(opts.auswahl)
+		if a == "turm":
+			game.hud.sel.select("tower")
+		else:
+			game.hud.sel.select("slot", int(a) - 1)
+		game.hud.refresh()
+		await get_tree().create_timer(0.4, true, false, true).timeout
+		if opts.has("abwahl"):
+			game.hud.deselect()
+			await get_tree().create_timer(0.12, true, false, true).timeout
+			await get_tree().process_frame
+			return
 	await _frames(12)
 
 
