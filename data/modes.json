@@ -51,6 +51,16 @@
 			"hint": "Elemente erforschen, Tower würfeln oder kaufen, Items sammeln, feste Wege. Koop bis 4 Spieler, jeder mit eigenem Weg. Spieler-XP bleibt über Partien.",
 			"needs_map": true,
 			"coop_only": true
+		},
+		{
+			"id": "heroes",
+			"name": "Bollwerk",
+			"ready": true,
+			"min_players": 1,
+			"max_players": 1,
+			"scene": "res://scenes/heroes_game.tscn",
+			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
+			"needs_map": false
 		}
 	]
 }

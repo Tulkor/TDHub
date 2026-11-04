@@ -51,7 +51,7 @@ func _test_modes() -> void:
 	for m in Database.modes:
 		m.ready = true
 		m.scene = Session.GAME
-		m.max_players = 1 if m.id in ["shoppingmaul", "youtd"] else 8
+		m.max_players = 1 if m.id in ["shoppingmaul", "youtd", "heroes"] else 8
 
 
 func _wait(cond: Callable, seconds: float) -> bool:
