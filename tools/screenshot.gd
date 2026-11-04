@@ -5,6 +5,7 @@ extends Node
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
+##   --hudbreite=80          Breite der mittigen HUD-Fläche in Prozent (60–100, wird nicht gespeichert)
 ##   --ui=70                 UI-Größe in Prozent (50–100), wird nicht gespeichert
 ##   --lobby=Anna,Ben,Max    (mit --seite=lobby) als Host mit diesen Mitspielern, --felder=0,1,1,2 Feld je Spieler
 ##                           (Host zuerst), --stimme=eevetd Modus vorwählen, --relay=127.0.0.1:24565 über einen Relay
@@ -162,6 +163,8 @@ func _ready() -> void:
 	# Fenster so groß wie der Xvfb-Bildschirm (--groesse), nicht die gespeicherte Auflösung
 	Display.resolution = DisplayServer.screen_get_size()
 	Display.fullscreen = false
+	if opts.has("hudbreite"):
+		Display.hud_width = clampf(float(opts.hudbreite) / 100.0, Display.HUD_WIDTH_MIN, 1.0)
 	if opts.has("ui"):
 		Display.ui_scale = clampf(float(opts.ui) / 100.0, Display.UI_SCALE_MIN, Display.UI_SCALE_MAX)
 	Display._apply()

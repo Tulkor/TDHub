@@ -153,6 +153,7 @@ var _gems: Array = []
 var _used_key := []
 var _selection: Dictionary = {}
 var _speed := -1.0
+var top_bar: PanelContainer  ## obere Leiste, reicht auch bei schmaler HUD-Fläche über die ganze Breite
 
 
 func _ready() -> void:
@@ -193,6 +194,9 @@ func _ready() -> void:
 	_build_pause_banner()
 	_build_hover_card()
 	root.resized.connect(_recenter)
+	_fit_width()
+	get_viewport().size_changed.connect(_fit_width)
+	Display.hud_width_changed.connect(_fit_width)
 
 	message_label = Label.new()
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -328,6 +332,20 @@ func _vsep(parent: Node) -> void:
 	separators.append(s)
 
 
+## Bei breiten Fenstern (oder kleinerer HUD-Breite in den Einstellungen) rückt alles in eine mittige Fläche.
+func _fit_width() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var cut := maxf(0.0, (view.x - Display.hud_span(view)) / 2.0)
+	root.offset_left = cut
+	root.offset_right = -cut
+	# Die obere Leiste bleibt als Band über die ganze Breite, nur ihr Inhalt rückt nach innen
+	top_bar.offset_left = -cut
+	top_bar.offset_right = cut
+	var st := top_bar.get_theme_stylebox("panel")
+	st.content_margin_left = 14 + cut
+	st.content_margin_right = 14 + cut
+
+
 func _build_top_bar() -> void:
 	var bar := PanelContainer.new()
 	var bar_style := UiTheme.box(UiTheme.PANEL, Color.TRANSPARENT, 0, 0, 14)
@@ -340,6 +358,7 @@ func _build_top_bar() -> void:
 	bar.anchor_right = 1.0
 	bar.custom_minimum_size.y = 52
 	root.add_child(bar)
+	top_bar = bar
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 5)
 	bar.add_child(h)

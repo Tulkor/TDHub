@@ -17,6 +17,12 @@ var ui_scale := 1.0  ## Größe der ganzen Oberfläche, 0,5 bis 1,0 (3D-Ansicht 
 var path_lights := false  ## Lichtpfad: Lichter fliegen den Gegnerweg entlang (PathLights, Knopf im HUD)
 var style_filter := true  ## Stil-Filter je Modus über dem 3D-Bild (StyleFilter), in den Einstellungen abschaltbar
 signal style_filter_changed(on: bool)
+## Breite des Spiel-HUDs: Leisten und Fenster liegen in einer mittigen Fläche, höchstens HUD_ASPECT breit
+## (16:9, breitere Bildschirme bekommen links und rechts nur Spielfeld) und davon hud_width Anteil.
+signal hud_width_changed
+const HUD_ASPECT := 16.0 / 9.0
+const HUD_WIDTH_MIN := 0.6
+var hud_width := 1.0
 ## Grafikqualität: Niedrig, Mittel, Hoch. Was sie je Stufe ändert, steht in QUALITY; Szenen lesen dazu
 ## Display.quality (z. B. Laternenlichter in eeveTD) und hören auf quality_changed. "lod": ab wie vielen Pixeln
 ## Abweichung Godot auf die vereinfachten Fassungen der Modelle wechselt (Bäume im Wald haben 3000–5000 Dreiecke).
@@ -39,6 +45,7 @@ func _ready() -> void:
 		ui_scale = clampf(float(cfg.get_value("display", "ui_scale", 1.0)), UI_SCALE_MIN, UI_SCALE_MAX)
 		path_lights = bool(cfg.get_value("display", "path_lights", false))
 		style_filter = bool(cfg.get_value("display", "style_filter", true))
+		hud_width = clampf(float(cfg.get_value("display", "hud_width", 1.0)), HUD_WIDTH_MIN, 1.0)
 	quality = clampi(int(cfg.get_value("display", "quality", _default_quality())), LOW, HIGH)
 	_sharpen_fonts()
 	_apply()
@@ -61,6 +68,17 @@ func set_ui_scale(v: float) -> void:
 	ui_scale = clampf(v, UI_SCALE_MIN, UI_SCALE_MAX)
 	_apply()
 	_save()
+
+
+func set_hud_width(v: float) -> void:
+	hud_width = clampf(v, HUD_WIDTH_MIN, 1.0)
+	hud_width_changed.emit()
+	_save()
+
+
+## Breite der mittigen HUD-Fläche in UI-Pixeln für ein Fenster dieser Größe (UI-Pixel, nach ui_scale).
+func hud_span(view: Vector2) -> float:
+	return minf(view.x, view.y * HUD_ASPECT) * hud_width
 
 
 func set_path_lights(on: bool) -> void:
@@ -150,5 +168,6 @@ func _save() -> void:
 	cfg.set_value("display", "ui_scale", ui_scale)
 	cfg.set_value("display", "path_lights", path_lights)
 	cfg.set_value("display", "style_filter", style_filter)
+	cfg.set_value("display", "hud_width", hud_width)
 	cfg.set_value("display", "quality", quality)
 	cfg.save(SETTINGS)
