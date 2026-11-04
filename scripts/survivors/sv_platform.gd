@@ -33,8 +33,8 @@ var _t := 0.0
 
 
 func _ready() -> void:
-	var metal := SvDev.mat(Color("5a6070"))
-	var dark := SvDev.mat(Color("2c2f38"))
+	var metal := SvDev.metal(Color("8a909c"))
+	var dark := SvDev.metal(Color("4a4f5a"))
 	# Fuß, schlanke Säule, die sich nach oben zum Deck hin aufweitet (Lukas 2026-11-04)
 	var foot := _cyl(2.0, 2.3, 0.35, 6, dark)
 	foot.position.y = 0.17
@@ -53,7 +53,7 @@ func _ready() -> void:
 		add_child(strip)
 		strip.look_at_from_position((bottom + top) * 0.5, top, Vector3.UP)
 
-	var deck := _cyl(DECK_R, DECK_R - 0.15, 0.45, 6, SvDev.mat(Color("8a90a0")))
+	var deck := _cyl(DECK_R, DECK_R - 0.15, 0.45, 6, SvDev.diamond_plate(Color("a3a8b2")))
 	deck.position.y = DECK_Y - 0.22
 	_railing()
 
@@ -62,19 +62,24 @@ func _ready() -> void:
 	ring_lo.position.y = DECK_Y + 0.15
 	var ring_hi := _cyl(1.0, 1.0, 0.25, 12, dark)
 	ring_hi.position.y = DECK_Y + 2.2
-	var glass := _cyl(0.88, 0.88, 1.8, 24, SvDev.glass())
-	glass.position.y = DECK_Y + 1.2
+	# untere Hälfte Metall, obere Hälfte Glas (Lukas 2026-11-04)
+	var lower := _cyl(0.9, 0.95, 0.95, 12, metal)
+	lower.position.y = DECK_Y + 0.75
+	var mid := _cyl(1.0, 1.0, 0.12, 12, dark)
+	mid.position.y = DECK_Y + 1.22
+	var glass := _cyl(0.88, 0.88, 0.95, 24, SvDev.glass())
+	glass.position.y = DECK_Y + 1.7
 	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_core_mat = SvDev.glow(UiTheme.CYAN, 4.0).duplicate()
-	core_glow = _cyl(0.22, 0.22, 1.6, 12, _core_mat)
-	core_glow.position.y = DECK_Y + 1.2
+	core_glow = _cyl(0.2, 0.2, 0.85, 12, _core_mat)
+	core_glow.position.y = DECK_Y + 1.7
 	var orb := MeshInstance3D.new()
 	var om := SphereMesh.new()
-	om.radius = 0.42
-	om.height = 0.84
+	om.radius = 0.34
+	om.height = 0.68
 	orb.mesh = om
 	orb.material_override = _core_mat
-	orb.position.y = DECK_Y + 1.2
+	orb.position.y = DECK_Y + 1.7
 	add_child(orb)
 	_core_orb = orb
 	_core_light = OmniLight3D.new()
@@ -82,7 +87,7 @@ func _ready() -> void:
 	_core_light.light_energy = 3.0
 	_core_light.omni_range = 9.0
 	_core_light.shadow_enabled = false
-	_core_light.position.y = DECK_Y + 1.2
+	_core_light.position.y = DECK_Y + 1.7
 	add_child(_core_light)
 	# Deckel und Antenne mit Blinklicht
 	var lid := _cyl(0.7, 1.0, 0.3, 12, metal)
@@ -187,7 +192,7 @@ static func _mi(mesh: Mesh, mat: Material, parent: Node) -> MeshInstance3D:
 func _build_pad(root: Node3D) -> Dictionary:
 	var h := hex(HEX_R)
 	# Rand mit Leuchtband (Zustand: gesperrt, frei, Seltenheitsfarbe)
-	var frame := _mi(prism(hex(HEX_R + 0.06), -0.02, 0.05), SvDev.mat(Color("2c2f38"), 1.0), root)
+	var frame := _mi(prism(hex(HEX_R + 0.06), -0.02, 0.05), SvDev.metal(Color("4a4f5a"), 1.0), root)
 	var band := _mi(prism(hex(HEX_R + 0.075), 0.0, 0.03), SvDev.flat(Color("3a3f4d")), root)
 	frame.name = "Rahmen"
 	# Schacht: schwarz, sichtbar, wenn die Klappe offen ist
@@ -195,7 +200,7 @@ func _build_pad(root: Node3D) -> Dictionary:
 	var lift := Node3D.new()
 	lift.position.y = LIFT_DOWN
 	root.add_child(lift)
-	_mi(prism(hex(HEX_R - 0.06), -0.08, 0.06), SvDev.mat(Color("4a5060"), 1.0), lift)
+	_mi(prism(hex(HEX_R - 0.06), -0.08, 0.06), SvDev.diamond_plate(Color("8a909c"), 2.5), lift)
 	var mount := Node3D.new()
 	mount.position.y = 0.06
 	mount.scale = Vector3.ONE * WEAPON_SCALE
@@ -214,11 +219,11 @@ func _build_pad(root: Node3D) -> Dictionary:
 			shifted.append(v + out_dir * GAP * 0.5)
 		var half := Node3D.new()
 		root.add_child(half)
-		_mi(prism(shifted, 0.04, HATCH_TOP), SvDev.mat(Color("5c5f66"), 1.0), half)
+		_mi(prism(shifted, 0.04, HATCH_TOP), SvDev.diamond_plate(Color("9a9fa8"), 2.5), half)
 		# helle Kante parallel zur Naht (Skizze, Ausschnitt)
 		var strip := _strip(shifted, out_dir, 0.05, 0.1)
 		if strip.size() >= 3:
-			_mi(prism(strip, HATCH_TOP, HATCH_TOP + 0.006), SvDev.mat(Color("8d9099"), 1.0), half)
+			_mi(prism(strip, HATCH_TOP, HATCH_TOP + 0.006), SvDev.metal(Color("c8ccd4"), 1.0), half)
 		# Warnstreifen quer über die Mitte
 		var cross := PackedVector2Array([Vector2(-2, -0.11), Vector2(2, -0.11), Vector2(2, 0.11), Vector2(-2, 0.11)])
 		for part in Geometry2D.intersect_polygons(shifted, cross):
@@ -386,7 +391,7 @@ func set_health(f: float) -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	_core_orb.scale = Vector3.ONE * (1.0 + sin(_t * 3.0) * 0.06)
-	_core_orb.position.y = DECK_Y + 1.2 + sin(_t * 1.3) * 0.12
+	_core_orb.position.y = DECK_Y + 1.7 + sin(_t * 1.3) * 0.08
 	_core_light.light_energy = 3.0 + sin(_t * 3.0) * 0.4
 	# Antenne blinkt
 	var on := fmod(_t, 1.4) < 0.18
@@ -410,7 +415,7 @@ func _cyl(top: float, bottom: float, h: float, seg: int, m: Material) -> MeshIns
 ## Geländer am Deckrand: Pfosten, zwei Holme, Warnlämpchen an den Ecken.
 func _railing() -> void:
 	var r := DECK_R - 0.12
-	var m := SvDev.mat(Color("a7adba"), 1.0)
+	var m := SvDev.metal(Color("5f86c8"), 1.0)  # Geländer leicht blau
 	var corners: Array = []
 	for k in 6:
 		var ang := TAU * k / 6.0

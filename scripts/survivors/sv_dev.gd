@@ -74,6 +74,96 @@ static func hazard() -> StandardMaterial3D:
 	return m
 
 
+## Gebürstetes Metall (feine Längsstreifen als Rauheit), triplanar. scale: Wiederholungen je Einheit.
+static func metal(c: Color, scale := 0.5) -> StandardMaterial3D:
+	var key := "metal|%s|%s" % [c.to_html(), scale]
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.albedo_texture = _brushed()
+	m.metallic = 0.75
+	m.roughness = 0.42
+	m.metallic_specular = 0.6
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale
+	_mats[key] = m
+	return m
+
+
+static func _brushed() -> Texture2D:
+	if _tex.has("brushed"):
+		return _tex.brushed
+	var px := 128
+	var img := Image.create(px, px, false, Image.FORMAT_RGBA8)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var rows: Array = []
+	for y in px:
+		rows.append(rng.randf_range(0.86, 1.0))
+	for y in px:
+		for x in px:
+			var v: float = rows[y] * rng.randf_range(0.97, 1.0)
+			img.set_pixel(x, y, Color(v, v, v))
+	img.generate_mipmaps()
+	var t := ImageTexture.create_from_image(img)
+	_tex.brushed = t
+	return t
+
+
+## Riffelblech: Tränen-Noppen im Wechsel ±45°, als Höhe gemalt und daraus eine Normal-Map.
+## Ein Bild sind 0,6 Einheiten (scale = Wiederholungen je Einheit).
+static func diamond_plate(c: Color, scale := 1.6) -> StandardMaterial3D:
+	var key := "riffel|%s|%s" % [c.to_html(), scale]
+	if _mats.has(key):
+		return _mats[key]
+	if not _tex.has("riffel_h"):
+		var px := 128
+		var h := Image.create(px, px, false, Image.FORMAT_RGBA8)
+		h.fill(Color(0, 0, 0))
+		var cell := px / 4.0
+		for gy in 4:
+			for gx in 4:
+				var center := Vector2((gx + 0.5) * cell, (gy + 0.5) * cell)
+				var ang := PI / 4.0 if (gx + gy) % 2 == 0 else -PI / 4.0
+				var dir := Vector2(cos(ang), sin(ang))
+				var side := Vector2(-dir.y, dir.x)
+				for y in range(int(center.y - cell * 0.5), int(center.y + cell * 0.5)):
+					for x in range(int(center.x - cell * 0.5), int(center.x + cell * 0.5)):
+						var d := Vector2(x + 0.5, y + 0.5) - center
+						var a := d.dot(dir) / (cell * 0.42)
+						var b := d.dot(side) / (cell * 0.11)
+						var q := a * a + b * b
+						if q < 1.0:
+							var v := sqrt(1.0 - q)
+							h.set_pixel(posmod(x, px), posmod(y, px), Color(v, v, v))
+		var n := h.duplicate() as Image
+		n.bump_map_to_normal_map(6.0)
+		n.generate_mipmaps()
+		_tex.riffel_n = ImageTexture.create_from_image(n)
+		var alb := Image.create(px, px, false, Image.FORMAT_RGBA8)
+		for y in px:
+			for x in px:
+				var v := 0.82 + h.get_pixel(x, y).r * 0.18
+				alb.set_pixel(x, y, Color(v, v, v))
+		alb.generate_mipmaps()
+		_tex.riffel_h = ImageTexture.create_from_image(alb)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.albedo_texture = _tex.riffel_h
+	m.normal_enabled = true
+	m.normal_texture = _tex.riffel_n
+	m.normal_scale = 1.0
+	m.metallic = 0.8
+	m.roughness = 0.38
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale
+	_mats[key] = m
+	return m
+
+
 ## Selbstleuchtend (über der Glow-Schwelle, strahlt bei Nacht).
 static func glow(c: Color, energy := 3.0) -> StandardMaterial3D:
 	var key := "glow|%s|%s" % [c.to_html(), energy]

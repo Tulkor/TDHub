@@ -97,8 +97,18 @@ func _build_world() -> void:
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = Color("04060c")
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color("3a4a78")
+	e.ambient_light_color = Color("4c5262")
 	e.ambient_light_energy = 0.35
+	# Himmel nur für Spiegelungen (Metall), sichtbar bleibt der dunkle Hintergrund
+	var sky := Sky.new()
+	var sm := ProceduralSkyMaterial.new()
+	sm.sky_top_color = Color("22262f")
+	sm.sky_horizon_color = Color("5d626e")
+	sm.ground_bottom_color = Color("0c0f18")
+	sm.ground_horizon_color = Color("3a4560")
+	sky.sky_material = sm
+	e.sky = sky
+	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = true
 	e.glow_intensity = 0.9
@@ -112,7 +122,7 @@ func _build_world() -> void:
 	world.add_child(env)
 	var moon := DirectionalLight3D.new()
 	moon.rotation_degrees = Vector3(-55, -35, 0)
-	moon.light_color = Color("9fb4ff")
+	moon.light_color = Color("c3cde6")
 	moon.light_energy = 0.3
 	moon.shadow_enabled = Display.quality > 0
 	world.add_child(moon)
