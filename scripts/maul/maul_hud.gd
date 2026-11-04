@@ -11,6 +11,8 @@ const ABIL_H := 84.0  ## feste Höhe der Fähigkeiten im Auswahlfenster (mehr sc
 
 var game: MaulGame
 var root: Control
+var full: Control  ## ganze Fensterfläche über root
+var _top_bar: PanelContainer
 
 var _level: Label
 var _next: Label
@@ -60,6 +62,12 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = UiTheme.get_theme()
 	add_child(root)
+	# Vollfläche über dem ganzen Fenster für Abdunklungen und Filialwahl (root ist bei breiten Fenstern schmaler)
+	full = Control.new()
+	full.set_anchors_preset(Control.PRESET_FULL_RECT)
+	full.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	full.theme = root.theme
+	add_child(full)
 	_build_top_bar()
 	_build_shop()
 	_build_selection()
@@ -82,6 +90,23 @@ func _ready() -> void:
 	_banner.add_theme_constant_override("shadow_offset_x", 2)
 	_banner.add_theme_constant_override("shadow_offset_y", 3)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fit_width()
+	get_viewport().size_changed.connect(_fit_width)
+	Display.hud_width_changed.connect(_fit_width)
+
+
+## Bei breiten Fenstern (oder kleinerer HUD-Breite) rückt alles in eine mittige Fläche, die obere Leiste bleibt
+## als Band über die ganze Breite und nur ihr Inhalt rückt nach innen.
+func _fit_width() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var cut := maxf(0.0, (view.x - Display.hud_span(view)) / 2.0)
+	root.offset_left = cut
+	root.offset_right = -cut
+	_top_bar.offset_left = -cut
+	_top_bar.offset_right = cut
+	var st := _top_bar.get_theme_stylebox("panel")
+	st.content_margin_left = 10 + cut
+	st.content_margin_right = 10 + cut
 
 
 # --- Leiste oben ------------------------------------------------------------------
@@ -94,6 +119,7 @@ func _build_top_bar() -> void:
 	bar.add_theme_stylebox_override("panel", style)
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	root.add_child(bar)
+	_top_bar = bar
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 22)
 	bar.add_child(row)
@@ -243,7 +269,7 @@ func _build_menu() -> void:
 	UiUtil.button("Hauptmenü", box, func(): Session.goto(Session.MAIN_MENU))
 	_menu = panel
 	settings_panel = SettingsPanel.new(false, true)
-	root.add_child(settings_panel)
+	full.add_child(settings_panel)
 
 
 ## Menü-Knopf und Esc: offenes Einstellungsfenster zuerst schließen.
@@ -1176,7 +1202,7 @@ func refresh_message() -> void:
 func show_setup() -> void:
 	_setup = MaulSetup.new()
 	_setup.game = game
-	root.add_child(_setup)
+	full.add_child(_setup)
 
 
 func hide_setup() -> void:
@@ -1201,7 +1227,7 @@ func show_game_over(victory: bool) -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BG, 0.7)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(dim)
+	full.add_child(dim)
 	_game_over = dim
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiTheme.panel(22))

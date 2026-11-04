@@ -2633,5 +2633,7 @@
 	"Pause (Taste P)": "Pause (P key)",
 	"P: weiter": "P: resume",
 	"Nach Sorte": "By type",
-	"DPS": "DPS"
+	"DPS": "DPS",
+	"HUD-Breite": "HUD width",
+	"Wie breit die Leisten und Fenster im Spiel sein dürfen. Auf breiten Bildschirmen liegt alles ohnehin höchstens in einer mittigen 16:9-Fläche; kleiner rückt alles weiter zur Mitte.": "How wide the in-game bars and windows may be. On wide screens everything already stays within a centred 16:9 area; lower values move everything further toward the centre."
 }

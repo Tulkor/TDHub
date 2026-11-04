@@ -153,6 +153,8 @@ var _gems: Array = []
 var _used_key := []
 var _selection: Dictionary = {}
 var _speed := -1.0
+var full: Control  ## ganze Fensterfläche über root (root ist bei breiten Fenstern schmaler)
+var top_bar: PanelContainer  ## obere Leiste, reicht auch bei schmaler HUD-Fläche über die ganze Breite
 
 
 func _ready() -> void:
@@ -163,6 +165,12 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+	# Vollfläche über dem ganzen Fenster für Abdunklungen, Hover-Karte und Auswahlrahmen
+	full = Control.new()
+	full.theme = root.theme
+	full.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	full.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(full)
 	_build_top_bar()
 	_build_banner()
 	_build_pinned()
@@ -193,6 +201,9 @@ func _ready() -> void:
 	_build_pause_banner()
 	_build_hover_card()
 	root.resized.connect(_recenter)
+	_fit_width()
+	get_viewport().size_changed.connect(_fit_width)
+	Display.hud_width_changed.connect(_fit_width)
 
 	message_label = Label.new()
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -328,6 +339,20 @@ func _vsep(parent: Node) -> void:
 	separators.append(s)
 
 
+## Bei breiten Fenstern (oder kleinerer HUD-Breite in den Einstellungen) rückt alles in eine mittige Fläche.
+func _fit_width() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var cut := maxf(0.0, (view.x - Display.hud_span(view)) / 2.0)
+	root.offset_left = cut
+	root.offset_right = -cut
+	# Die obere Leiste bleibt als Band über die ganze Breite, nur ihr Inhalt rückt nach innen
+	top_bar.offset_left = -cut
+	top_bar.offset_right = cut
+	var st := top_bar.get_theme_stylebox("panel")
+	st.content_margin_left = 14 + cut
+	st.content_margin_right = 14 + cut
+
+
 func _build_top_bar() -> void:
 	var bar := PanelContainer.new()
 	var bar_style := UiTheme.box(UiTheme.PANEL, Color.TRANSPARENT, 0, 0, 14)
@@ -340,6 +365,7 @@ func _build_top_bar() -> void:
 	bar.anchor_right = 1.0
 	bar.custom_minimum_size.y = 52
 	root.add_child(bar)
+	top_bar = bar
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 5)
 	bar.add_child(h)
@@ -512,7 +538,7 @@ func _build_hover_card() -> void:
 	hover_card = PanelContainer.new()
 	hover_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hover_card.add_theme_stylebox_override("panel", UiTheme.panel(8.0, 0.95))
-	root.add_child(hover_card)
+	full.add_child(hover_card)
 	_hover_label = UiUtil.label("", hover_card, 13)
 	hover_card.hide()
 
@@ -526,9 +552,9 @@ func show_hover_card(text: String, pos: Vector2) -> void:
 		return
 	_hover_label.text = text
 	hover_card.reset_size()
-	var p := root.get_global_transform().affine_inverse() * pos
+	var p := full.get_global_transform().affine_inverse() * pos
 	var s := hover_card.get_combined_minimum_size()
-	hover_card.position = Vector2(clampf(p.x + 18.0, 8.0, root.size.x - s.x - 8.0), clampf(p.y - s.y - 12.0, 60.0, root.size.y - s.y - 8.0))
+	hover_card.position = Vector2(clampf(p.x + 18.0, 8.0, full.size.x - s.x - 8.0), clampf(p.y - s.y - 12.0, 60.0, full.size.y - s.y - 8.0))
 
 
 # --- GemTD-Auswahlphase: Schilder über den neuen Gems -----------------------------------------
@@ -1493,7 +1519,7 @@ func show_drag_box(r: Rect2) -> void:
 		_drag_box = Panel.new()
 		_drag_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_drag_box.add_theme_stylebox_override("panel", UiTheme.box(Color(UiTheme.CYAN, 0.12), UiTheme.CYAN, 0, 2, 0))
-		root.add_child(_drag_box)
+		full.add_child(_drag_box)
 	_drag_box.visible = r.size != Vector2.ZERO
 	_drag_box.position = r.position
 	_drag_box.size = r.size
@@ -1646,7 +1672,7 @@ func _build_game_over() -> void:
 	game_over = Control.new()
 	game_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game_over.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(game_over)
+	full.add_child(game_over)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1694,7 +1720,7 @@ func _build_leave_confirm() -> void:
 	leave_confirm = Control.new()
 	leave_confirm.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	leave_confirm.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(leave_confirm)
+	full.add_child(leave_confirm)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1943,9 +1969,12 @@ func _recenter() -> void:
 		if c == bottom:
 			# Nicht unter die rechte Spalte (DPS, Tower-Liste, Mitspieler) schieben: lieber nach links
 			# rücken, solange links noch Platz ist
+			# Mittig bleiben, solange über der Karte noch Platz für ein paar Zeilen der Tower-Liste ist
 			var w := root.size.x
 			var right_edge := w - 16.0 - tower_list.custom_minimum_size.x - 12.0
-			var left := minf(w / 2.0 - s.x / 2.0, maxf(16.0, right_edge - s.x))
+			var left := w / 2.0 - s.x / 2.0
+			if root.size.y - 16.0 - s.y < tower_list.offset_top + 140.0:
+				left = minf(left, maxf(16.0, right_edge - s.x))
 			left = _avoid_left_col(left, right_edge, s)
 			c.offset_left = left - w / 2.0
 			c.offset_right = c.offset_left + s.x
