@@ -21,18 +21,24 @@ const SIZE_MAX := 3.0
 const BASE_PX := 32.0
 const VIEW := 34.0  ## viewBox -1..33
 
-const ARROW := "M2 2 L2 25 L8 19.5 L12.2 28.6 L16 27 L11.8 18 L19.5 18 Z"
+## Fantasy-Zeiger nach Art von Path of Exile: Klinge mit Grat (helle und dunkle Hälfte), Parierstange,
+## umwickelter Griff und Knauf mit Stein. Jeder Stil ist nur eine Palette (PAL) auf dieselbe Form.
+const HEAD := "M2 2 L2.6 20.5 Q6 17 8.8 15.4 Q11 13.6 15.8 14 Z"
+const HEAD_L := "M2 2 L2.6 20.5 Q6 17 8.8 15.4 Z"
+const GUARD := "M6.4 19.6 L7.4 17.9 L12 13.9 L13.9 13.5 L13.3 15.4 L8.6 19.4 Z"
+const GRIP := "M10.1 18.6 L14.8 24 L16.4 22.6 L11.7 17.2 Z"
+const POMMEL := Vector3(16.9, 24.6, 2.7)  ## x, y, Radius
 const IBEAM := "M11 3 H21 V6 H17.6 V26 H21 V29 H11 V26 H14.4 V6 H11 Z"
-const ARCADE_SIL := "M2 2 H4 V4 H6 V6 H8 V8 H10 V10 H12 V12 H14 V14 H16 V16 H18 V19 H12 V21 H13 V23 H14 V25 H15 V28 H11 V26 H10 V24 H9 V22 H8 V21 H6 V23 H4 V25 H2 Z"
-const DRUID_SIL := "M2 2 Q2.6 14 3 24.5 Q6.5 21.5 8.6 19.6 L12.6 28.4 L15.8 27 L11.9 18.2 Q15.5 17.6 20.5 18 Q11.5 8 2 2 Z"
-const POSTER_SIL := "M2 2 L2.4 25.2 L8.1 19.9 L12.4 28.8 L16.2 27.1 L12 18.3 L19.8 17.6 Z"
-## Füllung und Kante je Stil (Funken des „klickbar“-Zeigers und I-Balken)
-const FILL := {
-	"arcade": ["#ff4fd8", "#22c4ee"], "druid": ["#a8c27a", "#1a2420"], "poster": ["#151515", "#e8372a"],
-	"deco": ["#c9a36a", "#0f2a2c"], "wc3": ["#d8b97f", "#140c04"], "white": ["#ffffff", "#000000"],
-	"yellow": ["#ffe600", "#000000"],
+## l/d: Klinge hell/dunkel, e: Kante, g/gd: Parierstange, h: Griff, p: Knauf, gem: Stein, r: Grat/Rune
+const PAL := {
+	"arcade": {"l": "#5a3f8a", "d": "#2a1a4a", "e": "#0d0618", "g": "#ff4fd8", "gd": "#9a2a86", "h": "#2a1a45", "p": "#ff4fd8", "gem": "#22c4ee", "r": "#22c4ee"},
+	"druid": {"l": "#d4e3a0", "d": "#7f9a55", "e": "#1a2420", "g": "#8a6a42", "gd": "#4a3420", "h": "#6a4a2a", "p": "#8a6a42", "gem": "#e0a84a", "r": "#eef2cf"},
+	"poster": {"l": "#3a3a3a", "d": "#151515", "e": "#151515", "g": "#e8372a", "gd": "#9a1e14", "h": "#151515", "p": "#e8372a", "gem": "#ffd83a", "r": "#ffd83a"},
+	"deco": {"l": "#f3dea6", "d": "#a9844f", "e": "#0a1d1f", "g": "#d8b97f", "gd": "#7d6440", "h": "#0f2a2c", "p": "#c9a36a", "gem": "#6fc1b8", "r": "#0f2a2c"},
+	"wc3": {"l": "#eef1f4", "d": "#8a96a6", "e": "#140c04", "g": "#d8b97f", "gd": "#7d6440", "h": "#3a2616", "p": "#c9a36a", "gem": "#c0301c", "r": "#ffffff"},
+	"white": {"l": "#ffffff", "d": "#e4e4e4", "e": "#000000", "g": "#ffffff", "gd": "#bdbdbd", "h": "#ffffff", "p": "#ffffff", "gem": "#ffffff", "r": "#9a9a9a"},
+	"yellow": {"l": "#ffe600", "d": "#e8c800", "e": "#000000", "g": "#ffe600", "gd": "#b39a00", "h": "#ffe600", "p": "#ffe600", "gem": "#000000", "r": "#000000"},
 }
-
 var style := AUTO
 var size := 1.0
 var outline := "dark"
@@ -127,66 +133,65 @@ func texture(st: String, kind: String, px: int, ol := "") -> ImageTexture:
 
 
 func svg(st: String, kind: String, ol: String) -> String:
-	var sil := _silhouette(st)
-	var shadow := 2.0 if st == "arcade" else (2.2 if st == "poster" else 0.0)
+	var c: Dictionary = PAL.get(st, PAL.white)
 	var oc := "#ffffff" if ol == "light" else "#000000"
-	var fill: Array = FILL.get(st, FILL.white)
 	var out := ""
 	if ol != "none":
-		var p := IBEAM if kind == "text" else sil
-		out = '<g fill="%s" stroke="%s" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="%s"/>' % [oc, oc, p]
-		if shadow > 0.0 and kind != "text":
-			out += '<path d="%s" transform="translate(%s %s)"/>' % [p, shadow, shadow * 0.7]
-		out += "</g>"
+		out = '<g fill="%s" stroke="%s" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">%s</g>' % [oc, oc, IBEAM_PATH() if kind == "text" else _silhouette(st)]
 	var inner := ""
 	if kind == "text":
-		inner = '<path d="%s" fill="%s" stroke="%s" stroke-width="1"/>' % [IBEAM, fill[0], fill[1]]
+		inner = '<path d="%s" fill="%s" stroke="%s" stroke-width="1"/><path d="M16 9 L17.2 10.5 L16 12 L14.8 10.5 Z" fill="%s"/>' % [IBEAM, c.l, c.e, c.gem if st != "white" else c.e]
 	else:
-		inner = _body(st)
+		inner = _body(st, c)
 		if kind == "click":
-			var edge: String = fill[1] if ol == "none" else oc
+			var edge: String = c.e if ol == "none" else oc
 			for r in [[9, 5, 12.5, 3], [10.5, 8.5, 14.5, 8.5], [8, 1.8, 9.5, 0.9]]:
 				var d := "M%s %s L%s %s" % r
 				inner += '<path d="%s" stroke="%s" stroke-width="3.4" stroke-linecap="round"/>' % [d, edge]
-				inner += '<path d="%s" stroke="%s" stroke-width="1.6" stroke-linecap="round"/>' % [d, fill[0]]
+				inner += '<path d="%s" stroke="%s" stroke-width="1.6" stroke-linecap="round"/>' % [d, c.g]
 	return '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="-1 -1 34 34">%s%s</svg>' % [out, inner]
 
 
+func IBEAM_PATH() -> String:
+	return '<path d="%s"/>' % IBEAM
+
+
+## Umriss-Form: alle Teile, beim Plakat zusätzlich der verrutschte Rotdruck
 func _silhouette(st: String) -> String:
-	match st:
-		"arcade": return ARCADE_SIL
-		"druid": return DRUID_SIL
-		"poster": return POSTER_SIL
-	return ARROW
+	var s := '<path d="%s"/><path d="%s"/><path d="%s"/><circle cx="%s" cy="%s" r="%s"/>' % [HEAD, GUARD, GRIP, POMMEL.x, POMMEL.y, POMMEL.z]
+	if st == "poster":
+		s += '<path d="%s" transform="translate(1.6 1.1)"/>' % HEAD
+	return s
 
 
-func _body(st: String) -> String:
+func _body(st: String, c: Dictionary) -> String:
+	var ew := 1.5 if st in ["white", "yellow"] else 0.9
+	var b := ""
+	if st == "poster":
+		b += '<path d="%s" transform="translate(1.6 1.1)" fill="#e8372a"/>' % HEAD
+	# Griff mit Wicklung, Knauf mit Stein
+	b += '<path d="%s" fill="%s" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>' % [GRIP, c.h, c.e, ew]
+	b += '<path d="M11.4 19.9 L12.9 18.6 M12.7 21.4 L14.2 20.1 M14 22.9 L15.5 21.6" stroke="%s" stroke-width="0.8"/>' % c.g
+	b += '<circle cx="%s" cy="%s" r="%s" fill="%s" stroke="%s" stroke-width="%s"/>' % [POMMEL.x, POMMEL.y, POMMEL.z, c.p, c.e, ew]
+	b += '<circle cx="%s" cy="%s" r="1.45" fill="%s" stroke="%s" stroke-width="0.5"/>' % [POMMEL.x, POMMEL.y, c.gem, c.e]
+	b += '<circle cx="16.4" cy="24.1" r="0.5" fill="#ffffff" fill-opacity="0.8"/>'
+	# Klinge: dunkle Hälfte, helle Hälfte, Kante, Grat
+	b += '<path d="%s" fill="%s"/><path d="%s" fill="%s"/>' % [HEAD, c.d, HEAD_L, c.l]
+	b += '<path d="%s" fill="none" stroke="%s" stroke-width="%s" stroke-linejoin="miter"/>' % [HEAD, c.e, ew]
 	match st:
-		"arcade":
-			return ('<path d="%s" transform="translate(2 2)" fill="#22c4ee"/><path d="%s" fill="#ff4fd8"/>' % [ARCADE_SIL, ARCADE_SIL]
-				+ '<path d="M4 6 H6 V20 H4 Z" fill="#ffc2f2"/><path d="%s" fill="none" stroke="#0d0618" stroke-width="1"/>' % ARCADE_SIL)
 		"druid":
-			return ('<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c8de8c"/><stop offset="1" stop-color="#5f7a45"/></linearGradient></defs>'
-				+ '<path d="M8.6 19.6 L12.6 28.4 L15.8 27 L11.9 18.2 Z" fill="#7a5a3a" stroke="#2a1d12" stroke-width="1"/>'
-				+ '<path d="M2 2 Q2.6 14 3 24.5 Q6.5 21.5 8.6 19.6 Q10 19 11.9 18.2 Q15.5 17.6 20.5 18 Q11.5 8 2 2 Z" fill="url(#lg)" stroke="#1a2420" stroke-width="1.1"/>'
-				+ '<path d="M3 3.5 Q7 11 11 17.5 M5.5 10.5 L4 15 M7.8 13.5 L12 13.4 M9 16 L6.5 20" stroke="#eef2cf" stroke-width="0.9" fill="none" stroke-linecap="round"/>')
-		"poster":
-			return ('<path d="%s" transform="translate(2.2 1.4)" fill="#e8372a"/><path d="%s" fill="#151515"/>' % [POSTER_SIL, POSTER_SIL]
-				+ '<path d="M3.6 6 L3.9 17" stroke="#ffd83a" stroke-width="1.6" stroke-linecap="round"/>')
+			b += '<path d="M2.8 3.6 L8.2 14.6 M4.2 9 L3.4 13 M5.6 11.8 L9.6 11.2 M6.6 14 L4.8 16.8" stroke="%s" stroke-width="0.8" fill="none" stroke-linecap="round"/>' % c.r
 		"deco":
-			return ('<defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3dea6"/><stop offset=".55" stop-color="#c9a36a"/><stop offset="1" stop-color="#7d6440"/></linearGradient></defs>'
-				+ '<path d="%s" fill="url(#dg)" stroke="#0a1d1f" stroke-width="1.1"/>' % ARROW
-				+ '<path d="M4.2 8 L4.2 19.5 L8.8 15.2 L13.6 15.2 Z" fill="#0f2a2c"/><path d="M5.4 12.6 L5.4 16.4 L7.6 14.4 Z" fill="#d8b97f"/>')
-		"wc3":
-			return ('<path d="M2 2 L2 25 L8 19.5 L11.8 18 L19.5 18 Z" fill="#e6c98c"/><path d="M2 2 L8.6 15 L8 19.5 L11.8 18 L19.5 18 Z" fill="#9a7a48"/>'
-				+ '<path d="M8 19.5 L12.2 28.6 L16 27 L11.8 18 Z" fill="#5a4428"/>'
-				+ '<path d="%s" fill="none" stroke="#140c04" stroke-width="1.1"/>' % ARROW
-				+ '<circle cx="9.6" cy="17.4" r="2" fill="#b0281a" stroke="#140c04" stroke-width=".8"/><circle cx="9" cy="16.8" r=".6" fill="#ffb59c"/>')
-		"yellow":
-			return '<path d="%s" fill="#ffe600" stroke="#000" stroke-width="2" stroke-linejoin="round"/><path d="M4.8 9 L4.8 18" stroke="#000" stroke-width="1.4"/>' % ARROW
-	return '<path d="%s" fill="#ffffff" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/>' % ARROW
-
-
+			b += '<path d="M3.9 8.2 L4.2 16.6 L7.6 14.3 Z" fill="%s"/><path d="M4.8 12 L5 15 L6.6 13.9 Z" fill="%s"/>' % [c.r, c.g]
+		"arcade":
+			b += '<path d="M2.7 3.2 L8.2 14.6" stroke="%s" stroke-width="0.9"/><path d="M3.3 6 L3.6 17.5" stroke="%s" stroke-width="0.8"/>' % [c.r, c.g]
+		_:
+			b += '<path d="M2.8 3.4 L8.3 14.6" stroke="%s" stroke-width="0.6" stroke-opacity="0.8"/>' % c.r
+	# Parierstange mit dunkler Unterkante
+	b += '<path d="%s" fill="%s" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>' % [GUARD, c.g, c.e, ew]
+	b += '<path d="M8.4 18.8 L13 14.9" stroke="%s" stroke-width="0.9"/>' % c.gd
+	b += '<path d="M9.7 15.9 L10.9 17.3 L9.7 18.3 L8.6 17 Z" fill="%s" stroke="%s" stroke-width="0.5"/>' % [c.gem, c.e]
+	return b
 ## Neue Szene: Stil neu bestimmen (AUTO). Knöpfe zeigen den Klick-Zeiger, wenn sie nichts anderes wollen.
 func _on_node_added(node: Node) -> void:
 	if node is BaseButton:
