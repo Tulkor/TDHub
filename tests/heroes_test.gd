@@ -138,6 +138,10 @@ func _new_game() -> HdGame:
 	await get_tree().process_frame
 	g.set_physics_process(false)
 	g.spawn_queue.clear()
+	for e in g.enemies:
+		g._remove(e)
+	g.enemies.clear()
+	g.leaks = 0
 	return g
 
 
