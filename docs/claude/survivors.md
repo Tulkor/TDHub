@@ -1,0 +1,11 @@
+# Tower Survivors
+
+Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz automatisch ein, sobald ein Thread passende Dateien anfasst.
+
+- 6. Modus „Tower Survivors“ (Arbeitstitel, id `survivors`, Lukas 2026-11-04): ein Turm als Waffenplattform mitten in einer runden Arena, Gegner aus allen Richtungen, 30 Wellen à 30 s (Timer, Wellen warten nicht), Sieg nach Welle 30. Eigenes Design, angeregt von der WC3-Map. Etappe 1: nur Einzelspieler, Dev-Texturen.
+- Code `scripts/survivors/`: `sv_game.gd` (Ablauf, Laden, Upgrades, Boni, Kampf, Profil; Logik in `step(dt)`, Befehle `buy_offer/sell/reroll/buy_upgrade/choose_perk`, `bot_turn()` für Tests/Bilder), `sv_platform.gd` (Plattform mit 6 Montageplätzen: gesperrt = Abdeckplatte mit Warnstreifen, frei, belegt = Waffe + Ring in Seltenheitsfarbe + Stufen-Lämpchen), `sv_weapon.gd` (Werte je Stufe, Zielen, Drehen), `sv_enemy.gd`, `sv_fx.gd` (Geschosse, Strahlen, Ringe), `sv_hud.gd` (Arcade), `sv_dev.gd` (Raster-Texturen im Code, triplanar). Szene `scenes/survivors_game.tscn`.
+- Daten `data/survivors.json`: Waffen mit Modell aus Bausteinen (`model`: box/cyl/cone/sphere, Lauf nach −Z, Farben type/dark/light/glow), 4 Seltenheiten (Preis, Gewicht je Welle), 5 Schadensarten, Waffenarten bullet/lob/beam/line/cone/nova, Upgrades, Boni (alle 5 Wellen 1 aus 3), Gegner (Resistenzen je Schadensart, Rüstung wirkt nicht auf Brennen/Gift), Wellen-Budget, Schwierigkeiten Einfach/Mittel/Schwer. Gleiche Waffe nochmal kaufen = Stufe hoch (max 5).
+- Balance: `godot --headless --path . tools/survivors_sim.tscn -- --laeufe=3 [--stufen=0,1,2]` lässt den Bot spielen (≈15 s je Lauf). Stand 2026-11-04: Einfach gewinnt, Mittel teils, Schwer meist bis Welle 11–12 (Boss Welle 10).
+- Test `tools/run_tests.sh survivors`. Bild `tools/screenshot.sh --szene=survivors --sprache=de [--zeit=S --gold=N --nah --bonus --einstellungen]`.
+- Profil: Modus `survivors` in `Profile.MODES` und `ProfileWc3.MODES`, Waffen zählen als „Tower“.
+- Offen (spätere Etappen): Mehrspieler bis 8 (wer am längsten überlebt), echte Modelle statt Dev-Texturen, Level/EP, Inventar/Items, Aufstieg, Spielstände.
