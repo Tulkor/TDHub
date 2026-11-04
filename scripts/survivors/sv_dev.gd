@@ -82,9 +82,9 @@ static func metal(c: Color, scale := 0.5) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = c
 	m.albedo_texture = _brushed()
-	m.metallic = 0.75
-	m.roughness = 0.42
-	m.metallic_specular = 0.6
+	m.metallic = 0.5
+	m.roughness = 0.68
+	m.metallic_specular = 0.35
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * scale
@@ -155,8 +155,8 @@ static func diamond_plate(c: Color, scale := 1.6) -> StandardMaterial3D:
 	m.normal_enabled = true
 	m.normal_texture = _tex.riffel_n
 	m.normal_scale = 1.0
-	m.metallic = 0.8
-	m.roughness = 0.38
+	m.metallic = 0.55
+	m.roughness = 0.62
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * scale
@@ -246,5 +246,5 @@ static func part(spec: Dictionary, colors: Dictionary) -> MeshInstance3D:
 	mi.rotation_degrees = Vector3(float(r[0]), float(r[1]), float(r[2]))
 	var key := str(spec.get("c", "type"))
 	var col: Color = colors.get(key, colors.get("type", Color.WHITE))
-	mi.material_override = glow(col, 4.0) if key == "glow" else mat(col, 1.0)
+	mi.material_override = glow(col, 2.8) if key == "glow" else mat(col, 1.0)
 	return mi

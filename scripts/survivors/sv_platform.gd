@@ -10,6 +10,8 @@ extends Node3D
 const PAD_RADIUS := 2.8
 const DECK_R := 4.35
 const DECK_Y := 3.4
+## Mitte des Glasteils im Kern: dort sitzt das Licht
+const CORE_Y := DECK_Y + 1.7
 const SLOTS := 6
 ## Waffen etwas größer als ihre Bausteine, damit man sie aus der Spielansicht erkennt
 const WEAPON_SCALE := 1.35
@@ -29,6 +31,7 @@ var _core_orb: MeshInstance3D
 var _core_light: OmniLight3D
 var _beacon: MeshInstance3D
 var _beacon_light: OmniLight3D
+var _beacon_mat: StandardMaterial3D
 var _t := 0.0
 
 
@@ -68,18 +71,18 @@ func _ready() -> void:
 	var mid := _cyl(1.0, 1.0, 0.12, 12, dark)
 	mid.position.y = DECK_Y + 1.22
 	var glass := _cyl(0.88, 0.88, 0.95, 24, SvDev.glass())
-	glass.position.y = DECK_Y + 1.7
+	glass.position.y = CORE_Y
 	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_core_mat = SvDev.glow(UiTheme.CYAN, 4.0).duplicate()
+	_core_mat = SvDev.glow(UiTheme.CYAN, 8.0).duplicate()
 	core_glow = _cyl(0.2, 0.2, 0.85, 12, _core_mat)
-	core_glow.position.y = DECK_Y + 1.7
+	core_glow.position.y = CORE_Y
 	var orb := MeshInstance3D.new()
 	var om := SphereMesh.new()
 	om.radius = 0.34
 	om.height = 0.68
 	orb.mesh = om
 	orb.material_override = _core_mat
-	orb.position.y = DECK_Y + 1.7
+	orb.position.y = CORE_Y
 	add_child(orb)
 	_core_orb = orb
 	_core_light = OmniLight3D.new()
@@ -87,7 +90,7 @@ func _ready() -> void:
 	_core_light.light_energy = 3.0
 	_core_light.omni_range = 9.0
 	_core_light.shadow_enabled = false
-	_core_light.position.y = DECK_Y + 1.7
+	_core_light.position.y = CORE_Y
 	add_child(_core_light)
 	# Deckel und Antenne mit Blinklicht
 	var lid := _cyl(0.7, 1.0, 0.3, 12, metal)
@@ -108,13 +111,14 @@ func _ready() -> void:
 	bs.radius = 0.13
 	bs.height = 0.26
 	_beacon.mesh = bs
-	_beacon.material_override = SvDev.glow(UiTheme.MISSING, 6.0)
-	_beacon.position.y = DECK_Y + 5.0
+	_beacon_mat = SvDev.glow(Color("ff2a2a"), 6.0).duplicate()
+	_beacon.material_override = _beacon_mat
+	_beacon.position.y = DECK_Y + 5.25
 	add_child(_beacon)
 	_beacon_light = OmniLight3D.new()
-	_beacon_light.light_color = UiTheme.MISSING
+	_beacon_light.light_color = Color("ff2a2a")
 	_beacon_light.omni_range = 4.0
-	_beacon_light.position.y = DECK_Y + 5.0
+	_beacon_light.position.y = DECK_Y + 5.25
 	add_child(_beacon_light)
 
 	for i in SLOTS:
@@ -261,11 +265,11 @@ func set_state(i: int, state: String, color := Color.WHITE) -> void:
 		c = UiTheme.MISSING.darkened(0.45)
 	elif state == "armed":
 		c = color
-	p.band.material_override = SvDev.glow(c, 1.2 if state == "locked" else 2.5)
+	p.band.material_override = SvDev.glow(c, 1.0 if state == "locked" else 1.8)
 	# Platzlicht: belegt hell in der Seltenheitsfarbe, gesperrt schwach rot, frei aus
 	var light: OmniLight3D = p.light
 	light.light_color = c
-	light.light_energy = 1.4 if state == "armed" else (0.35 if state == "locked" else 0.0)
+	light.light_energy = 0.7 if state == "armed" else (0.2 if state == "locked" else 0.0)
 
 
 func is_up(i: int) -> bool:
@@ -391,12 +395,14 @@ func set_health(f: float) -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	_core_orb.scale = Vector3.ONE * (1.0 + sin(_t * 3.0) * 0.06)
-	_core_orb.position.y = DECK_Y + 1.7 + sin(_t * 1.3) * 0.08
-	_core_light.light_energy = 3.0 + sin(_t * 3.0) * 0.4
+	_core_orb.position.y = CORE_Y + sin(_t * 1.3) * 0.04
+	_core_light.light_energy = 4.5 + sin(_t * 3.0) * 0.5
 	# Antenne blinkt
-	var on := fmod(_t, 1.4) < 0.18
-	_beacon.visible = on
-	_beacon_light.light_energy = 2.5 if on else 0.0
+	# Antennenspitze: rotes Licht, das immer wieder aufleuchtet und abklingt
+	var k := fmod(_t, 1.2) / 1.2
+	var f := clampf(1.0 - k * 2.2, 0.0, 1.0)
+	_beacon_mat.emission_energy_multiplier = 0.3 + f * 7.0
+	_beacon_light.light_energy = f * 2.0
 
 
 func _cyl(top: float, bottom: float, h: float, seg: int, m: Material) -> MeshInstance3D:
