@@ -61,7 +61,12 @@ func _basics() -> void:
 	check(g.state == "play" and g.wave == 1, "Spiel startet in Welle 1")
 	check(g.weapons[0] != null and g.weapons[0].id == "mg", "Startwaffe auf Platz 1")
 	check(g.platform.pads[0].mount.get_child_count() == 1, "Startwaffe ist auf der Plattform zu sehen")
-	check(g.platform.pads[4].cover.visible and not g.platform.pads[1].cover.visible, "Plätze 4–6 gesperrt, 2–3 frei")
+	check(g.platform.pads[4].state == "locked" and g.platform.pads[1].state == "free", "Plätze 4–6 gesperrt, 2–3 frei")
+	check(g.platform.pads[0].phase == "opening" and not g.platform.is_up(0), "Klappe geht auf, Waffe noch unten")
+	for i in 40:
+		g.step(1.0 / 30.0)
+	check(g.platform.is_up(0) and is_equal_approx(g.platform.pads[0].lift.position.y, 0.0), "Waffe nach gut 1 s oben")
+	check(g.platform.pads[0].halves[0].node.position.y < -0.1, "Klappenhälften versenkt")
 	# Kaufen: gleiche Waffe hebt die Stufe, andere Waffe geht auf einen freien Platz
 	g.gold = 5000
 	g.offers = ["mg", "kanone", "tesla", "laser"]
@@ -70,15 +75,20 @@ func _basics() -> void:
 	check(g.buy_offer(1) and g.weapons[1] != null and g.weapons[1].id == "kanone", "Kanone auf Platz 2")
 	check(g.buy_offer(2) and g.weapons[2] != null, "Teslaspule auf Platz 3")
 	check(g.target_slot("laser") == -1 and not g.buy_offer(3), "ohne freien Platz kein Kauf")
-	check(g.buy_upgrade("slot") and g.slots_open == 4 and not g.platform.pads[3].cover.visible, "Montageplatz öffnet Platz 4")
+	check(g.buy_upgrade("slot") and g.slots_open == 4 and g.platform.pads[3].state == "free", "Montageplatz öffnet Platz 4")
 	check(g.buy_offer(3) and g.weapons[3].id == "laser", "Laserlanze auf Platz 4")
 	var before: float = g.weapons[0].dps()
 	check(g.buy_upgrade("damage") and g.weapons[0].dps() > before, "Schaden-Upgrade erhöht DPS")
 	var hp_before := g.max_hp()
 	check(g.buy_upgrade("hull") and g.max_hp() > hp_before and is_equal_approx(g.hp, g.max_hp()), "Hülle: mehr Leben")
 	var gold_before := g.gold
+	for i in 40:
+		g.step(1.0 / 30.0)
 	g.sell(1)
-	check(g.weapons[1] == null and g.gold > gold_before and g.platform.pads[1].mount.get_child_count() == 0, "Verkaufen räumt den Platz und gibt Gold")
+	check(g.weapons[1] == null and g.gold > gold_before and g.platform.pads[1].phase == "lowering", "Verkaufen gibt Gold, Waffe fährt runter")
+	for i in 40:
+		g.step(1.0 / 30.0)
+	check(g.platform.pads[1].mount.get_child_count() == 0 and g.platform.pads[1].phase == "closed", "danach Platz leer, Klappe zu")
 	check(g.reroll() and g.rerolls == 1, "Neu würfeln")
 	# Wellen laufen, Gegner kommen, Bonus nach Welle 5
 	g.gold = 0
@@ -106,6 +116,7 @@ func _all_weapons() -> void:
 		for e in g.enemies.duplicate():
 			g.enemies.erase(e)
 			e.queue_free()
+		g.platform.clear(0)
 		g._equip(str(w.id), 0)
 		var sw: SvWeapon = g.weapons[0]
 		var pos := sw.origin()
@@ -117,9 +128,9 @@ func _all_weapons() -> void:
 		# vor den Montageplatz stellen, innerhalb jeder Reichweite
 		var dir := Vector3(pos.x, 0, pos.z).normalized()
 		e.position = dir * 4.5
-		for i in 90:
+		for i in 120:
 			g.step(1.0 / 30.0)
-		check(sw.damage_done > 0.0, "%s trifft (%d Schaden in 3 s)" % [w.id, roundi(sw.damage_done)])
+		check(sw.damage_done > 0.0, "%s trifft (%d Schaden in 4 s)" % [w.id, roundi(sw.damage_done)])
 		g.sell(0)
 	g.queue_free()
 	await get_tree().process_frame

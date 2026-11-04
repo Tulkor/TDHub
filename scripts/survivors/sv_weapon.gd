@@ -95,6 +95,8 @@ func origin() -> Vector3:
 
 func step(dt: float) -> void:
 	cd_left -= dt
+	if not game.platform.is_up(slot):
+		return  # fährt noch aus der Klappe hoch
 	if _kick > 0.0:
 		_kick = maxf(0.0, _kick - dt * 6.0)
 		recoil.position.z = _kick * 0.25

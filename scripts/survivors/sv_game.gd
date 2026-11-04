@@ -301,6 +301,7 @@ func step(dt: float) -> void:
 		if w:
 			w.step(dt)
 	fx.step(dt)
+	platform.step(dt)
 	platform.set_health(hp / max_hp())
 	if hp <= 0.0:
 		hp = 0.0
@@ -495,7 +496,7 @@ func sell(slot: int) -> void:
 	gold += float(paid[slot]) * float(cfg.sell_factor)
 	paid[slot] = 0
 	weapons[slot] = null
-	platform.clear(slot)
+	platform.retract(slot)
 	platform.set_state(slot, "free")
 	changed.emit()
 

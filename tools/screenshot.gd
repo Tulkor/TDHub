@@ -1,7 +1,7 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N)
+##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -456,8 +456,27 @@ func _prepare_survivors(game: Node) -> void:
 			game.bot_turn()
 		if k % 300 == 0:
 			await get_tree().process_frame
+	if opts.has("klappe"):
+		# --klappe=S: eine neue Waffe auf einen freien Platz, S Sekunden des Klappen-Ablaufs zeigen
+		var slot: int = game.target_slot("__none__")
+		if slot < 0:
+			game.gold += 2000
+			game.buy_upgrade("slot")
+			slot = game.target_slot("__none__")
+		if slot < 0:
+			game.sell(game.slots_open - 1)
+			for i in 40:
+				game.step(1.0 / 30.0)
+			slot = game.slots_open - 1
+		game._equip(str(opts.get("waffe", "schiene")), slot)
+		game.paid[slot] = 100
+		var t := float(opts.klappe)
+		while t > 0.0:
+			game.platform.step(minf(t, 1.0 / 30.0))
+			t -= 1.0 / 30.0
+		game.paused = true
 	if opts.has("nah"):
-		game.cam_dist = 15.0
+		game.cam_dist = 13.0 if opts.has("klappe") else 15.0
 		game._place_camera()
 	await _frames(12)
 

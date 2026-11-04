@@ -54,6 +54,26 @@ static func mat(c: Color, scale := 0.25, glow := 0.0) -> StandardMaterial3D:
 	return m
 
 
+## Warnstreifen Gelb/Schwarz diagonal, triplanar in Weltkoordinaten (ein Streifenpaar ≈ 0,25 Einheiten).
+static func hazard() -> StandardMaterial3D:
+	if _mats.has("hazard"):
+		return _mats.hazard
+	var px := 64
+	var img := Image.create(px, px, false, Image.FORMAT_RGBA8)
+	for y in px:
+		for x in px:
+			img.set_pixel(x, y, Color("f2d21b") if ((x + y) / (px / 2)) % 2 == 0 else Color("141414"))
+	img.generate_mipmaps()
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = ImageTexture.create_from_image(img)
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * 4.0
+	m.roughness = 0.6
+	_mats.hazard = m
+	return m
+
+
 ## Einfarbig leuchtend ohne Licht (Geschosse, Strahlen, Ringe).
 static func flat(c: Color, alpha := 1.0) -> StandardMaterial3D:
 	var key := "flat|%s|%s" % [c.to_html(), alpha]
