@@ -1,7 +1,7 @@
 # Hinweise für Claude
 
 Diese Datei wird bei jedem Schritt jedes Threads mitgeschickt, deshalb steht hier nur der Kern. Details je Bereich liegen in `docs/claude/` und kommen automatisch dazu: Der Hook `.claude/hooks/thema.py` blendet die passende Notiz einmal pro Thread ein, sobald Dateien des Bereichs angefasst werden. Von Hand lesen nur, wenn man vorher etwas wissen muss:
-`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
+`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `survivors.md` · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
 Neues Wissen zu einem Bereich in dessen Notiz eintragen, nicht hier; neue Notiz = Datei plus Eintrag in `THEMEN` in `thema.py`.
 
 ## UI-Stil je Modus (Lukas will das nicht jedes Mal sagen müssen)

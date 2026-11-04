@@ -1,7 +1,7 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul   Standard spiel
+##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -150,6 +150,7 @@ func _ready() -> void:
 		"map_editor": node = load(Session.MAP_EDITOR).instantiate()
 		"tower_editor": node = load(Session.TOWER_EDITOR).instantiate()
 		"maul": node = load(Session.MAUL).instantiate()
+		"survivors": node = load("res://scenes/survivors_game.tscn").instantiate()
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
@@ -179,6 +180,8 @@ func _ready() -> void:
 	var angles: PackedStringArray = ["bild"]
 	if scene == "maul":
 		await _prepare_maul(node)
+	if scene == "survivors":
+		await _prepare_survivors(node)
 	if scene == "spiel":
 		await _prepare(node)
 		angles = String(opts.get("winkel", "schraeg")).split(",")
@@ -431,6 +434,56 @@ func _prepare(game: Node) -> void:
 
 
 ## Shopping Maul: Filiale eröffnen, im Zentrum bauen, Level im Zeitraffer spielen.
+## Tower Survivors (--szene=survivors): Bot spielt --zeit=S Sekunden Spielzeit (Standard 150) im Zeitraffer,
+## kauft Waffen und Upgrades; --bonus zeigt danach die Bonus-Wahl, --nah holt die Kamera an die Plattform.
+func _prepare_survivors(game: Node) -> void:
+	if game.state == "setup":
+		return
+	game.rng.seed = int(opts.get("seed", "1"))
+	game.gold += float(opts.get("gold", "0"))
+	var left := float(opts.get("zeit", "150"))
+	var dt := 1.0 / 30.0
+	var k := 0
+	while left > 0.0 and game.state != "over":
+		if game.state == "perk":
+			if opts.has("bonus"):
+				break
+			game.bot_turn()
+		game.step(dt)
+		left -= dt
+		k += 1
+		if k % 15 == 0:
+			game.bot_turn()
+		if k % 300 == 0:
+			await get_tree().process_frame
+	if opts.has("klappe"):
+		# --klappe=S: eine neue Waffe auf einen freien Platz, S Sekunden des Klappen-Ablaufs zeigen
+		var slot: int = game.target_slot("__none__")
+		if slot < 0:
+			game.gold += 2000
+			game.buy_upgrade("slot")
+			slot = game.target_slot("__none__")
+		if slot < 0:
+			game.sell(game.slots_open - 1)
+			for i in 40:
+				game.step(1.0 / 30.0)
+			slot = game.slots_open - 1
+		game._equip(str(opts.get("waffe", "schiene")), slot)
+		game.paid[slot] = 100
+		var t := float(opts.klappe)
+		while t > 0.0:
+			game.platform.step(minf(t, 1.0 / 30.0))
+			t -= 1.0 / 30.0
+		game.paused = true
+	if opts.has("neigung"):
+		game.cam_pitch = float(opts.neigung)
+		game._place_camera()
+	if opts.has("nah"):
+		game.cam_dist = 17.0 if opts.has("klappe") else 19.0
+		game._place_camera()
+	await _frames(12)
+
+
 func _prepare_maul(game: Node) -> void:
 	game.camera_rig.set_process(false)
 	if opts.has("alle_wege"):

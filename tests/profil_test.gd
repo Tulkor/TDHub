@@ -190,7 +190,7 @@ func _ready() -> void:
 	check(hist.chart.runs.size() == 2, "Filter je Modus: %d" % hist.chart.runs.size())
 	hist.back_requested.emit()
 	await get_tree().process_frame
-	check(panel.view == "youtd", "Zurück aus der Run-History: %s" % panel.view)
+	check(panel.view == ProfileWc3.MODES[-1][0], "Zurück aus der Run-History: %s" % panel.view)
 	panel.queue_free()
 
 	_clean(Profile.dir)

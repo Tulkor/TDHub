@@ -51,6 +51,16 @@
 			"hint": "Elemente erforschen, Tower würfeln oder kaufen, Items sammeln, feste Wege. Koop bis 4 Spieler, jeder mit eigenem Weg. Spieler-XP bleibt über Partien.",
 			"needs_map": true,
 			"coop_only": true
+		},
+		{
+			"id": "survivors",
+			"name": "Tower Survivors",
+			"ready": true,
+			"min_players": 1,
+			"max_players": 1,
+			"scene": "res://scenes/survivors_game.tscn",
+			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
+			"needs_map": false
 		}
 	]
 }
