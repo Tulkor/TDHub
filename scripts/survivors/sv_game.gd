@@ -117,7 +117,7 @@ func _build_world() -> void:
 	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	e.fog_enabled = Display.quality > 0
 	e.fog_light_color = Color("0b1020")
-	e.fog_density = 0.008
+	e.fog_density = 0.012
 	env.environment = e
 	world.add_child(env)
 	var moon := DirectionalLight3D.new()
@@ -128,23 +128,10 @@ func _build_world() -> void:
 	world.add_child(moon)
 
 	var r := float(cfg.arena.radius)
-	var outer := MeshInstance3D.new()
-	var om := PlaneMesh.new()
-	om.size = Vector2(r * 5, r * 5)
-	outer.mesh = om
-	outer.position.y = -0.02
-	outer.material_override = SvDev.mat(Color("2a2e38"))
-	world.add_child(outer)
-	var floor_ := MeshInstance3D.new()
-	var fm := CylinderMesh.new()
-	fm.top_radius = r
-	fm.bottom_radius = r
-	fm.height = 0.1
-	fm.radial_segments = 64
-	floor_.mesh = fm
-	floor_.position.y = -0.05
-	floor_.material_override = SvDev.mat(Color("6c7280"))
-	world.add_child(floor_)
+	# Eisfläche mit verschneiten Inseln, weit draußen Ozean (SvWorld)
+	var land := SvWorld.new()
+	world.add_child(land)
+	land.build(r)
 	# Rand der Arena in Akzentfarbe, Reichweiten-Hilfsringe alle 5 Einheiten
 	for k in [r] + [5.0, 10.0, 15.0]:
 		var rg := MeshInstance3D.new()
