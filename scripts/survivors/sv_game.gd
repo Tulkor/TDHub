@@ -56,6 +56,7 @@ var camera: Camera3D
 var hud  ## SvHud
 var cam_yaw := 0.0
 var cam_dist := 27.0
+var cam_pitch := 52.0  ## Grad über dem Boden
 var rng := RandomNumberGenerator.new()
 
 
@@ -90,22 +91,31 @@ func _exit_tree() -> void:
 func _build_world() -> void:
 	world = Node3D.new()
 	add_child(world)
+	# Nacht (Lukas 2026-11-04): dunkler Himmel, schwaches Mondlicht, Leuchten über Glow
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color("10131a")
+	e.background_color = Color("04060c")
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color("8090b0")
-	e.ambient_light_energy = 0.55
+	e.ambient_light_color = Color("3a4a78")
+	e.ambient_light_energy = 0.35
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	e.glow_enabled = Display.quality > 0
+	e.glow_enabled = true
+	e.glow_intensity = 0.9
+	e.glow_bloom = 0.05
+	e.glow_hdr_threshold = 0.85
+	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	e.fog_enabled = Display.quality > 0
+	e.fog_light_color = Color("0b1020")
+	e.fog_density = 0.008
 	env.environment = e
 	world.add_child(env)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55, -35, 0)
-	sun.light_energy = 1.1
-	sun.shadow_enabled = Display.quality > 0
-	world.add_child(sun)
+	var moon := DirectionalLight3D.new()
+	moon.rotation_degrees = Vector3(-55, -35, 0)
+	moon.light_color = Color("9fb4ff")
+	moon.light_energy = 0.3
+	moon.shadow_enabled = Display.quality > 0
+	world.add_child(moon)
 
 	var r := float(cfg.arena.radius)
 	var outer := MeshInstance3D.new()
@@ -150,10 +160,10 @@ func _build_world() -> void:
 
 
 func _place_camera() -> void:
-	var pitch := deg_to_rad(52.0)
+	var pitch := deg_to_rad(cam_pitch)
 	var off := Vector3(sin(cam_yaw) * cos(pitch), sin(pitch), cos(cam_yaw) * cos(pitch)) * cam_dist
-	camera.position = off + Vector3(0, 1.5, 0)
-	camera.look_at(Vector3(0, 0.5, 0), Vector3.UP)
+	camera.position = off + Vector3(0, 2.5, 0)
+	camera.look_at(Vector3(0, 2.2, 0), Vector3.UP)
 
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -653,6 +663,8 @@ func _effects(e: SvEnemy, w: SvWeapon) -> void:
 
 func fire(w: SvWeapon, target: SvEnemy) -> void:
 	var col := type_color(w.type())
+	if w.kind() != "nova":
+		fx.flash(w.muzzle(), col)
 	match w.kind():
 		"bullet":
 			var n := w.shots()
@@ -682,7 +694,7 @@ func fire(w: SvWeapon, target: SvEnemy) -> void:
 			var from := w.origin()
 			var dir := w.forward()
 			var to := from + dir * (w.range_() + SvPlatform.PAD_RADIUS)
-			fx.beam(w.muzzle(), to + Vector3(0, 0.6, 0), col, 0.22, 0.2)
+			fx.beam(w.muzzle(), Vector3(to.x, 0.6, to.z), col, 0.22, 0.2)
 			for e in enemies.duplicate():
 				var p: Vector3 = e.global_position
 				var rel := Vector2(p.x - from.x, p.z - from.z)
@@ -697,7 +709,8 @@ func fire(w: SvWeapon, target: SvEnemy) -> void:
 			var from := w.origin()
 			var dir := w.forward()
 			var half := deg_to_rad(float(w.data.get("angle", 40)) * 0.5)
-			fx.cone(w.muzzle(), dir, w.range_() + SvWeapon.AREA_BONUS, float(w.data.get("angle", 40)), col)
+			var cdir := (dir * (w.range_() + SvWeapon.AREA_BONUS) + Vector3(0, 0.6 - w.muzzle().y, 0)).normalized()
+			fx.cone(w.muzzle(), cdir, w.range_() + SvWeapon.AREA_BONUS, float(w.data.get("angle", 40)), col)
 			for e in in_radius(from, w.range_() + SvWeapon.AREA_BONUS):
 				var p: Vector3 = e.global_position - from
 				if absf(Vector2(dir.x, dir.z).angle_to(Vector2(p.x, p.z))) <= half:

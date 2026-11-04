@@ -7,6 +7,10 @@ extends Node3D
 var game  ## SvGame
 var shots: Array = []   ## {node, weapon, target, pos, to, kind, t, time, speed, from}
 var fading: Array = []  ## {node, t, time, grow}
+var lights: Array = []  ## Mündungsblitze {node, t}
+var _flashes := 0
+const MAX_FLASHES := 10
+const FLASH_TIME := 0.09
 
 
 func shoot(w: SvWeapon, target: SvEnemy, from: Vector3, dir_offset := 0.0) -> void:
@@ -19,7 +23,7 @@ func shoot(w: SvWeapon, target: SvEnemy, from: Vector3, dir_offset := 0.0) -> vo
 	s.radial_segments = 8
 	s.rings = 4
 	mi.mesh = s
-	mi.material_override = SvDev.flat(col)
+	mi.material_override = SvDev.glow(col, 5.0)
 	mi.position = from
 	add_child(mi)
 	var to := target.center()
@@ -72,6 +76,16 @@ func step(dt: float) -> void:
 			_remove(i)
 		else:
 			node.position += d.normalized() * mv
+	for i in range(lights.size() - 1, -1, -1):
+		var lf: Dictionary = lights[i]
+		lf.t += dt
+		var ln: OmniLight3D = lf.node
+		if lf.t >= FLASH_TIME:
+			ln.queue_free()
+			lights.remove_at(i)
+			_flashes -= 1
+		else:
+			ln.light_energy = 3.0 * (1.0 - lf.t / FLASH_TIME)
 	for i in range(fading.size() - 1, -1, -1):
 		var f: Dictionary = fading[i]
 		f.t += dt
@@ -98,10 +112,27 @@ func _fade(n: Node3D, time: float, grow := 0.0, alpha := 0.9) -> void:
 	fading.append({"node": n, "t": 0.0, "time": time, "grow": grow, "alpha": alpha})
 
 
+## Eigenes, durchsichtiges Leucht-Material (additiv, wird beim Ausblenden verändert).
 func _own(c: Color, a: float) -> StandardMaterial3D:
 	var m := SvDev.flat(c, a).duplicate() as StandardMaterial3D
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = Color(c.r * 1.6, c.g * 1.6, c.b * 1.6, a)
 	return m
+
+
+## Mündungsblitz: kurzes Punktlicht an der Waffe (höchstens MAX_FLASHES gleichzeitig).
+func flash(at: Vector3, c: Color) -> void:
+	if _flashes >= MAX_FLASHES or Display.quality == 0:
+		return
+	var l := OmniLight3D.new()
+	l.light_color = c
+	l.light_energy = 3.0
+	l.omni_range = 3.5
+	l.position = at
+	add_child(l)
+	_flashes += 1
+	lights.append({"node": l, "t": 0.0})
 
 
 ## Strahl zwischen zwei Punkten (Blitz, Laser).
@@ -183,3 +214,7 @@ func clear() -> void:
 	for f in fading:
 		f.node.queue_free()
 	fading.clear()
+	for lf in lights:
+		lf.node.queue_free()
+	lights.clear()
+	_flashes = 0

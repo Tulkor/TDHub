@@ -74,6 +74,37 @@ static func hazard() -> StandardMaterial3D:
 	return m
 
 
+## Selbstleuchtend (über der Glow-Schwelle, strahlt bei Nacht).
+static func glow(c: Color, energy := 3.0) -> StandardMaterial3D:
+	var key := "glow|%s|%s" % [c.to_html(), energy]
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	_mats[key] = m
+	return m
+
+
+## Glas: durchsichtig, glänzend, mit leichtem Rand-Schimmer.
+static func glass() -> StandardMaterial3D:
+	if _mats.has("glass"):
+		return _mats.glass
+	var m := StandardMaterial3D.new()
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(0.7, 0.9, 1.0, 0.16)
+	m.metallic = 0.2
+	m.roughness = 0.05
+	m.rim_enabled = true
+	m.rim = 0.6
+	m.rim_tint = 0.3
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mats.glass = m
+	return m
+
+
 ## Einfarbig leuchtend ohne Licht (Geschosse, Strahlen, Ringe).
 static func flat(c: Color, alpha := 1.0) -> StandardMaterial3D:
 	var key := "flat|%s|%s" % [c.to_html(), alpha]
@@ -125,5 +156,5 @@ static func part(spec: Dictionary, colors: Dictionary) -> MeshInstance3D:
 	mi.rotation_degrees = Vector3(float(r[0]), float(r[1]), float(r[2]))
 	var key := str(spec.get("c", "type"))
 	var col: Color = colors.get(key, colors.get("type", Color.WHITE))
-	mi.material_override = mat(col, 1.0, 1.6 if key == "glow" else 0.0)
+	mi.material_override = glow(col, 4.0) if key == "glow" else mat(col, 1.0)
 	return mi

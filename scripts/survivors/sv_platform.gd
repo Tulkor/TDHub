@@ -7,9 +7,9 @@ extends Node3D
 ## frei grau, belegt in der Seltenheitsfarbe; Stufen-Lämpchen außen. Alles in Dev-Optik.
 
 ## Groß genug, dass Klappen samt versenkten Hälften und die Waffen ganz auf dem Deck liegen (Lukas 2026-11-04)
-const PAD_RADIUS := 3.0
-const DECK_R := 4.7
-const DECK_Y := 1.5
+const PAD_RADIUS := 2.8
+const DECK_R := 4.35
+const DECK_Y := 3.4
 const SLOTS := 6
 ## Waffen etwas größer als ihre Bausteine, damit man sie aus der Spielansicht erkennt
 const WEAPON_SCALE := 1.35
@@ -25,64 +25,92 @@ const RISE_TIME := 0.6
 var pads: Array = []        ## je Platz: {root, frame, band, lift, mount, halves, pips, phase, t, state}
 var core_glow: MeshInstance3D
 var _core_mat: StandardMaterial3D
+var _core_orb: MeshInstance3D
+var _core_light: OmniLight3D
+var _beacon: MeshInstance3D
+var _beacon_light: OmniLight3D
 var _t := 0.0
 
 
 func _ready() -> void:
-	var base := MeshInstance3D.new()
-	var bm := CylinderMesh.new()
-	bm.top_radius = DECK_R - 0.45
-	bm.bottom_radius = DECK_R - 0.05
-	bm.height = 1.3
-	bm.radial_segments = 6
-	base.mesh = bm
-	base.position.y = 0.65
-	base.material_override = SvDev.mat(Color("5a6070"))
-	add_child(base)
+	var metal := SvDev.mat(Color("5a6070"))
+	var dark := SvDev.mat(Color("2c2f38"))
+	# Fuß, schlanke Säule, die sich nach oben zum Deck hin aufweitet (Lukas 2026-11-04)
+	var foot := _cyl(2.0, 2.3, 0.35, 6, dark)
+	foot.position.y = 0.17
+	var col := _cyl(DECK_R - 0.35, 1.25, DECK_Y - 0.6, 6, metal)
+	col.position.y = 0.35 + (DECK_Y - 0.6) * 0.5 - 0.05
+	# Leuchtleisten an den Kanten der Säule
+	for k in 6:
+		var ang := TAU * k / 6.0
+		var bottom := Vector3(sin(ang) * 1.27, 0.4, cos(ang) * 1.27)
+		var top := Vector3(sin(ang) * (DECK_R - 0.33), DECK_Y - 0.5, cos(ang) * (DECK_R - 0.33))
+		var strip := MeshInstance3D.new()
+		var sm := BoxMesh.new()
+		sm.size = Vector3(0.07, 0.07, bottom.distance_to(top))
+		strip.mesh = sm
+		strip.material_override = SvDev.glow(UiTheme.CYAN, 3.0)
+		add_child(strip)
+		strip.look_at_from_position((bottom + top) * 0.5, top, Vector3.UP)
 
-	var deck := MeshInstance3D.new()
-	var dm := CylinderMesh.new()
-	dm.top_radius = DECK_R
-	dm.bottom_radius = DECK_R - 0.15
-	dm.height = 0.45
-	dm.radial_segments = 6
-	deck.mesh = dm
+	var deck := _cyl(DECK_R, DECK_R - 0.15, 0.45, 6, SvDev.mat(Color("8a90a0")))
 	deck.position.y = DECK_Y - 0.22
-	deck.material_override = SvDev.mat(Color("8a90a0"))
-	add_child(deck)
+	_railing()
 
-	# Reaktor-Kern: Säule mit leuchtendem Ring, zeigt über die Farbe das Leben
-	var core := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.8
-	cm.bottom_radius = 1.0
-	cm.height = 1.9
-	cm.radial_segments = 8
-	core.mesh = cm
-	core.position.y = DECK_Y + 0.95
-	core.material_override = SvDev.mat(Color("40465a"))
-	add_child(core)
-	core_glow = MeshInstance3D.new()
-	var gm := CylinderMesh.new()
-	gm.top_radius = 0.9
-	gm.bottom_radius = 0.9
-	gm.height = 0.36
-	gm.radial_segments = 16
-	core_glow.mesh = gm
-	core_glow.position.y = DECK_Y + 1.35
-	_core_mat = StandardMaterial3D.new()
-	_core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_core_mat.albedo_color = UiTheme.CYAN
-	core_glow.material_override = _core_mat
-	add_child(core_glow)
-	var cap := MeshInstance3D.new()
-	var capm := SphereMesh.new()
-	capm.radius = 0.58
-	capm.height = 0.7
-	cap.mesh = capm
-	cap.position.y = DECK_Y + 1.9
-	cap.material_override = SvDev.mat(Color("40465a"))
-	add_child(cap)
+	# Kern: Glaszylinder mit leuchtendem Inneren, Licht fällt aufs Deck (Farbe zeigt das Leben)
+	var ring_lo := _cyl(1.0, 1.05, 0.3, 12, dark)
+	ring_lo.position.y = DECK_Y + 0.15
+	var ring_hi := _cyl(1.0, 1.0, 0.25, 12, dark)
+	ring_hi.position.y = DECK_Y + 2.2
+	var glass := _cyl(0.88, 0.88, 1.8, 24, SvDev.glass())
+	glass.position.y = DECK_Y + 1.2
+	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_core_mat = SvDev.glow(UiTheme.CYAN, 4.0).duplicate()
+	core_glow = _cyl(0.22, 0.22, 1.6, 12, _core_mat)
+	core_glow.position.y = DECK_Y + 1.2
+	var orb := MeshInstance3D.new()
+	var om := SphereMesh.new()
+	om.radius = 0.42
+	om.height = 0.84
+	orb.mesh = om
+	orb.material_override = _core_mat
+	orb.position.y = DECK_Y + 1.2
+	add_child(orb)
+	_core_orb = orb
+	_core_light = OmniLight3D.new()
+	_core_light.light_color = UiTheme.CYAN
+	_core_light.light_energy = 3.0
+	_core_light.omni_range = 9.0
+	_core_light.shadow_enabled = false
+	_core_light.position.y = DECK_Y + 1.2
+	add_child(_core_light)
+	# Deckel und Antenne mit Blinklicht
+	var lid := _cyl(0.7, 1.0, 0.3, 12, metal)
+	lid.position.y = DECK_Y + 2.45
+	var mast := _cyl(0.06, 0.1, 2.6, 8, dark)
+	mast.position.y = DECK_Y + 2.6 + 1.3
+	for k in 3:
+		var bar := MeshInstance3D.new()
+		var bm2 := BoxMesh.new()
+		bm2.size = Vector3(0.9 - k * 0.25, 0.05, 0.05)
+		bar.mesh = bm2
+		bar.material_override = dark
+		bar.position.y = DECK_Y + 3.2 + k * 0.55
+		bar.rotation.y = k * 0.6
+		add_child(bar)
+	_beacon = MeshInstance3D.new()
+	var bs := SphereMesh.new()
+	bs.radius = 0.13
+	bs.height = 0.26
+	_beacon.mesh = bs
+	_beacon.material_override = SvDev.glow(UiTheme.MISSING, 6.0)
+	_beacon.position.y = DECK_Y + 5.0
+	add_child(_beacon)
+	_beacon_light = OmniLight3D.new()
+	_beacon_light.light_color = UiTheme.MISSING
+	_beacon_light.omni_range = 4.0
+	_beacon_light.position.y = DECK_Y + 5.0
+	add_child(_beacon_light)
 
 	for i in SLOTS:
 		var a := TAU * float(i) / SLOTS + PI / 6.0
@@ -196,7 +224,12 @@ func _build_pad(root: Node3D) -> Dictionary:
 		for part in Geometry2D.intersect_polygons(shifted, cross):
 			_mi(prism(part, HATCH_TOP, HATCH_TOP + 0.008), SvDev.hazard(), half)
 		halves.append({"node": half, "dir": Vector3(out_dir.x, 0, out_dir.y)})
-	return {"frame": frame, "band": band, "lift": lift, "mount": mount, "halves": halves,
+	var light := OmniLight3D.new()
+	light.position.y = 0.9
+	light.omni_range = 2.6
+	light.light_energy = 0.0
+	root.add_child(light)
+	return {"frame": frame, "band": band, "lift": lift, "mount": mount, "halves": halves, "light": light,
 		"phase": "closed", "t": 0.0, "state": "locked"}
 
 
@@ -223,7 +256,11 @@ func set_state(i: int, state: String, color := Color.WHITE) -> void:
 		c = UiTheme.MISSING.darkened(0.45)
 	elif state == "armed":
 		c = color
-	p.band.material_override = SvDev.flat(c)
+	p.band.material_override = SvDev.glow(c, 1.2 if state == "locked" else 2.5)
+	# Platzlicht: belegt hell in der Seltenheitsfarbe, gesperrt schwach rot, frei aus
+	var light: OmniLight3D = p.light
+	light.light_color = c
+	light.light_energy = 1.4 if state == "armed" else (0.35 if state == "locked" else 0.0)
 
 
 func is_up(i: int) -> bool:
@@ -340,9 +377,69 @@ func set_level(i: int, level: int, color: Color) -> void:
 
 
 func set_health(f: float) -> void:
-	_core_mat.albedo_color = UiTheme.MISSING.lerp(UiTheme.CYAN, clampf(f, 0.0, 1.0))
+	var c := UiTheme.MISSING.lerp(UiTheme.CYAN, clampf(f, 0.0, 1.0))
+	_core_mat.emission = c
+	_core_mat.albedo_color = c
+	_core_light.light_color = c
 
 
 func _process(dt: float) -> void:
 	_t += dt
-	core_glow.scale = Vector3.ONE * (1.0 + sin(_t * 3.0) * 0.04)
+	_core_orb.scale = Vector3.ONE * (1.0 + sin(_t * 3.0) * 0.06)
+	_core_orb.position.y = DECK_Y + 1.2 + sin(_t * 1.3) * 0.12
+	_core_light.light_energy = 3.0 + sin(_t * 3.0) * 0.4
+	# Antenne blinkt
+	var on := fmod(_t, 1.4) < 0.18
+	_beacon.visible = on
+	_beacon_light.light_energy = 2.5 if on else 0.0
+
+
+func _cyl(top: float, bottom: float, h: float, seg: int, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var c := CylinderMesh.new()
+	c.top_radius = top
+	c.bottom_radius = bottom
+	c.height = h
+	c.radial_segments = seg
+	mi.mesh = c
+	mi.material_override = m
+	add_child(mi)
+	return mi
+
+
+## Geländer am Deckrand: Pfosten, zwei Holme, Warnlämpchen an den Ecken.
+func _railing() -> void:
+	var r := DECK_R - 0.12
+	var m := SvDev.mat(Color("a7adba"), 1.0)
+	var corners: Array = []
+	for k in 6:
+		var ang := TAU * k / 6.0
+		corners.append(Vector3(sin(ang) * r, DECK_Y, cos(ang) * r))
+	for k in 6:
+		var a: Vector3 = corners[k]
+		var b: Vector3 = corners[(k + 1) % 6]
+		for j in 4:
+			var p := a.lerp(b, j / 4.0)
+			var post := MeshInstance3D.new()
+			var pm := BoxMesh.new()
+			pm.size = Vector3(0.08, 0.75, 0.08)
+			post.mesh = pm
+			post.material_override = m
+			post.position = p + Vector3(0, 0.37, 0)
+			add_child(post)
+		for hgt in [0.72, 0.4]:
+			var rail := MeshInstance3D.new()
+			var rm := BoxMesh.new()
+			rm.size = Vector3(0.06, 0.06, a.distance_to(b))
+			rail.mesh = rm
+			rail.material_override = m
+			add_child(rail)
+			rail.look_at_from_position((a + b) * 0.5 + Vector3(0, hgt, 0), b + Vector3(0, hgt, 0), Vector3.UP)
+		var lamp := MeshInstance3D.new()
+		var lm := SphereMesh.new()
+		lm.radius = 0.08
+		lm.height = 0.16
+		lamp.mesh = lm
+		lamp.material_override = SvDev.glow(UiTheme.COIN, 4.0)
+		lamp.position = a + Vector3(0, 0.82, 0)
+		add_child(lamp)

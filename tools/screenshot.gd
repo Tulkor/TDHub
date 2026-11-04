@@ -1,7 +1,7 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id)
+##   --szene=spiel|menu|map_editor|tower_editor|maul|survivors   Standard spiel (survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -475,6 +475,9 @@ func _prepare_survivors(game: Node) -> void:
 			game.platform.step(minf(t, 1.0 / 30.0))
 			t -= 1.0 / 30.0
 		game.paused = true
+	if opts.has("neigung"):
+		game.cam_pitch = float(opts.neigung)
+		game._place_camera()
 	if opts.has("nah"):
 		game.cam_dist = 17.0 if opts.has("klappe") else 19.0
 		game._place_camera()

@@ -76,7 +76,7 @@ func _build() -> void:
 			var b := BoxMesh.new()
 			b.size = Vector3.ONE * size
 			_body.mesh = b
-	_body.material_override = SvDev.mat(c, 1.0 / maxf(size, 0.4) * 0.5)
+	_body.material_override = SvDev.mat(c, 1.0 / maxf(size, 0.4) * 0.5, 0.35)  # leicht selbstleuchtend, nachts sichtbar
 	_body.position.y = (2.2 if fly else 0.0) + size * 0.5
 	add_child(_body)
 	if fly:
