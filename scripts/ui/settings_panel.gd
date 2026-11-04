@@ -82,6 +82,10 @@ func _ready() -> void:
 	gfx.tooltip_text = tr("Niedrig: harte Schatten, ohne Leuchten, Kantenglättung, Treffer- und Laternenlichter. Für schwächere Grafikkarten.")
 	gfx.item_selected.connect(Display.set_quality)
 	ui_scale_slider = _ui_scale_row(grid)
+	# Widescreen: Leisten und Fenster im Spiel rücken in eine mittige Fläche (höchstens 16:9, davon dieser Anteil)
+	_percent_row(grid, tr("HUD-Breite"), Display.HUD_WIDTH_MIN, 1.0, Display.hud_width,
+		tr("Wie breit die Leisten und Fenster im Spiel sein dürfen. Auf breiten Bildschirmen liegt alles ohnehin höchstens in einer mittigen 16:9-Fläche; kleiner rückt alles weiter zur Mitte."),
+		Display.set_hud_width, true)
 	# Bildfilter je Modus (StyleFilter): Retro in GemTD, Messing im Maul, Nebelwald in eeveTD/YouTD, warm in Randgruppen
 	var look := _option(tr("Stil-Filter"), grid)
 	look.add_item(tr("An"))
@@ -134,22 +138,28 @@ func _unhandled_input(event: InputEvent) -> void:
 ## UI-Größe 50–100 %: die Zahl folgt dem Regler sofort, umgestellt wird beim Loslassen,
 ## sonst springt der Regler beim Ziehen unter der Maus weg.
 func _ui_scale_row(grid: GridContainer) -> HSlider:
-	var l := UiUtil.label(tr("UI-Größe"), grid, 15)
+	return _percent_row(grid, tr("UI-Größe"), Display.UI_SCALE_MIN, Display.UI_SCALE_MAX, Display.ui_scale,
+		tr("Verkleinert Menüs und Spieloberfläche, die Spielansicht bleibt gleich."), Display.set_ui_scale, false)
+
+
+## Regler in Prozent; live = schon beim Ziehen umstellen (geht, wenn sich der Regler selbst nicht verschiebt).
+func _percent_row(grid: GridContainer, text: String, lo: float, hi: float, value: float, tip: String, apply: Callable, live: bool) -> HSlider:
+	var l := UiUtil.label(text, grid, 15)
 	l.custom_minimum_size.x = 150
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_child(h)
 	var s := HSlider.new()
-	s.min_value = Display.UI_SCALE_MIN * 100.0
-	s.max_value = Display.UI_SCALE_MAX * 100.0
+	s.min_value = lo * 100.0
+	s.max_value = hi * 100.0
 	s.step = 5
-	s.value = roundf(Display.ui_scale * 100.0)
+	s.value = roundf(value * 100.0)
 	s.focus_mode = Control.FOCUS_NONE
 	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	s.custom_minimum_size.y = 24
-	s.tooltip_text = tr("Verkleinert Menüs und Spieloberfläche, die Spielansicht bleibt gleich.")
+	s.tooltip_text = tip
 	h.add_child(s)
 	var n := UiUtil.label("%d %%" % roundi(s.value), h, 16)
 	n.custom_minimum_size.x = 64
@@ -160,11 +170,11 @@ func _ui_scale_row(grid: GridContainer) -> HSlider:
 	s.drag_started.connect(func(): dragging[0] = true)
 	s.drag_ended.connect(func(_changed):
 		dragging[0] = false
-		Display.set_ui_scale(s.value / 100.0))
+		apply.call(s.value / 100.0))
 	s.value_changed.connect(func(val):
 		n.text = "%d %%" % roundi(val)
-		if not dragging[0]:
-			Display.set_ui_scale(val / 100.0))
+		if live or not dragging[0]:
+			apply.call(val / 100.0))
 	return s
 
 
