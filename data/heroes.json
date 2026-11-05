@@ -51,30 +51,6 @@
 		"reaggro_block": 1.5,
 		"road_lookahead": 3.0
 	},
-	"hero": {
-		"id": "torvik",
-		"name": "Torvik Sturmruf",
-		"title": "Elementarkrieger",
-		"hp": 620,
-		"hp_regen": 2.0,
-		"mana": 260,
-		"mana_regen": 4.0,
-		"armor": 3,
-		"speed": 6.5,
-		"radius": 0.7,
-		"attack": {"damage": 30, "interval": 0.8, "range": 2.6, "arc": 120},
-		"level": {"max": 15, "xp_base": 70, "xp_growth": 1.25, "hp": 55, "mana": 15, "damage": 0.08, "armor": 0.4},
-		"respawn": {"base": 5.0, "per_level": 1.0},
-		"dodge": {"distance": 5.5, "time": 0.22, "cooldown": 4.0},
-		"passive": {"name": "Sturmbrandung", "desc": "Grundangriffe lösen mit 20 % Chance einen Windstoß aus: 2 Zusatzangriffe (höchstens alle 1,5 s). Jeder Windstoß setzt mit 30 % Chance Donnerhieb zurück und verstärkt ihn um 25 %, der Blitz springt dann auf 2 weitere Gegner.", "chance": 0.2, "extra": 2, "icd": 1.5, "reset_chance": 0.3, "empower": 0.25, "empower_hops": 2, "hop_range": 6.0},
-		"abilities": [
-			{"slot": 0, "id": "donnerhieb", "name": "Donnerhieb", "desc": "Zwei Blitzschläge mit beiden Äxten im Kegel vor Torvik, der zweite betäubt kurz.", "kind": "cone", "range": 3.6, "angle": 85, "damage": [55, 55], "stun": 0.6, "cooldown": 6.0, "mana": 20,
-				"ascended": {"name": "Windschlag", "desc": "Fernkampf-Windklinge, durchschlägt alle Gegner auf der Linie.", "kind": "line", "range": 8.0, "width": 1.8, "damage": [85], "cooldown": 3.0}},
-			{"slot": 1, "id": "glutnova", "name": "Glutnova", "desc": "Feuerwelle um Torvik, setzt Getroffene 3 s in Brand. Trifft sie 3 oder mehr Gegner, kostet die nächste nur die Hälfte.", "kind": "nova", "radius": 5.0, "damage": 85, "burn": 12, "burn_time": 3.0, "cooldown": 10.0, "mana": 60, "discount_hits": 3, "discount": 0.5},
-			{"slot": 2, "id": "erdschock", "name": "Erdschock", "desc": "Felsgeschoss in Zielrichtung, trifft den ersten Gegner und verlangsamt ihn 2 s um 40 %.", "kind": "skillshot", "range": 16.0, "width": 0.9, "speed": 24.0, "damage": 95, "slow": 0.4, "slow_time": 2.0, "cooldown": 8.0, "mana": 30},
-			{"slot": 3, "id": "windaufstieg", "name": "Windaufstieg", "desc": "15 s Luftelementar: Donnerhieb wird zu Windschlag, Abklingzeit halbiert, doppelte Windstoß-Chance. Beim Verwandeln schleudert ein Windstoß Gegner im Umkreis zurück und betäubt sie 1 s.", "kind": "form", "unlock": 6, "duration": 15.0, "radius": 5.0, "stun": 1.0, "knockback": 4.0, "cooldown": 60.0, "mana": 100, "gust_mult": 2.0}
-		]
-	},
 	"abilities": {
 		"klauenhieb": {"name": "Klauenhieb", "kind": "cone", "cast_range": 2.8, "range": 3.4, "angle": 90, "windup": 0.9, "cooldown": 6.0, "damage": 120},
 		"moerser": {"name": "Schlammmörser", "kind": "circle", "cast_range": 13.0, "radius": 2.6, "windup": 1.5, "cooldown": 8.0, "damage": 150},

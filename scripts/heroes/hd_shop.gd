@@ -386,8 +386,8 @@ func use(i: int) -> String:
 	if u.has("home"):
 		game.teleport_hero(game.hero_spawn())
 	if u.has("shield"):
-		h.shield = float(u.shield)
-		h.shield_until = game.play_time + float(u.time)
+		h.ward = float(u.shield)
+		h.ward_until = game.play_time + float(u.time)
 	x.n = int(x.n) - 1
 	if int(x.n) <= 0:
 		inv[i] = null
