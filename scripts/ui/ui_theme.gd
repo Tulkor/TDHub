@@ -11,6 +11,8 @@ const DRUID := "druid"
 const DECO := "deco"
 ## Randgruppen TD: Plakatwand (poster_theme.gd), Papier, Druckerschwärze, Signalrot.
 const POSTER := "poster"
+## Tower Survivors: Hologramm (holo_theme.gd), Cyan-Linien auf halbtransparentem Dunkelblau.
+const HOLO := "holo"
 
 const ARCADE_COLORS := {
 	"BG": Color("07040e"), "BAR": Color("0d0618"), "PANEL": Color("0d0618"), "PANEL_2": Color("160b28"),
@@ -62,6 +64,7 @@ static func use_skin(name: String) -> void:
 		DRUID: c = DruidTheme.COLORS
 		DECO: c = _deco_colors()
 		POSTER: c = PosterTheme.COLORS
+		HOLO: c = HoloTheme.COLORS
 	BG = c.BG
 	BAR = c.BAR
 	PANEL = c.PANEL
@@ -95,6 +98,10 @@ static func poster() -> bool:
 	return skin == POSTER
 
 
+static func holo() -> bool:
+	return skin == HOLO
+
+
 ## Farben von DecoTheme unter den Namen von UiTheme (kein Versatz-Schatten: SHADOW = Leistenfarbe).
 static func _deco_colors() -> Dictionary:
 	return {
@@ -117,7 +124,7 @@ static func box(bg: Color, border := Color.TRANSPARENT, _radius := 0, border_wid
 	if border.a > 0.0:
 		s.border_color = border
 		# Druidenhain: feine 1-px-Rahmen wie im Entwurf, Arcade mindestens 2 px
-		s.set_border_width_all(0 if border_width <= 0 else (border_width if druid() else maxi(border_width, 2)))
+		s.set_border_width_all(0 if border_width <= 0 else (border_width if druid() or holo() else maxi(border_width, 2)))
 	s.content_margin_left = pad
 	s.content_margin_right = pad
 	s.content_margin_top = pad * 0.6
@@ -133,6 +140,8 @@ static func chamfer(bg: Color, border: Color, cut := 10, pad := 10.0) -> StyleBo
 		return DecoTheme.chamfer(bg, border, cut, pad)
 	if poster():
 		return PosterTheme.frame(bg, BORDER, pad)
+	if holo():
+		return HoloTheme.frame(bg, border, pad, float(cut))
 	var s := box(bg, border, 0, 2, pad)
 	s.corner_radius_top_left = cut
 	s.corner_radius_bottom_right = cut
@@ -146,6 +155,8 @@ static func chamfer(bg: Color, border: Color, cut := 10, pad := 10.0) -> StyleBo
 static func panel(pad := 14.0, alpha := 0.95, border := Color.TRANSPARENT) -> StyleBox:
 	if poster():
 		return PosterTheme.panel(pad, alpha, BORDER if border.a == 0.0 else border)
+	if holo():
+		return HoloTheme.panel(pad, alpha, border)
 	if border.a == 0.0:
 		border = GOLD
 	if druid():
@@ -167,6 +178,8 @@ static func font(bold := false) -> Font:
 		return DecoTheme.font(bold)
 	if poster():
 		return PosterTheme.font(bold)
+	if holo():
+		return HoloTheme.font(bold)
 	return load(FONT_BOLD if bold else FONT)
 
 
@@ -228,6 +241,8 @@ static func get_theme() -> Theme:
 		DruidTheme.extend_theme(t)
 	elif poster():
 		PosterTheme.extend_theme(t)
+	elif holo():
+		HoloTheme.extend_theme(t)
 	_themes[skin] = t
 	return t
 
@@ -274,6 +289,9 @@ static func accent_button(b: Button, bg: Color, fg: Color, _glow: Color = Color.
 	if poster():
 		PosterTheme.accent_button(b, bg, fg)
 		return
+	if holo():
+		HoloTheme.accent_button(b, bg, fg)
+		return
 	var normal := box(bg, Color.TRANSPARENT, 0, 0, 14)
 	normal.shadow_color = CYAN if bg != CYAN else GOLD
 	normal.shadow_size = 1
@@ -301,6 +319,8 @@ static func caption(text: String, parent: Node) -> Label:
 		l.add_theme_color_override("font_color", GOLD)
 	elif poster():
 		l.add_theme_font_override("font", PosterTheme.font(true))
+	elif holo():
+		HoloTheme.caption(l)
 	return l
 
 
@@ -311,6 +331,8 @@ static func heading(l: Label, color := Color.TRANSPARENT) -> Label:
 		return DruidTheme.heading(l)
 	if poster():
 		return PosterTheme.heading(l, color)
+	if holo():
+		return HoloTheme.heading(l, color)
 	if deco():
 		# Messing, Großbuchstaben, gesperrt (Federo; Limelight erst ab DecoTheme.DISPLAY_SIZE)
 		l.uppercase = true
@@ -330,6 +352,8 @@ static func title(l: Label, size := 0) -> Label:
 		return DruidTheme.title(l, size)
 	if poster():
 		return PosterTheme.title(l, size)
+	if holo():
+		return HoloTheme.title(l, size)
 	if deco():
 		return DecoTheme.title(l, size)
 	l.uppercase = true

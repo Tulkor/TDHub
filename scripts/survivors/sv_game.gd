@@ -61,7 +61,8 @@ var rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
-	UiTheme.use_skin(UiTheme.ARCADE)
+	# Hologramm-Stil (Lukas 2026-11-04, Entwurf „Cyan-Kommando“)
+	UiTheme.use_skin(UiTheme.HOLO)
 	cfg = Database.load_json(DATA)
 	for w in cfg.weapons:
 		weapon_defs[str(w.id)] = w
@@ -84,6 +85,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
+	UiTheme.use_skin(UiTheme.ARCADE)
 
 
 # ---------------------------------------------------------------- Welt
@@ -171,10 +173,16 @@ func _unhandled_input(ev: InputEvent) -> void:
 		elif ev.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			cam_dist = minf(46.0, cam_dist + 1.5)
 			_place_camera()
+		elif ev.button_index == MOUSE_BUTTON_LEFT and state != "setup":
+			hud.pick(ev.position)
+		elif ev.button_index == MOUSE_BUTTON_RIGHT:
+			hud.deselect()
 	elif ev is InputEventKey and ev.pressed and not ev.echo:
 		match ev.keycode:
 			KEY_ESCAPE:
-				hud.toggle_menu()
+				# erst die Auswahl aufheben, dann das Menü
+				if not hud.deselect():
+					hud.toggle_menu()
 			KEY_SPACE:
 				if state == "play":
 					paused = not paused
