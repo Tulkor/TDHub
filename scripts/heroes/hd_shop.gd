@@ -22,6 +22,9 @@ var inv: Array = []              ## Heldenplätze: null | {id, n}
 var stash: Array = []            ## Lager in der Feste
 var wood_bought: Dictionary = {} ## Holzwert-id → Anzahl
 var crafted := 0
+var trophies := 0                ## Etappe 3: Trophäen der Kriegsherren (Kriegsherren-Händler)
+var marks := 0                   ## Arena-Marken
+var merchant: Array = []         ## Wanderhändler: [{id, price}] solange das Ereignis läuft
 
 
 func _init(g) -> void:
@@ -175,14 +178,36 @@ func owned_count(id: String) -> int:
 	return n
 
 
-## Werte aller Items am Helden (nicht im Lager) plus Holzwerte.
+## Werte eines Platzes: Item-Werte mit Veredelung (+per_level je Stufe) plus eingesetzte Edelsteine.
+func entry_stats(x) -> Dictionary:
+	var out := {}
+	if x == null:
+		return out
+	var f: float = 1.0 + float(game.cfg.zones.schmiede.per_level) * int(x.get("up", 0))
+	for k in item(x.id).get("stats", {}):
+		out[k] = float(item(x.id).stats[k]) * f
+	for gid in x.get("gems", []):
+		var gem: Dictionary = game.zones.gem(str(gid))
+		for k in gem.get("stats", {}):
+			out[k] = float(out.get(k, 0.0)) + float(gem.stats[k])
+	return out
+
+
+## Werte aller Items am Helden (nicht im Lager) plus Holzwerte, Arena-Siege und Schrein-Segen.
 func bonus() -> Dictionary:
 	var out := {}
 	for x in inv:
 		if x == null:
 			continue
-		for k in item(x.id).get("stats", {}):
-			out[k] = float(out.get(k, 0.0)) + float(item(x.id).stats[k])
+		var st := entry_stats(x)
+		for k in st:
+			out[k] = float(out.get(k, 0.0)) + float(st[k])
+	var extra: Array = [game.perma]
+	if not game.blessing.is_empty() and game.wave <= int(game.blessing.until):
+		extra.append(game.blessing.stats)
+	for d in extra:
+		for k in d:
+			out[k] = float(out.get(k, 0.0)) + float(d[k])
 	for s in cfg.wood.stats:
 		var n := int(wood_bought.get(str(s.id), 0))
 		for k in s.stats:
@@ -216,6 +241,12 @@ func act(cmd: Dictionary) -> String:
 			return buy_wood(str(cmd.id))
 		"repair":
 			return repair(cmd.gate)
+		"merchant":
+			return buy_merchant(int(cmd.i))
+		"upgrade", "socket", "lumberjack", "arena", "trial":
+			return game.zones.act(cmd)
+		"event":
+			return game.events.act(cmd)
 	return "?"
 
 
@@ -223,6 +254,10 @@ func can_buy(id: String) -> String:
 	var it := item(id)
 	if it.is_empty() or it.has("recipe"):
 		return "?"
+	if it.has("trophy") and trophies < int(it.trophy):
+		return tr("Zu wenig Trophäen")
+	if it.has("marks") and marks < int(it.marks):
+		return tr("Zu wenig Arena-Marken")
 	if gold < int(it.price):
 		return tr("Zu wenig Gold")
 	if _target_for(id).is_empty():
@@ -235,7 +270,45 @@ func buy(id: String) -> String:
 	if why != "":
 		return why
 	gold -= int(item(id).price)
+	trophies -= int(item(id).get("trophy", 0))
+	marks -= int(item(id).get("marks", 0))
 	_put(id, 1)
+	_changed()
+	return ""
+
+
+## Preis als Text (Gold, Trophäen oder Arena-Marken).
+func price_text(id: String) -> String:
+	var it := item(id)
+	if it.has("trophy"):
+		return tr("%d Trophäe") % int(it.trophy) if int(it.trophy) == 1 else tr("%d Trophäen") % int(it.trophy)
+	if it.has("marks"):
+		return tr("%d Marken") % int(it.marks)
+	return tr("%d Gold") % int(it.price)
+
+
+func can_buy_merchant(i: int) -> String:
+	if i < 0 or i >= merchant.size():
+		return "?"
+	var m: Dictionary = merchant[i]
+	if bool(m.get("sold", false)):
+		return tr("Verkauft")
+	if gold < int(m.price):
+		return tr("Zu wenig Gold")
+	if _target_for(str(m.id)).is_empty():
+		return tr("Kein Platz frei")
+	return ""
+
+
+## Wanderhändler: seltenes Item zum Festpreis (ohne Bauteile).
+func buy_merchant(i: int) -> String:
+	var why := can_buy_merchant(i)
+	if why != "":
+		return why
+	var m: Dictionary = merchant[i]
+	gold -= int(m.price)
+	m.sold = true
+	_put(str(m.id), 1)
 	_changed()
 	return ""
 
@@ -471,8 +544,18 @@ static func stat_text(stats: Dictionary) -> String:
 
 
 ## Tooltip eines Items: Name, Stufe, Werte bzw. Wirkung, Verkaufswert.
-func tooltip(id: String) -> String:
+func tooltip(id: String, x = null) -> String:
 	var it := item(id)
+	if x != null and (int(x.get("up", 0)) > 0 or not x.get("gems", []).is_empty()):
+		var head := "%s +%d (%s)" % [tr(str(it.name)), int(x.get("up", 0)), tr(str(tier(id).name))]
+		var gl: Array = []
+		for gid in x.get("gems", []):
+			gl.append(tr(str(game.zones.gem(str(gid)).get("name", gid))))
+		var lines2: Array = [head, stat_text(entry_stats(x))]
+		if not gl.is_empty():
+			lines2.append(tr("Edelsteine: %s") % ", ".join(gl))
+		lines2.append(tr("Verkauf %d Gold") % sell_price(id))
+		return "\n".join(lines2)
 	var lines: Array = ["%s (%s)" % [tr(str(it.name)), tr(str(tier(id).name))]]
 	if it.has("stats"):
 		lines.append(stat_text(it.stats))

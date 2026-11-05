@@ -1,22 +1,14 @@
 {
-	"_info": "Bollwerk (Arbeitstitel), Hero-Defense-Modus \"heroes\", Etappe 1: ein Held, eine Straße, 10 Wellen. Design: /mnt/project-files/docs/hero-defense/. Längen in Welteinheiten (1 Einheit ≈ 1 Meter), Zeiten in Sekunden. cc: harte Kontrolleffekte nehmen je Treffer ab (steps = Faktor der 1., 2., 3. … CC), Zähler zurück nach reset Sekunden ohne harte CC oder reset Sekunden am Maximum; Bosse nach dem letzten Schritt immune Sekunden immun. Verlangsamung und Rüstungssenkung wirken immer, auf Bossen mit boss_slow/boss_armor_reduction.",
+	"_info": "Bollwerk (Arbeitstitel), Hero-Defense-Modus \"heroes\", Etappe 3: 40 Wellen in vier Fraktionen (factions: trait rise/explode/shield), Kriegsherren W10/20/30, Endboss W40 (land, siege, phases), Elite-Eigenschaften ab Welle elites.from, Sonderzonen (zones) und Ereignisse (events). Design: /mnt/project-files/docs/hero-defense/. Längen in Welteinheiten (1 Einheit ≈ 1 Meter), Zeiten in Sekunden. cc: harte Kontrolleffekte nehmen je Treffer ab (steps = Faktor der 1., 2., 3. … CC), Zähler zurück nach reset Sekunden ohne harte CC oder reset Sekunden am Maximum; Bosse nach dem letzten Schritt immune Sekunden immun. Verlangsamung und Rüstungssenkung wirken immer, auf Bossen mit boss_slow/boss_armor_reduction.",
 	"arena": {
 		"bounds": [-82, -82, 82, 82],
 		"road_width": 6.0,
 		"fortress": [0, 0],
 		"fortress_radius": 5.0,
 		"fortress_zone": 14.0,
-		"roads": [
-			{"id": "nord", "name": "Nordstraße", "points": [[0, -78], [0, -64], [-12, -52], [-15, -36], [-5, -24], [3, -15], [1, -7]]},
-			{"id": "ost", "name": "Oststraße", "points": [[78, 0], [64, 0], [52, -12], [36, -15], [24, -5], [15, 3], [7, 1]]},
-			{"id": "sued", "name": "Südstraße", "points": [[0, 78], [0, 64], [12, 52], [15, 36], [5, 24], [-3, 15], [-1, 7]]},
-			{"id": "west", "name": "Weststraße", "points": [[-78, 0], [-64, 0], [-52, 12], [-36, 15], [-24, 5], [-15, -3], [-7, -1]]}
-		],
-		"obstacles": [[7, -57, 1.6], [-8, -71, 1.3], [-23, -46, 2.0], [-6, -41, 1.4], [-14, -27, 1.2], [12, -25, 1.8], [-6, -14, 1.1], [24, -40, 2.6], [-34, -30, 2.4], [30, -66, 3.0], [-28, -66, 2.8], [16, -48, 1.5], [57, 7, 1.6], [71, -8, 1.3], [46, -23, 2.0], [41, -6, 1.4], [27, -14, 1.2], [25, 12, 1.8], [14, -6, 1.1], [40, 24, 2.6], [30, -34, 2.4], [66, 30, 3.0], [66, -28, 2.8], [48, 16, 1.5], [-7, 57, 1.6], [8, 71, 1.3], [23, 46, 2.0], [6, 41, 1.4], [14, 27, 1.2], [-12, 25, 1.8], [6, 14, 1.1], [-24, 40, 2.6], [34, 30, 2.4], [-30, 66, 3.0], [28, 66, 2.8], [-16, 48, 1.5], [-57, -7, 1.6], [-71, 8, 1.3], [-46, 23, 2.0], [-41, 6, 1.4], [-27, 14, 1.2], [-25, -12, 1.8], [-14, 6, 1.1], [-40, -24, 2.6], [-30, 34, 2.4], [-66, -30, 3.0], [-66, 28, 2.8], [-48, -16, 1.5], [52, -52, 4.0], [-52, -52, 4.0], [52, 52, 4.0], [-52, 52, 4.0], [40, -30, 2.2], [-40, 30, 2.2], [30, 40, 2.2], [-30, -40, 2.2]],
-		"gates": [
-			{"kind": "vorwerk", "name": "Vorwerk", "at": 0.42, "side": 1, "radius": 1.6, "hp": 1600, "armor": 4, "range": 10.0, "damage": 16, "interval": 1.1, "fast": 1.3, "rebuild": 350},
-			{"kind": "innentor", "name": "Innentor", "at": 0.8, "side": -1, "radius": 1.9, "hp": 2400, "armor": 6, "range": 11.0, "damage": 22, "interval": 1.0, "fast": 1.15, "rebuild": 450}
-		],
+		"roads": [{"id": "nord", "name": "Nordstraße", "points": [[0, -78], [0, -64], [-12, -52], [-15, -36], [-5, -24], [3, -15], [1, -7]]}, {"id": "ost", "name": "Oststraße", "points": [[78, 0], [64, 0], [52, -12], [36, -15], [24, -5], [15, 3], [7, 1]]}, {"id": "sued", "name": "Südstraße", "points": [[0, 78], [0, 64], [12, 52], [15, 36], [5, 24], [-3, 15], [-1, 7]]}, {"id": "west", "name": "Weststraße", "points": [[-78, 0], [-64, 0], [-52, 12], [-36, 15], [-24, 5], [-15, -3], [-7, -1]]}],
+		"obstacles": [[7, -57, 1.6], [-8, -71, 1.3], [-23, -46, 2.0], [-6, -41, 1.4], [-14, -27, 1.2], [12, -25, 1.8], [-6, -14, 1.1], [24, -40, 2.6], [-34, -30, 2.4], [30, -66, 3.0], [-28, -66, 2.8], [16, -48, 1.5], [57, 7, 1.6], [71, -8, 1.3], [46, -23, 2.0], [41, -6, 1.4], [27, -14, 1.2], [25, 12, 1.8], [14, -6, 1.1], [40, 24, 2.6], [30, -34, 2.4], [66, 30, 3.0], [66, -28, 2.8], [48, 16, 1.5], [-7, 57, 1.6], [8, 71, 1.3], [23, 46, 2.0], [6, 41, 1.4], [14, 27, 1.2], [-12, 25, 1.8], [6, 14, 1.1], [-24, 40, 2.6], [34, 30, 2.4], [-30, 66, 3.0], [28, 66, 2.8], [-16, 48, 1.5], [-57, -7, 1.6], [-71, 8, 1.3], [-46, 23, 2.0], [-41, 6, 1.4], [-27, 14, 1.2], [-25, -12, 1.8], [-14, 6, 1.1], [-40, -24, 2.6], [-30, 34, 2.4], [-66, -30, 3.0], [-66, 28, 2.8], [-48, -16, 1.5], [40, -30, 2.2], [-40, 30, 2.2], [30, 40, 2.2], [-30, -40, 2.2]],
+		"gates": [{"kind": "vorwerk", "name": "Vorwerk", "at": 0.42, "side": 1, "radius": 1.6, "hp": 1600, "armor": 4, "range": 10.0, "damage": 16, "interval": 1.1, "fast": 1.3, "rebuild": 350}, {"kind": "innentor", "name": "Innentor", "at": 0.8, "side": -1, "radius": 1.9, "hp": 2400, "armor": 6, "range": 11.0, "damage": 22, "interval": 1.0, "fast": 1.15, "rebuild": 450}],
 		"repair": {"gold_per_hp": 0.12, "enemy_free": 12.0, "rebuild_hp": 0.5},
 		"teleport": {"radius": 1.4, "cooldown": 3.0, "offset": 5.5, "hold": 0.8}
 	},
@@ -32,7 +24,17 @@
 		{"max": 6, "roads": ["nord", "ost", "sued", "west"], "hp": 1.35, "gold": 0.9},
 		{"max": 8, "roads": ["nord", "ost", "sued", "west"], "hp": 1.7, "gold": 0.8}
 	],
-	"economy": {"start_gold": 250, "kill_gold": 0.5, "wave_gold": [60, 8], "early_gold": 1.0, "wave_wood": 1, "boss_wood": 4, "sell": 0.5, "stash": 12, "slots": 6},
+	"economy": {
+		"start_gold": 250,
+		"kill_gold": 0.5,
+		"wave_gold": [60, 8],
+		"early_gold": 1.0,
+		"wave_wood": 1,
+		"boss_wood": 4,
+		"sell": 0.5,
+		"stash": 12,
+		"slots": 6
+	},
 	"cc": {
 		"reset": 10.0,
 		"normal": {"steps": [1.0, 0.75, 0.5, 0.35]},
@@ -43,14 +45,7 @@
 		"boss_armor_reduction": 0.5,
 		"max_slow": 0.8
 	},
-	"ai": {
-		"ability_gap": 1.2,
-		"stuck_check": 0.75,
-		"stuck_ratio": 0.25,
-		"sidestep_time": 0.8,
-		"reaggro_block": 1.5,
-		"road_lookahead": 3.0
-	},
+	"ai": {"ability_gap": 1.2, "stuck_check": 0.75, "stuck_ratio": 0.25, "sidestep_time": 0.8, "reaggro_block": 1.5, "road_lookahead": 3.0},
 	"abilities": {
 		"klauenhieb": {"name": "Klauenhieb", "kind": "cone", "cast_range": 2.8, "range": 3.4, "angle": 90, "windup": 0.9, "cooldown": 6.0, "damage": 120},
 		"moerser": {"name": "Schlammmörser", "kind": "circle", "cast_range": 13.0, "radius": 2.6, "windup": 1.5, "cooldown": 8.0, "damage": 150},
@@ -64,36 +59,109 @@
 		"grolm_ringe": {"name": "Moorbeben", "kind": "ring", "cast_range": 12.0, "inner": 0.0, "radius": 4.0, "windup": 1.2, "cooldown": 15.0, "damage": 170, "repeat": 3, "repeat_windup": 0.9, "grow": 4.0},
 		"grolm_kegel": {"name": "Faulatem", "kind": "cone", "cast_range": 9.0, "range": 10.0, "angle": 80, "windup": 0.9, "cooldown": 13.0, "damage": 160, "repeat": 4, "repeat_windup": 0.7, "rotate": 90},
 		"grolm_wirbel": {"name": "Schlammwirbel", "kind": "whirl", "cast_range": 7.0, "radius": 3.4, "windup": 0.7, "duration": 3.5, "tick": 0.5, "cooldown": 16.0, "damage": 60, "speed_mult": 1.0},
-		"grolm_moerser": {"name": "Schlammhagel", "kind": "circle", "cast_range": 18.0, "radius": 2.8, "windup": 1.2, "cooldown": 9.0, "damage": 140, "count": 4, "scatter": 4.5}
+		"grolm_moerser": {"name": "Schlammhagel", "kind": "circle", "cast_range": 18.0, "radius": 2.8, "windup": 1.2, "cooldown": 9.0, "damage": 140, "count": 4, "scatter": 4.5},
+		"knochenpfeil": {"name": "Knochenpfeile", "kind": "skillshot", "cast_range": 13.0, "length": 16.0, "width": 0.8, "speed": 24.0, "windup": 1.0, "cooldown": 7.0, "damage": 150, "count": 2, "spread": 14},
+		"grabhieb": {"name": "Grabhieb", "kind": "cone", "cast_range": 3.2, "range": 4.2, "angle": 110, "windup": 1.0, "cooldown": 7.0, "damage": 170},
+		"seelenmoerser": {"name": "Seelenmörser", "kind": "circle", "cast_range": 14.0, "radius": 2.8, "windup": 1.4, "cooldown": 9.0, "damage": 160, "count": 2, "scatter": 3.5},
+		"totenruf": {"name": "Totenruf", "kind": "summon", "cast_range": 0.0, "radius": 3.0, "windup": 2.8, "cooldown": 16.0, "summon": "knochenknecht", "count": 2},
+		"knochenfaecher": {"name": "Knochenfächer", "kind": "skillshot", "cast_range": 12.0, "length": 15.0, "width": 0.9, "speed": 22.0, "windup": 1.0, "cooldown": 9.0, "damage": 150, "count": 5, "spread": 16},
+		"gruft_ringe": {"name": "Gruftbeben", "kind": "ring", "cast_range": 12.0, "inner": 4.0, "radius": 8.0, "windup": 1.3, "cooldown": 14.0, "damage": 190, "repeat": 3, "repeat_windup": 0.8, "grow": -2.0},
+		"seelenspeere": {"name": "Seelenspeere", "kind": "skillshot", "cast_range": 16.0, "length": 20.0, "width": 1.0, "speed": 24.0, "windup": 1.1, "cooldown": 11.0, "damage": 170, "count": 7, "spread": 14, "repeat": 2, "repeat_windup": 0.8, "rotate": 7},
+		"gruftruf": {"name": "Ruf der Gruft", "kind": "summon", "cast_range": 0.0, "radius": 4.0, "windup": 3.0, "cooldown": 22.0, "summon": "knochenknecht", "count": 4},
+		"knochensturm": {"name": "Knochensturm", "kind": "whirl", "cast_range": 7.0, "radius": 3.6, "windup": 0.8, "duration": 3.5, "tick": 0.5, "cooldown": 17.0, "damage": 70, "speed_mult": 1.0},
+		"glutball": {"name": "Glutball", "kind": "circle", "cast_range": 13.0, "radius": 2.6, "windup": 1.4, "cooldown": 8.0, "damage": 150, "pool": 4.0, "pool_dps": 35},
+		"glutwalze": {"name": "Glutwalze", "kind": "charge", "cast_range": 10.0, "min_range": 3.0, "length": 11.0, "width": 2.2, "windup": 1.2, "cooldown": 10.0, "damage": 190, "knockdown": 0.8},
+		"feueratem": {"name": "Feueratem", "kind": "cone", "cast_range": 6.0, "range": 7.0, "angle": 60, "windup": 1.0, "cooldown": 9.0, "damage": 180},
+		"flammenring": {"name": "Flammenring", "kind": "ring", "cast_range": 6.0, "min_range": 1.6, "inner": 2.2, "radius": 7.0, "windup": 1.4, "cooldown": 12.0, "damage": 170},
+		"aschenruf": {"name": "Aschenruf", "kind": "summon", "cast_range": 0.0, "radius": 3.0, "windup": 2.8, "cooldown": 16.0, "summon": "glutling", "count": 3},
+		"glut_kegel": {"name": "Glockenschlag", "kind": "cone", "cast_range": 10.0, "range": 11.0, "angle": 70, "windup": 0.9, "cooldown": 14.0, "damage": 200, "repeat": 6, "repeat_windup": 0.6, "rotate": 60},
+		"glut_hagel": {"name": "Glutregen", "kind": "circle", "cast_range": 18.0, "radius": 2.8, "windup": 1.3, "cooldown": 10.0, "damage": 170, "count": 6, "scatter": 6.0, "pool": 4.0, "pool_dps": 40},
+		"glut_ansturm": {"name": "Schmelzlauf", "kind": "charge", "cast_range": 14.0, "min_range": 3.0, "length": 14.0, "width": 2.6, "windup": 1.1, "cooldown": 13.0, "damage": 210, "knockdown": 0.8, "repeat": 3, "repeat_windup": 0.7},
+		"glut_ring": {"name": "Feuerglocke", "kind": "ring", "cast_range": 12.0, "inner": 0.0, "radius": 4.0, "windup": 1.1, "cooldown": 15.0, "damage": 200, "repeat": 3, "repeat_windup": 0.8, "grow": 4.0},
+		"leerenstrahl": {"name": "Leerenstrahl", "kind": "skillshot", "cast_range": 15.0, "length": 20.0, "width": 0.7, "speed": 30.0, "windup": 1.0, "cooldown": 7.0, "damage": 190},
+		"leerenwirbel": {"name": "Leerenwirbel", "kind": "whirl", "cast_range": 6.0, "radius": 2.8, "windup": 0.8, "duration": 3.0, "tick": 0.5, "cooldown": 13.0, "damage": 70, "speed_mult": 0.95},
+		"riss": {"name": "Riss", "kind": "circle", "cast_range": 13.0, "radius": 3.0, "windup": 1.4, "cooldown": 9.0, "damage": 180, "count": 2, "scatter": 4.0},
+		"riftruf": {"name": "Riftruf", "kind": "summon", "cast_range": 0.0, "radius": 3.0, "windup": 2.8, "cooldown": 16.0, "summon": "leerling", "count": 3},
+		"leeren_ansturm": {"name": "Leerensprung", "kind": "charge", "cast_range": 11.0, "min_range": 3.0, "length": 12.0, "width": 2.0, "windup": 1.0, "cooldown": 10.0, "damage": 200, "knockdown": 0.8},
+		"verschl_ringe": {"name": "Sog", "kind": "ring", "cast_range": 20.0, "inner": 0.0, "radius": 5.0, "windup": 1.2, "cooldown": 13.0, "damage": 230, "repeat": 4, "repeat_windup": 0.8, "grow": 4.0},
+		"verschl_kegel": {"name": "Schlund", "kind": "cone", "cast_range": 13.0, "range": 14.0, "angle": 80, "windup": 1.0, "cooldown": 12.0, "damage": 240, "repeat": 4, "repeat_windup": 0.7, "rotate": 90},
+		"verschl_hagel": {"name": "Sternenfall", "kind": "circle", "cast_range": 22.0, "radius": 3.0, "windup": 1.3, "cooldown": 9.0, "damage": 210, "count": 7, "scatter": 7.0},
+		"verschl_speere": {"name": "Leerenspeere", "kind": "skillshot", "cast_range": 22.0, "length": 24.0, "width": 1.0, "speed": 26.0, "windup": 1.0, "cooldown": 10.0, "damage": 210, "count": 9, "spread": 12, "repeat": 2, "repeat_windup": 0.8, "rotate": 6},
+		"waechter_hieb": {"name": "Wächterhieb", "kind": "cone", "cast_range": 3.5, "range": 4.5, "angle": 120, "windup": 0.9, "cooldown": 6.0, "damage": 150},
+		"waechter_ringe": {"name": "Arenabeben", "kind": "ring", "cast_range": 9.0, "inner": 0.0, "radius": 3.5, "windup": 1.1, "cooldown": 12.0, "damage": 160, "repeat": 3, "repeat_windup": 0.8, "grow": 3.5},
+		"waechter_ansturm": {"name": "Wächtersturm", "kind": "charge", "cast_range": 12.0, "min_range": 3.0, "length": 12.0, "width": 2.2, "windup": 1.1, "cooldown": 10.0, "damage": 170, "knockdown": 0.8}
 	},
 	"enemies": [
-		{"id": "sumpfling", "name": "Sumpfling", "rank": "normal", "hp": 110, "armor": 1, "speed": 3.8, "radius": 0.5, "size": [0.9, 0.9, 0.9], "color": "6f9a3e", "attack": {"damage": 9, "interval": 1.2, "range": 1.4}, "aggro": 9.0, "leash": 16.0, "xp": 10, "lives": 1, "abilities": []},
-		{"id": "moorklauer", "name": "Moorklauer", "rank": "normal", "hp": 220, "armor": 2, "speed": 3.6, "radius": 0.6, "size": [1.1, 1.0, 1.1], "color": "4f7a5a", "attack": {"damage": 12, "interval": 1.2, "range": 1.6}, "aggro": 9.0, "leash": 16.0, "xp": 18, "lives": 1, "abilities": ["klauenhieb"]},
-		{"id": "schlammwerfer", "name": "Schlammwerfer", "rank": "normal", "hp": 150, "armor": 0, "speed": 3.2, "radius": 0.55, "size": [0.8, 1.2, 0.8], "color": "8a6a3a", "attack": {"damage": 8, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 16, "lives": 1, "abilities": ["moerser"]},
-		{"id": "speerjaeger", "name": "Speerjäger", "rank": "normal", "hp": 170, "armor": 1, "speed": 3.6, "radius": 0.55, "size": [0.7, 1.4, 0.7], "color": "a07a4a", "attack": {"damage": 9, "interval": 1.4, "range": 7.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 18, "lives": 1, "abilities": ["speerwurf"]},
-		{"id": "giftkroete", "name": "Giftkröte", "rank": "normal", "hp": 240, "armor": 2, "speed": 3.0, "radius": 0.7, "size": [1.3, 0.7, 1.3], "color": "7cb03a", "attack": {"damage": 10, "interval": 1.3, "range": 1.7}, "aggro": 10.0, "leash": 16.0, "xp": 20, "lives": 1, "abilities": ["giftpfuetze"]},
-		{"id": "moorbrute", "name": "Moorbrute", "rank": "normal", "hp": 560, "armor": 5, "speed": 2.9, "radius": 0.9, "size": [1.6, 1.6, 1.6], "color": "3e5a46", "attack": {"damage": 16, "interval": 1.5, "range": 2.0}, "aggro": 9.0, "leash": 15.0, "xp": 40, "lives": 2, "abilities": ["ansturm", "schockring"]},
-		{"id": "sumpfhexer", "name": "Sumpfhexer", "rank": "normal", "hp": 230, "armor": 0, "speed": 3.0, "radius": 0.55, "size": [0.8, 1.5, 0.8], "color": "6a4a8a", "attack": {"damage": 8, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 30, "lives": 1, "abilities": ["beschwoerung", "moerser"]},
-		{"id": "moorhauptmann", "name": "Moorhauptmann", "rank": "elite", "hp": 1500, "armor": 6, "speed": 3.1, "radius": 1.0, "size": [1.9, 1.9, 1.9], "color": "2e4a3a", "attack": {"damage": 20, "interval": 1.4, "range": 2.2}, "aggro": 11.0, "leash": 18.0, "xp": 120, "lives": 4, "abilities": ["ansturm", "wirbelwind", "speerfaecher"]},
-		{"id": "grolm", "name": "Grolm der Moorkönig", "rank": "boss", "hp": 9000, "armor": 7, "speed": 2.7, "radius": 1.7, "size": [3.2, 3.4, 3.2], "color": "35503a", "attack": {"damage": 28, "interval": 1.6, "range": 3.0}, "aggro": 14.0, "leash": 24.0, "xp": 600, "lives": 10, "abilities": ["grolm_ringe", "grolm_kegel", "grolm_wirbel", "grolm_moerser"]}
+		{"id": "sumpfling", "name": "Sumpfling", "rank": "normal", "hp": 110, "armor": 1, "speed": 3.8, "radius": 0.5, "size": [0.9, 0.9, 0.9], "color": "6f9a3e", "attack": {"damage": 9, "interval": 1.2, "range": 1.4}, "aggro": 9.0, "leash": 16.0, "xp": 10, "lives": 1, "abilities": [], "faction": "sumpf"},
+		{"id": "moorklauer", "name": "Moorklauer", "rank": "normal", "hp": 220, "armor": 2, "speed": 3.6, "radius": 0.6, "size": [1.1, 1.0, 1.1], "color": "4f7a5a", "attack": {"damage": 12, "interval": 1.2, "range": 1.6}, "aggro": 9.0, "leash": 16.0, "xp": 18, "lives": 1, "abilities": ["klauenhieb"], "faction": "sumpf"},
+		{"id": "schlammwerfer", "name": "Schlammwerfer", "rank": "normal", "hp": 150, "armor": 0, "speed": 3.2, "radius": 0.55, "size": [0.8, 1.2, 0.8], "color": "8a6a3a", "attack": {"damage": 8, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 16, "lives": 1, "abilities": ["moerser"], "faction": "sumpf"},
+		{"id": "speerjaeger", "name": "Speerjäger", "rank": "normal", "hp": 170, "armor": 1, "speed": 3.6, "radius": 0.55, "size": [0.7, 1.4, 0.7], "color": "a07a4a", "attack": {"damage": 9, "interval": 1.4, "range": 7.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 18, "lives": 1, "abilities": ["speerwurf"], "faction": "sumpf"},
+		{"id": "giftkroete", "name": "Giftkröte", "rank": "normal", "hp": 240, "armor": 2, "speed": 3.0, "radius": 0.7, "size": [1.3, 0.7, 1.3], "color": "7cb03a", "attack": {"damage": 10, "interval": 1.3, "range": 1.7}, "aggro": 10.0, "leash": 16.0, "xp": 20, "lives": 1, "abilities": ["giftpfuetze"], "faction": "sumpf"},
+		{"id": "moorbrute", "name": "Moorbrute", "rank": "normal", "hp": 560, "armor": 5, "speed": 2.9, "radius": 0.9, "size": [1.6, 1.6, 1.6], "color": "3e5a46", "attack": {"damage": 16, "interval": 1.5, "range": 2.0}, "aggro": 9.0, "leash": 15.0, "xp": 40, "lives": 2, "abilities": ["ansturm", "schockring"], "faction": "sumpf"},
+		{"id": "sumpfhexer", "name": "Sumpfhexer", "rank": "normal", "hp": 230, "armor": 0, "speed": 3.0, "radius": 0.55, "size": [0.8, 1.5, 0.8], "color": "6a4a8a", "attack": {"damage": 8, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 30, "lives": 1, "abilities": ["beschwoerung", "moerser"], "faction": "sumpf"},
+		{"id": "moorhauptmann", "name": "Moorhauptmann", "rank": "elite", "hp": 1500, "armor": 6, "speed": 3.1, "radius": 1.0, "size": [1.9, 1.9, 1.9], "color": "2e4a3a", "attack": {"damage": 20, "interval": 1.4, "range": 2.2}, "aggro": 11.0, "leash": 18.0, "xp": 120, "lives": 4, "abilities": ["ansturm", "wirbelwind", "speerfaecher"], "faction": "sumpf"},
+		{"id": "grolm", "name": "Grolm der Moorkönig", "rank": "boss", "hp": 9000, "armor": 7, "speed": 2.7, "radius": 1.7, "size": [3.2, 3.4, 3.2], "color": "35503a", "attack": {"damage": 28, "interval": 1.6, "range": 3.0}, "aggro": 14.0, "leash": 24.0, "xp": 600, "lives": 10, "abilities": ["grolm_ringe", "grolm_kegel", "grolm_wirbel", "grolm_moerser"], "faction": "sumpf"},
+		{"id": "knochenknecht", "name": "Knochenknecht", "rank": "normal", "hp": 150, "armor": 2, "speed": 3.8, "radius": 0.5, "size": [0.8, 1.1, 0.8], "color": "d8d2c0", "attack": {"damage": 11, "interval": 1.2, "range": 1.4}, "aggro": 9.0, "leash": 16.0, "xp": 8, "lives": 1, "abilities": [], "faction": "knochen"},
+		{"id": "knochenschuetze", "name": "Knochenschütze", "rank": "normal", "hp": 170, "armor": 1, "speed": 3.4, "radius": 0.55, "size": [0.7, 1.3, 0.7], "color": "bdb59a", "attack": {"damage": 10, "interval": 1.5, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 14, "lives": 1, "abilities": ["knochenpfeil"], "faction": "knochen"},
+		{"id": "grabwaechter", "name": "Grabwächter", "rank": "normal", "hp": 560, "armor": 7, "speed": 2.9, "radius": 0.9, "size": [1.5, 1.7, 1.5], "color": "8f8a7a", "attack": {"damage": 18, "interval": 1.5, "range": 2.0}, "aggro": 9.0, "leash": 16.0, "xp": 36, "lives": 2, "abilities": ["grabhieb", "schockring"], "faction": "knochen"},
+		{"id": "knochengeier", "name": "Knochengeier", "rank": "normal", "hp": 180, "armor": 1, "speed": 4.6, "radius": 0.6, "size": [1.1, 0.6, 1.1], "color": "a8a290", "attack": {"damage": 10, "interval": 1.1, "range": 1.6}, "aggro": 9.0, "leash": 16.0, "xp": 14, "lives": 1, "abilities": [], "fly": true, "faction": "knochen"},
+		{"id": "totenrufer", "name": "Totenrufer", "rank": "normal", "hp": 220, "armor": 0, "speed": 3.0, "radius": 0.55, "size": [0.8, 1.5, 0.8], "color": "6a5a7a", "attack": {"damage": 9, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 26, "lives": 1, "abilities": ["totenruf", "seelenmoerser"], "faction": "knochen"},
+		{"id": "knochenritter", "name": "Knochenritter", "rank": "elite", "hp": 1500, "armor": 7, "speed": 3.2, "radius": 1.0, "size": [1.9, 2.0, 1.9], "color": "6e6858", "attack": {"damage": 22, "interval": 1.4, "range": 2.2}, "aggro": 11.0, "leash": 18.0, "xp": 110, "lives": 4, "abilities": ["ansturm", "knochensturm", "knochenfaecher"], "faction": "knochen"},
+		{"id": "vargul", "name": "Vargul der Gruftfürst", "rank": "boss", "hp": 8000, "armor": 8, "speed": 2.7, "radius": 1.7, "size": [3.2, 3.6, 3.2], "color": "5a5448", "attack": {"damage": 30, "interval": 1.6, "range": 3.0}, "aggro": 14.0, "leash": 24.0, "xp": 900, "lives": 12, "abilities": ["gruft_ringe", "seelenspeere", "gruftruf", "knochensturm"], "faction": "knochen", "title": "Kriegsherr der Knochen"},
+		{"id": "glutling", "name": "Glutling", "rank": "normal", "hp": 160, "armor": 1, "speed": 4.0, "radius": 0.5, "size": [0.8, 0.8, 0.8], "color": "e0662a", "attack": {"damage": 12, "interval": 1.2, "range": 1.4}, "aggro": 9.0, "leash": 16.0, "xp": 9, "lives": 1, "abilities": [], "faction": "glut"},
+		{"id": "glutspeier", "name": "Glutspeier", "rank": "normal", "hp": 180, "armor": 0, "speed": 3.2, "radius": 0.55, "size": [0.8, 1.2, 0.8], "color": "c4481e", "attack": {"damage": 10, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 16, "lives": 1, "abilities": ["glutball"], "faction": "glut"},
+		{"id": "lavawalze", "name": "Lavawalze", "rank": "normal", "hp": 600, "armor": 6, "speed": 3.0, "radius": 0.95, "size": [1.7, 1.4, 1.7], "color": "7a2e1a", "attack": {"damage": 19, "interval": 1.5, "range": 2.0}, "aggro": 9.0, "leash": 16.0, "xp": 40, "lives": 2, "abilities": ["glutwalze", "feueratem"], "faction": "glut"},
+		{"id": "glutfalter", "name": "Glutfalter", "rank": "normal", "hp": 190, "armor": 0, "speed": 4.8, "radius": 0.6, "size": [1.2, 0.5, 1.2], "color": "ff9a3a", "attack": {"damage": 11, "interval": 1.1, "range": 1.6}, "aggro": 9.0, "leash": 16.0, "xp": 14, "lives": 1, "abilities": [], "fly": true, "faction": "glut"},
+		{"id": "aschenpriester", "name": "Aschenpriester", "rank": "normal", "hp": 240, "armor": 1, "speed": 3.0, "radius": 0.55, "size": [0.8, 1.5, 0.8], "color": "5a3a3a", "attack": {"damage": 9, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 28, "lives": 1, "abilities": ["aschenruf", "flammenring"], "faction": "glut"},
+		{"id": "schmelzhauer", "name": "Schmelzhauer", "rank": "elite", "hp": 1600, "armor": 7, "speed": 3.1, "radius": 1.0, "size": [1.9, 1.9, 1.9], "color": "a03a1a", "attack": {"damage": 24, "interval": 1.4, "range": 2.2}, "aggro": 11.0, "leash": 18.0, "xp": 120, "lives": 4, "abilities": ["glutwalze", "feueratem", "flammenring"], "faction": "glut"},
+		{"id": "ignar", "name": "Ignar, Herz der Glut", "rank": "boss", "hp": 8500, "armor": 8, "speed": 2.7, "radius": 1.8, "size": [3.3, 3.6, 3.3], "color": "b8401a", "attack": {"damage": 32, "interval": 1.6, "range": 3.0}, "aggro": 14.0, "leash": 24.0, "xp": 1100, "lives": 12, "abilities": ["glut_kegel", "glut_hagel", "glut_ansturm", "glut_ring"], "faction": "glut", "title": "Kriegsherr der Glut"},
+		{"id": "leerling", "name": "Leerling", "rank": "normal", "hp": 160, "armor": 2, "speed": 4.0, "radius": 0.5, "size": [0.8, 0.9, 0.8], "color": "5a4aa0", "attack": {"damage": 12, "interval": 1.2, "range": 1.4}, "aggro": 9.0, "leash": 16.0, "xp": 10, "lives": 1, "abilities": [], "faction": "leere"},
+		{"id": "leerenseher", "name": "Leerenseher", "rank": "normal", "hp": 190, "armor": 1, "speed": 3.3, "radius": 0.55, "size": [0.7, 1.4, 0.7], "color": "7a5ad0", "attack": {"damage": 11, "interval": 1.5, "range": 9.0, "ranged": true}, "aggro": 13.0, "leash": 18.0, "xp": 17, "lives": 1, "abilities": ["leerenstrahl"], "faction": "leere"},
+		{"id": "nichtswandler", "name": "Nichtswandler", "rank": "normal", "hp": 620, "armor": 7, "speed": 3.0, "radius": 0.95, "size": [1.6, 1.8, 1.6], "color": "3a2a6a", "attack": {"damage": 20, "interval": 1.5, "range": 2.0}, "aggro": 9.0, "leash": 16.0, "xp": 42, "lives": 2, "abilities": ["leerenwirbel", "leeren_ansturm"], "faction": "leere"},
+		{"id": "leerenschwinge", "name": "Leerenschwinge", "rank": "normal", "hp": 200, "armor": 1, "speed": 4.8, "radius": 0.6, "size": [1.3, 0.5, 1.3], "color": "9a7aff", "attack": {"damage": 12, "interval": 1.1, "range": 1.6}, "aggro": 9.0, "leash": 16.0, "xp": 15, "lives": 1, "abilities": [], "fly": true, "faction": "leere"},
+		{"id": "riftrufer", "name": "Riftrufer", "rank": "normal", "hp": 250, "armor": 1, "speed": 3.0, "radius": 0.55, "size": [0.8, 1.5, 0.8], "color": "4a3a8a", "attack": {"damage": 10, "interval": 1.6, "range": 8.0, "ranged": true}, "aggro": 12.0, "leash": 18.0, "xp": 30, "lives": 1, "abilities": ["riftruf", "riss"], "faction": "leere"},
+		{"id": "leerenhueter", "name": "Leerenhüter", "rank": "elite", "hp": 1700, "armor": 8, "speed": 3.1, "radius": 1.0, "size": [1.9, 2.1, 1.9], "color": "2a1a5a", "attack": {"damage": 25, "interval": 1.4, "range": 2.2}, "aggro": 11.0, "leash": 18.0, "xp": 130, "lives": 4, "abilities": ["leeren_ansturm", "leerenwirbel", "riss"], "faction": "leere"},
+		{"id": "verschlinger", "name": "Der Verschlinger", "rank": "boss", "hp": 11000, "armor": 10, "speed": 2.4, "radius": 2.4, "size": [4.4, 4.6, 4.4], "color": "1a1030", "attack": {"damage": 36, "interval": 1.6, "range": 3.6}, "aggro": 16.0, "leash": 30.0, "xp": 2000, "lives": 50, "abilities": ["verschl_ringe", "verschl_kegel", "verschl_hagel"], "faction": "leere", "title": "Endboss", "land": true, "ignore_buildings": true, "siege": {"interval": 8.0, "lives": 1}, "phases": [{"at": 0.66, "name": "Zweite Phase: Der Schlund öffnet sich", "add": ["verschl_speere"], "summon": {"id": "leerling", "count": 5}, "cooldown": 0.85}, {"at": 0.33, "name": "Letzte Phase: Alles wird verschlungen", "add": [], "summon": {"id": "nichtswandler", "count": 2}, "cooldown": 0.7}]},
+		{"id": "arenawaechter", "name": "Arena-Wächter", "rank": "elite", "hp": 1400, "armor": 5, "speed": 3.3, "radius": 1.1, "size": [2.0, 2.2, 2.0], "color": "b03a6a", "attack": {"damage": 22, "interval": 1.3, "range": 2.4}, "aggro": 30.0, "leash": 40.0, "xp": 80, "lives": 1, "abilities": ["waechter_hieb", "waechter_ringe", "waechter_ansturm"]},
+		{"id": "haingeist", "name": "Hain-Geist", "rank": "normal", "hp": 200, "armor": 1, "speed": 3.4, "radius": 0.55, "size": [0.8, 1.2, 0.8], "color": "7ad0a0", "attack": {"damage": 10, "interval": 1.3, "range": 1.5}, "aggro": 10.0, "leash": 12.0, "xp": 8, "lives": 1, "abilities": ["klauenhieb"]},
+		{"id": "pruefling", "name": "Prüfling", "rank": "normal", "hp": 70, "armor": 0, "speed": 3.6, "radius": 0.45, "size": [0.7, 0.8, 0.7], "color": "d0d0ff", "attack": {"damage": 6, "interval": 1.3, "range": 1.4}, "aggro": 40.0, "leash": 40.0, "xp": 0, "lives": 1, "abilities": []},
+		{"id": "karawanenraeuber", "name": "Karawanenräuber", "rank": "normal", "hp": 220, "armor": 2, "speed": 4.4, "radius": 0.55, "size": [0.8, 1.2, 0.8], "color": "7a5a2a", "attack": {"damage": 14, "interval": 1.2, "range": 1.5}, "aggro": 6.0, "leash": 200.0, "xp": 10, "lives": 1, "abilities": []},
+		{"id": "kerkerwache", "name": "Kerkerwache", "rank": "normal", "hp": 450, "armor": 4, "speed": 3.4, "radius": 0.8, "size": [1.3, 1.5, 1.3], "color": "5a5a6a", "attack": {"damage": 16, "interval": 1.3, "range": 1.8}, "aggro": 10.0, "leash": 14.0, "xp": 30, "lives": 1, "abilities": ["klauenhieb", "ansturm"]}
 	],
 	"waves": {
-		"count": 10,
+		"count": 40,
 		"time": 60.0,
 		"spawn_window": 22.0,
 		"scale_hp": 0.12,
 		"scale_damage": 0.06,
-		"list": [
-			{"groups": [["sumpfling", 10]]},
-			{"groups": [["sumpfling", 10], ["schlammwerfer", 3]]},
-			{"groups": [["sumpfling", 8], ["moorklauer", 5]]},
-			{"groups": [["moorklauer", 6], ["speerjaeger", 4], ["schlammwerfer", 3]]},
-			{"groups": [["sumpfling", 12], ["moorbrute", 2], ["giftkroete", 3]]},
-			{"groups": [["moorklauer", 6], ["speerjaeger", 6], ["sumpfhexer", 2]]},
-			{"groups": [["moorbrute", 3], ["giftkroete", 4], ["schlammwerfer", 4]]},
-			{"groups": [["moorklauer", 8], ["speerjaeger", 5], ["moorhauptmann", 1]]},
-			{"groups": [["sumpfhexer", 3], ["moorbrute", 4], ["giftkroete", 4], ["moorhauptmann", 1]]},
-			{"groups": [["sumpfling", 8], ["grolm", 1]], "boss": true}
-		]
+		"list": [{"groups": [["sumpfling", 10]]}, {"groups": [["sumpfling", 10], ["schlammwerfer", 3]]}, {"groups": [["sumpfling", 8], ["moorklauer", 5]]}, {"groups": [["moorklauer", 6], ["speerjaeger", 4], ["schlammwerfer", 3]]}, {"groups": [["sumpfling", 12], ["moorbrute", 2], ["giftkroete", 3]]}, {"groups": [["moorklauer", 6], ["speerjaeger", 6], ["sumpfhexer", 2]]}, {"groups": [["moorbrute", 3], ["giftkroete", 4], ["schlammwerfer", 4]]}, {"groups": [["moorklauer", 8], ["speerjaeger", 5], ["moorhauptmann", 1]]}, {"groups": [["sumpfhexer", 3], ["moorbrute", 4], ["giftkroete", 4], ["moorhauptmann", 1]]}, {"groups": [["sumpfling", 8], ["grolm", 1]], "boss": true}, {"groups": [["knochenknecht", 14], ["knochenschuetze", 4]]}, {"groups": [["knochenknecht", 10], ["knochengeier", 6]], "elites": 1}, {"groups": [["knochenknecht", 10], ["grabwaechter", 2], ["knochenschuetze", 4]], "elites": 1}, {"groups": [["knochengeier", 8], ["totenrufer", 3], ["knochenschuetze", 4]], "elites": 1}, {"groups": [["grabwaechter", 3], ["knochenknecht", 12], ["knochenritter", 1]], "elites": 2}, {"groups": [["knochenschuetze", 8], ["knochengeier", 8], ["totenrufer", 2]], "elites": 2}, {"groups": [["grabwaechter", 4], ["totenrufer", 3], ["knochenknecht", 10]], "elites": 2}, {"groups": [["knochenritter", 1], ["knochengeier", 10], ["knochenschuetze", 6]], "elites": 2}, {"groups": [["grabwaechter", 4], ["knochenritter", 2], ["totenrufer", 3]], "elites": 3}, {"groups": [["knochenknecht", 10], ["vargul", 1]], "boss": true}, {"groups": [["glutling", 16], ["glutspeier", 4]], "elites": 2}, {"groups": [["glutling", 10], ["glutfalter", 8]], "elites": 2}, {"groups": [["lavawalze", 3], ["glutspeier", 5], ["glutling", 8]], "elites": 2}, {"groups": [["glutfalter", 10], ["aschenpriester", 3], ["glutspeier", 4]], "elites": 3}, {"groups": [["lavawalze", 3], ["glutling", 12], ["schmelzhauer", 1]], "elites": 3}, {"groups": [["glutspeier", 8], ["glutfalter", 8], ["aschenpriester", 3]], "elites": 3}, {"groups": [["lavawalze", 5], ["aschenpriester", 3], ["glutling", 10]], "elites": 3}, {"groups": [["schmelzhauer", 1], ["glutfalter", 12], ["glutspeier", 6]], "elites": 4}, {"groups": [["lavawalze", 5], ["schmelzhauer", 2], ["aschenpriester", 3]], "elites": 4}, {"groups": [["glutling", 10], ["ignar", 1]], "boss": true}, {"groups": [["leerling", 16], ["leerenseher", 5]], "elites": 3}, {"groups": [["leerling", 10], ["leerenschwinge", 10]], "elites": 3}, {"groups": [["nichtswandler", 3], ["leerenseher", 6], ["leerling", 10]], "elites": 3, "double": true}, {"groups": [["leerenschwinge", 10], ["riftrufer", 3], ["leerenseher", 5]], "elites": 4, "double": true}, {"groups": [["nichtswandler", 4], ["leerling", 14], ["leerenhueter", 1]], "elites": 4, "double": true}, {"groups": [["leerenseher", 9], ["leerenschwinge", 10], ["riftrufer", 3]], "elites": 4, "double": true}, {"groups": [["nichtswandler", 5], ["riftrufer", 4], ["leerling", 12]], "elites": 5, "double": true}, {"groups": [["leerenhueter", 2], ["leerenschwinge", 12], ["leerenseher", 6]], "elites": 5, "double": true}, {"groups": [["nichtswandler", 6], ["leerenhueter", 2], ["riftrufer", 4]], "elites": 6, "double": true}, {"groups": [["leerling", 8], ["verschlinger", 1]], "boss": true}],
+		"boss_time": 110.0,
+		"rest": 45.0,
+		"boss_warn": 20.0
+	},
+	"factions": {
+		"sumpf": {"name": "Sumpfvolk", "trait": "", "desc": "Gift und Pfützen"},
+		"knochen": {"name": "Knochenheer", "trait": "rise", "chance": 0.4, "hp": 0.4, "delay": 2.0, "desc": "Fallen sie, stehen manche mit 40 % Leben wieder auf."},
+		"glut": {"name": "Glutbrut", "trait": "explode", "radius": 2.2, "windup": 1.0, "damage": 110, "desc": "Fallen sie, explodieren sie nach kurzer Warnung."},
+		"leere": {"name": "Leere", "trait": "shield", "share": 0.3, "desc": "Ein Leerenschild schluckt die ersten 30 % Schaden."}
+	},
+	"elites": {
+		"from": 11,
+		"traits": [{"id": "schnell", "name": "Schnell", "speed": 1.35}, {"id": "vampir", "name": "Vampir", "lifesteal": 0.5}, {"id": "gepanzert", "name": "Gepanzert", "armor": 6}, {"id": "teiler", "name": "Teiler", "split": 2, "hp": 0.35}]
+	},
+	"zones": {
+		"radius": 13.0,
+		"stone_ring": 12.0,
+		"list": [{"id": "arena", "name": "Arena", "pos": [-57, -57], "open": 11, "color": "ff5c8a", "desc": "Besiege den Arena-Wächter. Jeder Sieg gibt dauerhaft Werte und eine Arena-Marke; der nächste Wächter ist stärker."}, {"id": "hain", "name": "Holzhain", "pos": [57, -57], "open": 6, "color": "5ce08a", "desc": "Hain-Geister lassen Holz fallen. Holzfäller arbeiten, solange du im Hain bist."}, {"id": "schmiede", "name": "Schmiede", "pos": [57, 57], "open": 6, "color": "ffb43a", "desc": "Items veredeln (+1 bis +5) und Edelsteine einsetzen."}, {"id": "pruefung", "name": "Prüfungen", "pos": [-57, 57], "open": 11, "color": "3ab8ff", "desc": "Herausforderungen auf Zeit. Belohnung: ein seltenes Item."}],
+		"arena": {"guardian": "arenawaechter", "hp_step": 0.45, "damage_step": 0.15, "gold": 120, "bonus": {"damage": 0.04, "hp": 80}},
+		"hain": {"spirit": "haingeist", "max": 4, "respawn": 5.0, "wood": 1, "lumberjack": {"price": 150, "max": 3, "interval": 15.0, "wood": 1}},
+		"schmiede": {"max": 5, "cost": [0.25, 0.35, 0.5, 0.7, 1.0], "fail": [0, 0, 0.25, 0.35, 0.5], "per_level": 0.12, "gem_price": 140, "gems": [{"id": "rubin", "name": "Rubin", "color": "ff3a4a", "stats": {"damage": 0.05}}, {"id": "saphir", "name": "Saphir", "color": "3a7aff", "stats": {"cdr": 0.04, "mana": 40}}, {"id": "smaragd", "name": "Smaragd", "color": "3ad06a", "stats": {"hp_regen": 3.0, "hp": 60}}, {"id": "topas", "name": "Topas", "color": "ffd23a", "stats": {"attack_speed": 0.06}}, {"id": "amethyst", "name": "Amethyst", "color": "b05aff", "stats": {"armor": 2}}, {"id": "diamant", "name": "Diamant", "color": "e8f4ff", "stats": {"lifesteal": 0.03, "damage": 0.02}}]},
+		"pruefungen": {"cooldown": 5, "reward_tier": 3, "list": [{"id": "jagd", "name": "Jagd", "kind": "kills", "enemy": "pruefling", "count": 25, "time": 30.0, "batch": 6, "desc": "Töte 25 Prüflinge in 30 s."}, {"id": "tanz", "name": "Funkentanz", "kind": "dodge", "time": 20.0, "every": 0.75, "radius": 2.4, "windup": 1.0, "desc": "Überlebe 20 s ohne Treffer. Ausweichen hilft."}]}
+	},
+	"events": {
+		"first": 3,
+		"every": [3, 4],
+		"choose_time": 20.0,
+		"list": [{"id": "haendler", "name": "Wanderhändler", "time": 60.0, "count": 3, "tiers": [3, 4], "markup": 1.15, "desc": "Verkauft 60 s lang drei seltene Items."}, {"id": "karawane", "name": "Goldene Karawane", "hp": 2600, "speed": 2.4, "gold": [250, 20], "raiders": "karawanenraeuber", "raid": [3, 0.2], "raid_every": 9.0, "desc": "Schütze die Karawane. Erreicht sie das Ziel, gibt es Gold je nach ihrem Leben."}, {"id": "blutmond", "name": "Blutmond", "hp": 2.0, "damage": 1.25, "reward": 2.0, "desc": "Abstimmung: Die nächste Welle wird doppelt so stark, gibt aber doppelte Belohnung."}, {"id": "gefangener", "name": "Gefangener Held", "guards": "kerkerwache", "guard_count": 3, "waves": 2, "hp": 1800, "damage": 45, "range": 9.0, "interval": 0.9, "free_time": 2.0, "desc": "Besiege die Wachen und befreie den Gefangenen. Er kämpft zwei Wellen lang mit."}, {"id": "schrein", "name": "Verderbter Schrein", "lives": 5, "gold": [150, 15], "waves": 3, "bonus": {"damage": 0.25, "hp_regen": 5.0}, "desc": "Opfere Feste-Leben oder Gold für einen starken Segen über drei Wellen."}]
 	}
 }

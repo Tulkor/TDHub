@@ -80,6 +80,19 @@ var _wave_kills := 0
 var _wave_leaks := 0
 var _wave_damage0 := 0.0
 var rng := RandomNumberGenerator.new()
+## Etappe 3: Sonderzonen (HdZones), Ereignisse (HdEvents), Fraktionen, Elite-Eigenschaften, Bosse
+var zones: HdZones
+var events: HdEvents
+var wave_limit := 0             ## Tests/Sim: Lauf nach dieser Welle beenden (0 = alle)
+var blasts: Array = []          ## Warnflächen ohne Gegner (Glut-Todesexplosion, Prüfung): {tele, t, windup, dmg, on_hit}
+var boss_road: HdRoad           ## Straße des nächsten Kriegsherrn (wird boss_warn Sekunden vorher angesagt)
+var boss_warned := false
+var rest_given := false         ## Rast nach dem Kriegsherrn schon gewährt
+var perma: Dictionary = {}      ## dauerhafte Werte dieses Runs (Arena-Siege)
+var blessing: Dictionary = {}   ## Schrein-Segen {stats, until}
+var blood_wave := 0             ## Blutmond liegt auf dieser Welle
+var _fly_roads: Dictionary = {} ## Straße → gerade Fluglinie
+var _boss_marker: Node3D
 
 
 func _ready() -> void:
@@ -103,6 +116,9 @@ func _ready() -> void:
 	_build_world()
 	_build_roads()
 	shop = HdShop.new(self)
+	zones = HdZones.new(self)
+	zones.add_stones()
+	events = HdEvents.new(self)
 	hero.set_bonus(shop.bonus())
 	hud = load("res://scripts/heroes/hd_hud.gd").new()
 	hud.game = self
@@ -258,6 +274,9 @@ func _build_roads() -> void:
 		for st in [home, back]:
 			_road_root.add_child(HdDev.cyl(1.0, 1.2, 0.3, HdDev.mat(Color("3a3f55"), 0.5), st + Vector3(0, 0.15, 0), 12))
 			_road_root.add_child(HdDev.cyl(0.7, 0.7, 0.06, HdDev.mat(UiTheme.PURPLE_LIGHT, 0.5, 1.6), st + Vector3(0, 0.34, 0), 12))
+	_fly_roads.clear()
+	if zones:
+		zones.add_stones()
 
 
 func _draw_road(r: HdRoad, on: bool) -> void:
@@ -577,12 +596,38 @@ func start(diff_index: int) -> void:
 	hud.on_started()
 
 
+## Wellenzahl dieses Runs (wave_limit für Tests/Sim).
+func wave_count() -> int:
+	return wave_limit if wave_limit > 0 else int(cfg.waves.count)
+
+
+## Dauer der Welle n (Kriegsherren länger).
+func wave_len(n: int) -> float:
+	if n >= 1 and n <= cfg.waves.list.size() and bool(cfg.waves.list[n - 1].get("boss", false)):
+		return float(cfg.waves.get("boss_time", cfg.waves.time))
+	return float(cfg.waves.time)
+
+
+func is_boss_wave(n: int) -> bool:
+	return n >= 1 and n <= cfg.waves.list.size() and bool(cfg.waves.list[n - 1].get("boss", false))
+
+
+## Fraktion der Welle n (nach dem ersten Gegner der Welle).
+func faction_of(n: int) -> Dictionary:
+	var w: Dictionary = cfg.waves.list[clampi(n, 1, cfg.waves.list.size()) - 1]
+	var id := str(enemy_defs[str(w.groups[0][0])].get("faction", "sumpf"))
+	return cfg.factions.get(id, {})
+
+
 func start_wave(n: int) -> void:
 	if wave > 0:
 		_wave_reward(wave)
 		wave_log.append({"wave": wave, "kills": _wave_kills, "leaks": _wave_leaks, "damage": roundi(hero.damage_done - _wave_damage0)})
+	var fac_old := faction_of(wave) if wave > 0 else {}
 	wave = n
 	wave_time = 0.0
+	boss_warned = false
+	rest_given = false
 	_wave_kills = 0
 	_wave_leaks = 0
 	_wave_damage0 = hero.damage_done
@@ -601,32 +646,139 @@ func start_wave(n: int) -> void:
 				g[1] -= 1
 				any = true
 	# reihum auf die aktiven Straßen, gleichzeitig an allen Toren; der Boss nimmt eine zufällige
+	# Ab Welle 31 (double): zwei Straßen gleichzeitig verstärkt, die übrigen bekommen weniger
 	var window := float(cfg.waves.spawn_window)
-	var per := ceili(order.size() / float(roads.size()))
-	var boss_road: HdRoad = roads[rng.randi() % roads.size()]
+	var weights: Array = []
+	var strong: Array = []
+	if bool(w.get("double", false)) and roads.size() > 2:
+		var pick := roads.duplicate()
+		pick.shuffle()
+		strong = pick.slice(0, 2)
+	for r in roads:
+		weights.append(2.0 if strong.has(r) else 1.0)
+	if boss_road == null or not roads.has(boss_road):
+		boss_road = roads[rng.randi() % roads.size()]
+	var pattern: Array = []
+	for k in roads.size():
+		for m in int(weights[k]):
+			pattern.append(roads[k])
+	var road_of: Array = []
+	for i in order.size():
+		road_of.append(pattern[i % pattern.size()])
+	var per_road := {}
 	for i in order.size():
 		var id: String = order[i]
-		var rd: HdRoad = roads[i % roads.size()]
-		var t := window * (i / roads.size()) / maxf(per, 1.0)
-		if str(enemy_defs[id].get("rank", "")) == "boss":
+		var rd: HdRoad = road_of[i]
+		var nth := int(per_road.get(rd, 0))
+		per_road[rd] = nth + 1
+		var cnt := road_of.count(rd)
+		var t := window * nth / maxf(cnt, 1.0)
+		var d: Dictionary = enemy_defs[id]
+		if str(d.get("rank", "")) == "boss":
 			t = minf(6.0, window)
 			rd = boss_road
 		spawn_queue.append({"t": play_time + t, "id": id, "road": rd})
+	# Elite-Eigenschaften: einzelne normale Gegner der Welle bekommen eine
+	var el := int(w.get("elites", 0))
+	if el > 0 and n >= int(cfg.elites.get("from", 11)):
+		var cand: Array = []
+		for k in spawn_queue.size():
+			var q: Dictionary = spawn_queue[k]
+			if q.t >= play_time and str(enemy_defs[q.id].get("rank", "")) == "normal" and not q.has("trait"):
+				cand.append(q)
+		cand.shuffle()
+		for k in mini(el, cand.size()):
+			cand[k].trait = cfg.elites.traits[rng.randi() % cfg.elites.traits.size()]
 	spawn_queue.sort_custom(func(a, b): return a.t < b.t)
-	if bool(w.get("boss", false)):
-		message.emit(tr("Welle %d: Der Moorkönig kommt über die %s!") % [n, tr(boss_road.name)])
+	var fac := faction_of(n)
+	if is_boss_wave(n):
+		var bd := _boss_def(n)
+		message.emit(tr("Welle %d: %s kommt über die %s!") % [n, tr(str(bd.name)), tr(boss_road.name)])
+		if bool(bd.get("land", false)):
+			message.emit(tr("Welle %d: %s landet vor der Feste!") % [n, tr(str(bd.name))])
+	elif str(fac.get("name", "")) != str(fac_old.get("name", "")) and not fac_old.is_empty():
+		message.emit(tr("Welle %d: %s! %s") % [n, tr(str(fac.name)), tr(str(fac.get("desc", "")))])
+	elif strong.size() == 2:
+		message.emit(tr("Welle %d: Verstärkt über %s und %s") % [n, tr(strong[0].name), tr(strong[1].name)])
 	else:
 		message.emit(tr("Welle %d") % n)
+	if blood_wave == n:
+		message.emit(tr("Blutmond! Welle %d ist doppelt so stark.") % n)
+	# Straße des nächsten Kriegsherrn auswürfeln (Ansage boss_warn Sekunden vor seiner Welle)
+	if is_boss_wave(n + 1) and n + 1 <= wave_count():
+		boss_road = roads[rng.randi() % roads.size()]
+	_place_boss_marker(null)
+	if events:
+		events.on_wave(n)
 	changed.emit()
 
 
+## Daten des Kriegsherrn der Welle n.
+func _boss_def(n: int) -> Dictionary:
+	for g in cfg.waves.list[n - 1].groups:
+		if str(enemy_defs[str(g[0])].get("rank", "")) == "boss":
+			return enemy_defs[str(g[0])]
+	return {}
+
+
+## Roter Leuchtpfeiler am Spawn-Tor der angesagten Kriegsherrn-Straße (null = weg).
+func _place_boss_marker(r) -> void:
+	if _boss_marker:
+		_boss_marker.queue_free()
+		_boss_marker = null
+	if r == null:
+		return
+	_boss_marker = Node3D.new()
+	add_child(_boss_marker)
+	var p: Vector3 = r.point(6.0)
+	_boss_marker.add_child(HdDev.cyl(0.9, 0.9, 14.0, HdDev.flat(Color(1.0, 0.2, 0.25), 0.45), p + Vector3(0, 7.0, 0), 10))
+	_boss_marker.add_child(HdDev.cyl(2.6, 2.6, 0.08, HdDev.mat(UiTheme.MISSING, 0.5, 1.6), p + Vector3(0, 0.05, 0), 20))
+
+
+## Kriegsherr in die Ansage: boss_warn Sekunden vor seiner Welle Name und Straße zeigen.
+func _step_boss_warning() -> void:
+	if boss_warned or not is_boss_wave(wave + 1) or wave + 1 > wave_count() or boss_road == null:
+		return
+	if wave_time >= wave_len(wave) - float(cfg.waves.get("boss_warn", 20.0)):
+		boss_warned = true
+		var bd := _boss_def(wave + 1)
+		if bool(bd.get("land", false)):
+			message.emit(tr("In 20 s: %s landet vor der Feste und ruft alle Straßen!") % tr(str(bd.name)))
+		else:
+			message.emit(tr("In 20 s: %s über die %s!") % [tr(str(bd.name)), tr(boss_road.name)])
+			_place_boss_marker(boss_road)
+
+
 func can_call_early() -> bool:
-	return state == "play" and spawn_queue.is_empty() and wave < int(cfg.waves.count)
+	return state == "play" and spawn_queue.is_empty() and wave < wave_count() and not boss_alive()
+
+
+func _boss_queued() -> bool:
+	for q in spawn_queue:
+		if str(enemy_defs[q.id].get("rank", "")) == "boss":
+			return true
+	return false
+
+
+func boss_alive() -> bool:
+	for e in enemies:
+		if not e.dead and e.rank == "boss":
+			return true
+	return false
+
+
+## Gegner, die zur Welle zählen (nicht in Sonderzonen/Ereignissen).
+func wave_enemies() -> int:
+	var n := 0
+	for e in enemies:
+		if not e.dead and (e.zone == "" or e.zone == "siege"):
+			n += 1
+	return n
 
 
 func call_early() -> void:
 	if can_call_early():
-		var bonus := roundi(maxf(0.0, float(cfg.waves.time) - wave_time) * float(cfg.economy.early_gold))
+		var bonus := roundi(maxf(0.0, wave_len(wave) - wave_time) * float(cfg.economy.early_gold))
 		if bonus > 0:
 			shop.add_gold(bonus)
 			message.emit(tr("Früher gerufen: +%d Gold") % bonus)
@@ -635,7 +787,7 @@ func call_early() -> void:
 
 ## Belohnung für eine überstandene Welle (beim Start der nächsten bzw. beim Sieg).
 func _wave_reward(n: int) -> void:
-	shop.add_gold(shop.wave_gold(n))
+	shop.add_gold(roundi(shop.wave_gold(n) * (float(events.blood().get("reward", 2.0)) if blood_wave == n else 1.0)))
 	var w: Dictionary = cfg.waves.list[n - 1]
 	var wd := int(cfg.economy.boss_wood) if bool(w.get("boss", false)) else int(cfg.economy.wave_wood)
 	shop.add_wood(maxi(1, roundi(wd * float(diff().get("wood", 1.0)))))
@@ -649,8 +801,16 @@ func step(dt: float) -> void:
 	var now := play_time
 	while not spawn_queue.is_empty() and spawn_queue[0].t <= now:
 		var s: Dictionary = spawn_queue.pop_front()
-		spawn(s.id, null, 0.0, s.get("road"))
-	if wave < int(cfg.waves.count) and wave_time >= float(cfg.waves.time):
+		_spawn_queued(s)
+	_step_boss_warning()
+	# Rast: Kriegsherr gefallen → höchstens noch rest Sekunden bis zur nächsten Welle
+	if is_boss_wave(wave) and not rest_given and not boss_alive() and not _boss_queued():
+		rest_given = true
+		var rest := float(cfg.waves.get("rest", 45.0))
+		if wave < wave_count() and wave_len(wave) - wave_time > rest:
+			wave_time = wave_len(wave) - rest
+			message.emit(tr("Rast: %d s bis zur nächsten Welle") % roundi(rest))
+	if wave < wave_count() and wave_time >= wave_len(wave):
 		start_wave(wave + 1)
 	hero.step(dt, now)
 	_step_stones(dt)
@@ -666,8 +826,11 @@ func step(dt: float) -> void:
 		b.step(dt)
 	_step_projectiles(dt)
 	_step_pools(dt, now)
+	_step_blasts(dt)
+	zones.step(dt)
+	events.step(dt)
 	enemies = enemies.filter(func(e): return not e.dead)
-	if state == "play" and wave >= int(cfg.waves.count) and spawn_queue.is_empty() and enemies.is_empty():
+	if state == "play" and wave >= wave_count() and spawn_queue.is_empty() and wave_enemies() == 0:
 		_finish(true)
 
 
@@ -678,6 +841,8 @@ func _step_stones(dt: float) -> void:
 		return
 	var tp: Dictionary = cfg.arena.teleport
 	for st in stones:
+		if st.has("zone") and not zones.is_open(str(st.zone)):
+			continue
 		var d: Vector3 = hero.position - st.pos
 		d.y = 0.0
 		if d.length() <= float(tp.radius):
@@ -707,11 +872,76 @@ func spawn(id: String, at = null, road_s := 0.0, rd = null) -> HdEnemy:
 	var e := HdEnemy.new()
 	e.road = rd if rd != null else roads[0]  ## ohne Angabe: erste Straße, wie road_point/road_len
 	e.setup(self, enemy_defs[id], wave)
+	if e.fly:
+		e.fly_road = fly_road(e.road)
+		if at != null:
+			road_s = e.fly_road.project(at, 0.0, e.fly_road.length)
 	e.road_s = road_s
-	e.position = at if at != null else e.road.point(road_s, e.lane)
+	e.position = at if at != null else e.path().point(road_s, e.lane)
+	if blood_wave == wave and events:
+		var bm := events.blood()
+		e.max_hp *= float(bm.get("hp", 2.0))
+		e.hp = e.max_hp
+		e.max_shield *= float(bm.get("hp", 2.0))
+		e.shield = e.max_shield
+		e.dmg_mult *= float(bm.get("damage", 1.25))
+		e.reward = float(bm.get("reward", 2.0))
 	add_child(e)
 	enemies.append(e)
 	return e
+
+
+## Gegner ohne Straße an einem festen Ort (Sonderzonen, Ereignisse, gelandeter Endboss).
+func spawn_home(id: String, at: Vector3, zone_id: String, home = null) -> HdEnemy:
+	var e := HdEnemy.new()
+	e.road = nearest_road(at)
+	e.zone = zone_id
+	e.home = home if home != null else at
+	e.setup(self, enemy_defs[id], wave)
+	e.position = at
+	e.gold_free = zone_id != "siege"
+	add_child(e)
+	enemies.append(e)
+	_resolve(e)
+	return e
+
+
+## Eintrag der Spawn-Warteschlange ausführen (Straße, Elite-Eigenschaft, Wiederauferstehen, gelandeter Endboss).
+func _spawn_queued(s: Dictionary) -> HdEnemy:
+	var d: Dictionary = enemy_defs[s.id]
+	var e: HdEnemy
+	if bool(d.get("land", false)):
+		var rd: HdRoad = s.get("road", roads[0])
+		var p := fortress_pos + (rd.point(rd.length - 12.0) - fortress_pos).normalized() * 13.0
+		e = spawn_home(s.id, p, "siege")
+		fx.nova(p, 8.0, UiTheme.PURPLE_LIGHT)
+	elif s.has("at"):
+		e = spawn(s.id, s.at, float(s.get("s", 0.0)), s.get("road"))
+	else:
+		e = spawn(s.id, null, 0.0, s.get("road"))
+	if s.has("trait"):
+		e.add_trait(s.trait)
+	if s.has("hp"):
+		e.max_hp *= float(s.hp)
+		e.hp = e.max_hp
+		e.max_shield = 0.0
+		e.shield = 0.0
+	if s.has("zone"):
+		e.zone = str(s.zone)
+		e.home = s.get("home", e.position)
+		e.gold_free = true
+	e.risen = bool(s.get("risen", false))
+	e.split_done = bool(s.get("split_done", false))
+	return e
+
+
+## Gerade Fluglinie vom Spawn-Tor der Straße bis vor die Feste (Flieger ignorieren Torwerke und Felsen).
+func fly_road(r: HdRoad) -> HdRoad:
+	if not _fly_roads.has(r):
+		var a: Vector3 = r.points[0]
+		var b: Vector3 = fortress_pos + (a - fortress_pos).normalized() * (float(cfg.arena.fortress_radius) + 2.0)
+		_fly_roads[r] = HdRoad.new({"id": r.id + "_luft", "name": r.name, "points": [[a.x, a.z], [b.x, b.z]]}, {})
+	return _fly_roads[r]
 
 
 ## Beschwörerkreis: neue Gegner um den Beschwörer, sie laufen ab seiner Stelle die Straße weiter.
@@ -719,7 +949,10 @@ func summon(src: HdEnemy, id: String, count: int, r: float) -> void:
 	for k in count:
 		var a := TAU * k / maxf(count, 1)
 		var p := src.position + Vector3(cos(a), 0, sin(a)) * r * 0.7
-		var e := spawn(id, p, src.road_s, src.road)
+		if src.zone != "" and src.zone != "siege":
+			spawn_home(id, p, src.zone, src.home)
+			continue
+		var e := spawn(id, p, src.road.project(p, 0.0, src.road.length) if src.zone == "siege" else src.road_s, src.road)
 		_resolve(e)
 
 
@@ -753,14 +986,107 @@ func _kill(e: HdEnemy) -> void:
 	if e.plagued():
 		_spread_plague(e)
 	kills += 1
-	_wave_kills += 1
 	hero.kills += 1
 	hero.add_xp(float(e.def.get("xp", 10)))
-	var g := shop.kill_gold(e)
-	if g > 0:
+	if zones.on_kill(e) or events.on_kill(e):
+		changed.emit()
+		return
+	_wave_kills += 1
+	var g := roundi(shop.kill_gold(e) * e.reward)
+	if g > 0 and not e.gold_free:
 		shop.add_gold(g)
 		floater(e.position + Vector3(0, e.height() + 1.0, 0), "+%d" % g, UiTheme.COIN)
+	_on_death_traits(e)
+	if e.rank == "boss":
+		shop.trophies += 1
+		message.emit(tr("%s ist gefallen! +1 Trophäe") % tr(str(e.def.name)))
 	changed.emit()
+
+
+## Fraktion und Elite-Eigenschaften beim Tod: Knochen stehen wieder auf, Glut explodiert, Teiler teilt sich.
+func _on_death_traits(e: HdEnemy) -> void:
+	var fac: Dictionary = cfg.factions.get(str(e.def.get("faction", "")), {})
+	var at := e.position
+	match str(fac.get("trait", "")):
+		"rise":
+			if not e.risen and e.rank == "normal" and rng.randf() < float(fac.get("chance", 0.4)):
+				spawn_queue.append({"t": play_time + float(fac.get("delay", 2.0)), "id": e.id, "road": e.road, "at": at,
+					"s": e.road_s, "hp": float(fac.get("hp", 0.4)), "risen": true, "split_done": true})
+				spawn_queue.sort_custom(func(a, b): return a.t < b.t)
+				floater(at + Vector3(0, 1.4, 0), tr("Erhebt sich …"), Color("d8d2c0"))
+		"explode":
+			if e.rank != "boss":
+				ground_blast(at, float(fac.get("radius", 2.2)), float(fac.get("windup", 1.0)), float(fac.get("damage", 100)) * e.out_mult())
+	if e.traits.has("teiler") and not e.split_done:
+		var t: Dictionary = {}
+		for x in cfg.elites.traits:
+			if str(x.id) == "teiler":
+				t = x
+		for k in int(t.get("split", 2)):
+			var off := Vector3(cos(k * PI), 0, sin(k * PI)) * 0.8
+			spawn_queue.append({"t": play_time, "id": e.id, "road": e.road, "at": at + off, "s": e.road_s,
+				"hp": float(t.get("hp", 0.35)), "risen": true, "split_done": true})
+		spawn_queue.sort_custom(func(a, b): return a.t < b.t)
+
+
+## Endboss erreicht eine neue Phase: neue Fähigkeiten, schneller, ruft Gegner über alle Straßen.
+func boss_phase(e: HdEnemy, ph: Dictionary) -> void:
+	for aid in ph.get("add", []):
+		e.extra_abilities.append(str(aid))
+		e.ab_ready[str(aid)] = play_time + 1.5
+	e.cd_mult *= float(ph.get("cooldown", 1.0))
+	message.emit(tr(str(ph.get("name", "Neue Phase"))))
+	fx.nova(e.position, 10.0, UiTheme.PURPLE_LIGHT)
+	var sm: Dictionary = ph.get("summon", {})
+	if not sm.is_empty():
+		for r in roads:
+			for k in int(sm.count):
+				spawn_queue.append({"t": play_time + k * 1.2, "id": str(sm.id), "road": r})
+		spawn_queue.sort_custom(func(a, b): return a.t < b.t)
+
+
+## Gelandeter Endboss ohne Ziel belagert die Feste.
+func siege_hit(e: HdEnemy, n: int) -> void:
+	lives -= n
+	fx.beam(e.position + Vector3(0, e.height() * 0.7, 0), fortress_pos + Vector3(0, 6.0, 0), UiTheme.PURPLE_LIGHT, 0.35)
+	message.emit(tr("%s zehrt an der Feste! −%d") % [tr(str(e.def.name)), n])
+	if lives <= 0:
+		lives = 0
+		_finish(false)
+	changed.emit()
+
+
+## Warnfläche ohne Gegner: füllt sich in windup Sekunden, trifft dann den Helden (on_hit statt Schaden).
+func ground_blast(at: Vector3, r: float, windup: float, dmg: float, on_hit := Callable()) -> void:
+	var t := HdTelegraph.circle(r)
+	t.position = at
+	add_tele(t)
+	blasts.append({"tele": t, "t": 0.0, "windup": windup, "dmg": dmg, "on_hit": on_hit})
+
+
+func _step_blasts(dt: float) -> void:
+	for i in range(blasts.size() - 1, -1, -1):
+		var b: Dictionary = blasts[i]
+		b.t += dt
+		var t: HdTelegraph = b.tele
+		if not is_instance_valid(t):
+			blasts.remove_at(i)
+			continue
+		t.progress = b.t / maxf(float(b.windup), 0.01)
+		if b.t >= b.windup:
+			blasts.remove_at(i)
+			var inside := t.contains(hero.position, hero.radius) and hero.alive()
+			if inside and hero.dodging():
+				floater(hero.position + Vector3(0, 2.4, 0), tr("Ausgewichen"), UiTheme.CYAN)
+			elif inside:
+				if b.on_hit.is_valid():
+					b.on_hit.call()
+				if float(b.dmg) > 0.0:
+					damage_hero(float(b.dmg), null)
+			for bl in buildings:
+				if float(b.dmg) > 0.0 and bl.alive() and t.contains(bl.position, bl.radius):
+					damage_building(bl, float(b.dmg) * 0.5)
+			t.trigger()
 
 
 ## Rattenseuche springt beim Tod auf bis zu jumps Gegner in der Nähe über.
@@ -843,9 +1169,22 @@ func place_free(u: Node3D) -> void:
 	_resolve(u)
 
 
+## Punkt mit Abstand r aus Felsen, Gebäuden und Feste schieben (Käfig, Ereignis-Orte).
+func free_point(p: Vector3, r: float) -> Vector3:
+	for k in 3:
+		for ob in _all_obstacles():
+			var d: Vector3 = p - ob[0]
+			d.y = 0.0
+			var min_d: float = ob[1] + r
+			if d.length() < min_d:
+				p += (d.normalized() if d.length() > 0.001 else Vector3.RIGHT) * (min_d - d.length())
+	return p
+
+
 ## Aus Hindernissen herausschieben und im Spielfeld halten.
 func _resolve(u: Node3D) -> void:
-	for ob in _all_obstacles():
+	var flying: bool = u is HdEnemy and u.fly
+	for ob in ([] if flying else _all_obstacles()):
 		if ob.size() > 2 and ob[2] == u:
 			continue
 		var d: Vector3 = u.position - ob[0]
@@ -956,7 +1295,7 @@ func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 	if e.dead:
 		return
 	var dmg := amount * hero.out_mult() * armor_factor(e.armor - e.cc.armor_reduction(play_time))
-	e.hp -= dmg
+	e.take(dmg)
 	e.hit_flash = 0.12
 	hero.damage_done += dmg
 	if hero.b("lifesteal") > 0.0 and hero.alive():
@@ -972,7 +1311,7 @@ func building_hit(e: HdEnemy, amount: float, b: HdBuilding) -> void:
 	if e.dead:
 		return
 	var dmg := amount * armor_factor(e.armor - e.cc.armor_reduction(play_time))
-	e.hp -= dmg
+	e.take(dmg)
 	e.hit_flash = 0.12
 	if b is HdGadget:
 		hero.damage_done += dmg
@@ -1016,10 +1355,11 @@ func damage_building(b: HdBuilding, amount: float) -> void:
 	b.hp -= b.incoming(amount * armor_factor(b.armor))
 	if b.hp <= 0.0:
 		b.hp = 0.0
-		b.destroy()
-		if b is HdGadget:
+		if b is HdGadget or b is HdAlly:
 			buildings.erase(b)
+			b.destroy()
 		else:
+			b.destroy()
 			message.emit(tr("%s zerstört!") % b.label())
 			if b.gate_kind == "vorwerk" and b.road != null:
 				message.emit(tr("Gegner der %s laufen schneller!") % tr(b.road.name))
@@ -1198,7 +1538,7 @@ func _finish(victory: bool) -> void:
 
 
 func score() -> int:
-	return kills * 10 + (wave - 1) * 100 + lives * 50 + (2000 if state == "over" and lives > 0 and wave >= int(cfg.waves.count) else 0)
+	return kills * 10 + (wave - 1) * 100 + lives * 50 + (2000 if state == "over" and lives > 0 and wave >= wave_count() else 0)
 
 
 func _record(victory: bool) -> Dictionary:
@@ -1209,7 +1549,7 @@ func _record(victory: bool) -> Dictionary:
 	var towers: Array = [{"id": hid, "label": label, "kills": hero.kills, "damage": roundi(hero.damage_done),
 		"best_wave_damage": 0, "best_wave": 0}]
 	var info := {"map": "Morgenwacht", "difficulty": difficulty, "victory": victory, "wave": wave,
-		"waves": int(cfg.waves.count), "lives": lives, "max_lives": max_lives, "score": score(),
+		"waves": wave_count(), "lives": lives, "max_lives": max_lives, "score": score(),
 		"kills": kills, "play_time": roundi(play_time), "debug": debug, "hero": hid, "hero_level": hero.level}
 	return Profile.record_run("heroes", info, {"types": types, "towers": towers, "wave_log": wave_log})
 
@@ -1217,7 +1557,7 @@ func _record(victory: bool) -> Dictionary:
 func leave() -> void:
 	if state == "play":
 		Profile.record_abort("heroes", {"map": "Morgenwacht", "difficulty": difficulty, "wave": wave,
-			"waves": int(cfg.waves.count), "play_time": roundi(play_time), "debug": debug})
+			"waves": wave_count(), "play_time": roundi(play_time), "debug": debug})
 	Engine.time_scale = 1.0
 	Session.goto(Session.return_scene)
 
