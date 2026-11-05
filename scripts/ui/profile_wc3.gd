@@ -12,6 +12,7 @@ const MODES := [
 	["maul", "Shopping Maul", Color("b878e0")],
 	["randgruppen", "Randgruppen TD", Color("5d8ff0")],
 	["youtd", "YouTD", Color("e0b56a")],
+	["heroes", "Bollwerk", Color("ff8a3a")],
 ]
 const WIN := Color("9fd27a")
 const LOSS := Color("e07b5f")

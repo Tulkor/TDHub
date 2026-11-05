@@ -1,7 +1,9 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul   Standard spiel
+##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes   Standard spiel
+##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
+##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -150,6 +152,11 @@ func _ready() -> void:
 		"map_editor": node = load(Session.MAP_EDITOR).instantiate()
 		"tower_editor": node = load(Session.TOWER_EDITOR).instantiate()
 		"maul": node = load(Session.MAUL).instantiate()
+		"heroes":
+			Session.skip_setup = not opts.has("setup")
+			Session.difficulty = int(opts.get("stufe", "1"))
+			node = load("res://scenes/heroes_game.tscn").instantiate()
+			node.bot = true
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
@@ -179,6 +186,8 @@ func _ready() -> void:
 	var angles: PackedStringArray = ["bild"]
 	if scene == "maul":
 		await _prepare_maul(node)
+	if scene == "heroes":
+		await _prepare_heroes(node)
 	if scene == "spiel":
 		await _prepare(node)
 		angles = String(opts.get("winkel", "schraeg")).split(",")
@@ -431,6 +440,49 @@ func _prepare(game: Node) -> void:
 
 
 ## Shopping Maul: Filiale eröffnen, im Zentrum bauen, Level im Zeitraffer spielen.
+## Bollwerk: Bot spielt im Zeitraffer, danach optional auf halb gefüllte Warnflächen warten und anhalten.
+func _prepare_heroes(game: Node) -> void:
+	if game.state == "setup":
+		return
+	game.set_physics_process(false)
+	game.rng.seed = int(opts.get("seed", "1"))
+	if opts.has("boss"):
+		game.spawn_queue.clear()
+		game.hero.add_xp(4000.0)
+		game.start_wave(10)
+	var left := float(opts.get("zeit", "150"))
+	var dt := 1.0 / 30.0
+	var k := 0
+	while left > 0.0 and game.state == "play":
+		if k % 3 == 0:
+			game.bot_turn()
+		game.step(dt)
+		left -= dt
+		k += 1
+		if k % 300 == 0:
+			await get_tree().process_frame
+	if opts.has("warnung"):
+		var tries := 0
+		while tries < 1800 and game.state == "play":
+			var n := 0
+			for e in game.enemies:
+				if e.casting() and str(e.cast.phase) == "windup" and float(e.cast.t) > float(e.cast.windup) * 0.55:
+					n += 1
+			if n >= int(opts.get("warnungen", "1")):
+				break
+			if k % 3 == 0:
+				game.bot_turn()
+			game.step(dt)
+			k += 1
+			tries += 1
+	game.paused = true
+	if opts.has("nah"):
+		game.cam_dist = 17.0
+	game.cam_pos = game.hero.position
+	game._place_camera()
+	await _frames(12)
+
+
 func _prepare_maul(game: Node) -> void:
 	game.camera_rig.set_process(false)
 	if opts.has("alle_wege"):
