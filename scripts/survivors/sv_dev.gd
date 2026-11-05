@@ -164,6 +164,17 @@ static func diamond_plate(c: Color, scale := 1.6) -> StandardMaterial3D:
 	return m
 
 
+## Schnee: fast weiß, rau, leicht bläulich im Schatten.
+static func snow() -> StandardMaterial3D:
+	if _mats.has("snow"):
+		return _mats.snow
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("eef3fa")
+	m.roughness = 0.9
+	_mats.snow = m
+	return m
+
+
 ## Selbstleuchtend (über der Glow-Schwelle, strahlt bei Nacht).
 static func glow(c: Color, energy := 3.0) -> StandardMaterial3D:
 	var key := "glow|%s|%s" % [c.to_html(), energy]
