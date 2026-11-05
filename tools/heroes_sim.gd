@@ -1,7 +1,7 @@
 extends Node
 ## Balance-Probe für Bollwerk (Modus heroes): der Bot spielt Läufe ohne Bild.
 ##   godot --headless --path . tools/heroes_sim.tscn -- --laeufe=3 --stufen=0,1,2
-## Ausgabe je Lauf: erreichte Welle, Feste-Leben, Stufe, Tode, Durchbrüche je Welle.
+## Ausgabe je Lauf: erreichte Welle, Feste-Leben, Stufe, Tode, Durchbrüche je Welle, Gold/Holz/Inventar.
 
 func _ready() -> void:
 	var opts := {}
@@ -30,9 +30,19 @@ func _ready() -> void:
 			var leaks: Array = []
 			for w in g.wave_log:
 				leaks.append(int(w.leaks))
+			var gear: Array = []
+			for x in g.shop.inv:
+				if x != null:
+					gear.append(x.id)
+			var fallen := 0
+			for b in g.buildings:
+				if b.destroyed:
+					fallen += 1
 			print("Stufe %s Lauf %d: %s Welle %d, Feste %d/%d, Held Stufe %d, Tode %d, ausgewichen %d, Durchbrüche %s" % [
 				st, r, "SIEG" if g.lives > 0 and g.state == "over" else "verloren", g.wave, g.lives, g.max_lives,
 				g.hero.level, g.hero.deaths, g.hero.dodges, leaks])
+			print("    Gold verdient %d, übrig %d, Holz %d/%d, Torwerke gefallen %d, Inventar %s" % [
+				g.shop.gold_earned, g.shop.gold, g.shop.wood, g.shop.wood_earned, fallen, gear])
 			g.queue_free()
 			await get_tree().process_frame
 	get_tree().quit()

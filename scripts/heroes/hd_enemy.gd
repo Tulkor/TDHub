@@ -25,6 +25,7 @@ var dmg_mult := 1.0
 var cc: HdCc
 var dead := false
 var state := "road"            ## road | chase | return
+var road  ## HdRoad, auf der der Gegner läuft
 var road_s := 0.0
 var lane := 0.0
 var anchor_s := 0.0
@@ -62,7 +63,7 @@ func setup(g, d: Dictionary, wave: int) -> void:
 	rank = str(d.get("rank", "normal"))
 	var diff: Dictionary = game.diff()
 	var w: Dictionary = game.cfg.waves
-	max_hp = float(d.hp) * float(diff.hp) * (1.0 + float(w.scale_hp) * (wave - 1))
+	max_hp = float(d.hp) * float(diff.hp) * float(game.scaling().hp) * (1.0 + float(w.scale_hp) * (wave - 1))
 	hp = max_hp
 	armor = float(d.get("armor", 0))
 	speed = float(d.speed)
@@ -143,7 +144,7 @@ func step(dt: float, now: float) -> void:
 		else:
 			_move(target.position - position, dt, now)
 	elif state == "return":
-		var p: Vector3 = game.road_point(anchor_s, lane)
+		var p: Vector3 = road.point(anchor_s, lane)
 		if _flat_dist(p) < 1.5:
 			state = "road"
 			road_s = anchor_s
@@ -155,15 +156,15 @@ func step(dt: float, now: float) -> void:
 
 
 func _follow_road(dt: float, now: float) -> void:
-	road_s = maxf(road_s, game.road_project(position, road_s - 2.0, road_s + 8.0))
-	if road_s >= game.road_len - 1.0:
+	road_s = maxf(road_s, road.project(position, road_s - 2.0, road_s + 8.0))
+	if road_s >= road.length - 1.0:
 		game.leak(self)
 		return
 	var ahead: float = road_s + float(game.cfg.ai.road_lookahead)
-	_move(game.road_point(ahead, lane) - position, dt, now)
+	_move(road.point(ahead, lane) - position, dt, now, road.speed_mult())
 
 
-func _move(v: Vector3, dt: float, now: float) -> void:
+func _move(v: Vector3, dt: float, now: float, mult := 1.0) -> void:
 	v.y = 0.0
 	if v.length_squared() < 0.0001:
 		return
@@ -174,7 +175,7 @@ func _move(v: Vector3, dt: float, now: float) -> void:
 		dir = (dir * 0.35 + _side_dir).normalized()
 	wants_move = true
 	_face(dir)
-	game.move_unit(self, dir, speed * cc.speed_factor(now), dt)
+	game.move_unit(self, dir, speed * mult * cc.speed_factor(now), dt)
 
 
 func _face(v: Vector3) -> void:
@@ -192,7 +193,7 @@ func _flat_dist(p: Vector3) -> float:
 
 func _choose_target() -> void:
 	if state == "chase":
-		var anchor: Vector3 = game.road_point(anchor_s, lane)
+		var anchor: Vector3 = road.point(anchor_s, lane)
 		var lost: bool = target == null or not is_instance_valid(target) or not target.alive()
 		if lost or _flat_dist(anchor) > float(def.leash):
 			drop_target(float(game.cfg.ai.reaggro_block))
@@ -270,14 +271,14 @@ func _check_stuck(dt: float, now: float) -> void:
 			if state == "chase":
 				drop_target(2.0)
 			else:
-				road_s = game.road_project(position, 0.0, game.road_len)
+				road_s = road.project(position, 0.0, road.length)
 				anchor_s = road_s
 				lane = game.rng.randf_range(-0.5, 0.5)
 				if state == "return":
 					state = "road"
 		if _stuck_n >= 5:
 			# letzte Rettung: ein Stück direkt Richtung Straßenmitte schieben, Hindernisse lösen danach auf
-			var p: Vector3 = game.road_point(road_s + 2.0, 0.0)
+			var p: Vector3 = road.point(road_s + 2.0, 0.0)
 			position += (p - position).limit_length(1.5)
 			_stuck_n = 0
 	else:

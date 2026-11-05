@@ -1,8 +1,9 @@
 class_name HdGame
 extends Node3D
-## Bollwerk (Arbeitstitel), Hero-Defense-Modus "heroes", Etappe 1 (Design: /mnt/project-files/docs/
-## hero-defense/, Abschnitte 5a, 13, 15): ein Held (Torvik Sturmruf), eine Straße mit Vorwerk, die
-## Feste am Ende, 10 Wellen Sumpfvolk mit ausweichbaren Fähigkeiten (Warnflächen), Boss in Welle 10.
+## Bollwerk (Arbeitstitel), Hero-Defense-Modus "heroes" (Design: /mnt/project-files/docs/hero-defense/,
+## Abschnitte 2, 5a, 6, 13, 15): Feste in der Mitte, 4 Straßen (bei 1–3 Spielern 2) mit je Vorwerk und
+## Innentor, 10 Wellen Sumpfvolk mit ausweichbaren Fähigkeiten (Warnflächen), Boss in Welle 10.
+## Wirtschaft (Gold, Holz, Shop, Rezepte, Inventar) in HdShop, Straßen in HdRoad.
 ## Steuerung WASD (Laufen, Maus zielt, Linksklick Angriff) oder Maus (Rechtsklick laufen/angreifen,
 ## Q W E R mit Zielvorschau), Leertaste Ausweichen. Alle Werte in data/heroes.json.
 ## Ablauf: setup → play → over. Logik läuft in step(dt), damit Tests und Bilder sie ohne Eingabe treiben.
@@ -44,10 +45,20 @@ var control := "wasd"           ## wasd | maus
 var quickcast := false          ## Maus-Modus: Q W E R sofort statt Zielvorschau
 var result_news: Dictionary = {}
 
-var road: Array = []            ## Vector3-Punkte
-var road_cum: Array = []        ## Länge bis Punkt i
-var road_len := 0.0
+var roads: Array = []           ## HdRoad, alle aktiven Straßen (Spielerzahl, Einstellung)
+var players := 1                ## Etappe 2a: Einzelspieler; bestimmt Straßen und Gegnerleben (players)
+var road_choice := 0            ## 0 = nach Spielerzahl, 4 = immer alle vier Straßen (Einstellung)
 var fortress_pos := Vector3.ZERO
+var stones: Array = []          ## Teleport-Steine {pos, to, road}
+var shop: HdShop
+var _road_root: Node3D
+var _tp_cd := 0.0
+var tp_hold := 0.0              ## so lange steht der Held schon auf tp_stone
+var tp_stone: Dictionary = {}
+## Erste aktive Straße (Tests und Etappe-1-Aufrufe ohne Straßenangabe).
+var road_len: float:
+	get:
+		return roads[0].length
 
 var hero: HdHero
 var fx: HdFx
@@ -73,8 +84,12 @@ func _ready() -> void:
 		enemy_defs[str(e.id)] = e
 	rng.randomize()
 	_load_settings()
-	_build_road()
+	var f: Array = cfg.arena.fortress
+	fortress_pos = Vector3(float(f[0]), 0, float(f[1]))
 	_build_world()
+	_build_roads()
+	shop = HdShop.new(self)
+	hero.set_bonus(shop.bonus())
 	hud = load("res://scripts/heroes/hd_hud.gd").new()
 	hud.game = self
 	add_child(hud)
@@ -93,6 +108,9 @@ func _load_settings() -> void:
 	if c.load(SETTINGS) == OK:
 		control = str(c.get_value("steuerung", "modus", "wasd"))
 		quickcast = bool(c.get_value("steuerung", "schnellzauber", false))
+		road_choice = int(c.get_value("spiel", "strassen", 0))
+		HdTelegraph.palette = int(c.get_value("warnflaechen", "farbe", 0))
+		HdTelegraph.outline = int(c.get_value("warnflaechen", "umriss", 0))
 	if not KEYS.has(control):
 		control = "wasd"
 
@@ -101,6 +119,9 @@ func save_settings() -> void:
 	var c := ConfigFile.new()
 	c.set_value("steuerung", "modus", control)
 	c.set_value("steuerung", "schnellzauber", quickcast)
+	c.set_value("spiel", "strassen", road_choice)
+	c.set_value("warnflaechen", "farbe", HdTelegraph.palette)
+	c.set_value("warnflaechen", "umriss", HdTelegraph.outline)
 	c.save(SETTINGS)
 
 
@@ -108,70 +129,140 @@ func diff() -> Dictionary:
 	return cfg.difficulties[clampi(difficulty, 0, cfg.difficulties.size() - 1)]
 
 
+## Zeile der Spielerzahl-Tabelle (Design Abschnitt 12): Straßen, Gegnerleben, Gold je Kill.
+func scaling() -> Dictionary:
+	for row in cfg.players:
+		if players <= int(row.max):
+			return row
+	return cfg.players[-1]
+
+
+func active_road_ids() -> Array:
+	if road_choice == 4:
+		var all: Array = []
+		for rd in cfg.arena.roads:
+			all.append(str(rd.id))
+		return all
+	return scaling().roads
+
+
 func key_name(slot: int) -> String:
 	return OS.get_keycode_string(KEYS[control][slot])
 
 
-# ---------------------------------------------------------------- Straße
+# ---------------------------------------------------------------- Straßen
 
-func _build_road() -> void:
-	road.clear()
-	road_cum.clear()
-	var total := 0.0
-	for i in cfg.arena.road.size():
-		var p: Array = cfg.arena.road[i]
-		var v := Vector3(float(p[0]), 0, float(p[1]))
-		if i > 0:
-			total += v.distance_to(road[i - 1])
-		road.append(v)
-		road_cum.append(total)
-	road_len = total
-	var f: Array = cfg.arena.fortress
-	fortress_pos = Vector3(float(f[0]), 0, float(f[1]))
-
-
-func _segment(s: float) -> int:
-	for i in range(1, road.size()):
-		if s <= road_cum[i]:
-			return i - 1
-	return road.size() - 2
-
-
-## Punkt auf der Straße bei Länge s, lane = seitlicher Versatz (links/rechts der Mitte).
-func road_point(s: float, lane := 0.0) -> Vector3:
-	s = clampf(s, 0.0, road_len)
-	var i := _segment(s)
-	var a: Vector3 = road[i]
-	var b: Vector3 = road[i + 1]
-	var seg: float = road_cum[i + 1] - road_cum[i]
-	var p := a.lerp(b, (s - road_cum[i]) / maxf(seg, 0.001))
-	var d := (b - a).normalized()
-	return p + Vector3(-d.z, 0, d.x) * lane
-
-
-## Länge s des nächsten Straßenpunkts, nur im Bereich [s0, s1].
-func road_project(pos: Vector3, s0: float, s1: float) -> float:
-	s0 = clampf(s0, 0.0, road_len)
-	s1 = clampf(s1, 0.0, road_len)
-	var best := s0
-	var best_d := INF
-	for i in road.size() - 1:
-		if road_cum[i + 1] < s0 or road_cum[i] > s1:
+## Aktive Straßen mit Torwerken und Teleport-Steinen bauen (neu bei geänderter Einstellung).
+func _build_roads() -> void:
+	if _road_root:
+		for bl in buildings:
+			if bl.road != null:
+				bl.queue_free()
+		buildings = buildings.filter(func(x): return x.road == null)
+		_road_root.queue_free()
+	_road_root = Node3D.new()
+	add_child(_road_root)
+	roads.clear()
+	stones.clear()
+	var fast := {}
+	for gd in cfg.arena.gates:
+		fast[str(gd.kind)] = float(gd.get("fast", 1.0))
+	var ids := active_road_ids()
+	var rw := float(cfg.arena.road_width)
+	for rd in cfg.arena.roads:
+		var r := HdRoad.new(rd, fast)
+		var on := ids.has(r.id)
+		_draw_road(r, on)
+		if not on:
 			continue
-		var a: Vector3 = road[i]
-		var b: Vector3 = road[i + 1]
-		var ab := b - a
-		var t := clampf((pos - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
-		var s := clampf(road_cum[i] + t * ab.length(), s0, s1)
-		var d := pos.distance_squared_to(road_point(s))
-		if d < best_d:
-			best_d = d
-			best = s
+		roads.append(r)
+		for gd in cfg.arena.gates:
+			var bl := HdBuilding.new()
+			bl.setup(self, gd, r)
+			add_child(bl)
+			buildings.append(bl)
+			r.gates.append(bl)
+		# Teleport-Steine: an der Feste zur Straße hinaus (vor das Vorwerk), beim Vorwerk zurück
+		var tp: Dictionary = cfg.arena.teleport
+		var vs: float = r.length * float(r.gate("vorwerk").def.at)
+		var off := rw * 0.5 + float(tp.offset)
+		var home := r.point(r.length - 5.0) + r.side(r.length - 5.0) * off
+		var out := r.point(vs + 4.0)
+		var back := r.point(vs + 2.0) - r.side(vs + 2.0) * off
+		stones.append({"pos": home, "to": out, "road": r, "out": true})
+		stones.append({"pos": back, "to": hero_spawn(), "road": r, "out": false})
+		for st in [home, back]:
+			_road_root.add_child(HdDev.cyl(1.0, 1.2, 0.3, HdDev.mat(Color("3a3f55"), 0.5), st + Vector3(0, 0.15, 0), 12))
+			_road_root.add_child(HdDev.cyl(0.7, 0.7, 0.06, HdDev.mat(UiTheme.PURPLE_LIGHT, 0.5, 1.6), st + Vector3(0, 0.34, 0), 12))
+
+
+func _draw_road(r: HdRoad, on: bool) -> void:
+	var rw := float(cfg.arena.road_width)
+	var road_mat := HdDev.mat(Color("8a7356") if on else Color("5d5546"))
+	for i in r.points.size() - 1:
+		var a: Vector3 = r.points[i]
+		var c: Vector3 = r.points[i + 1]
+		var seg := MeshInstance3D.new()
+		var sm := PlaneMesh.new()
+		sm.size = Vector2(rw, a.distance_to(c))
+		seg.mesh = sm
+		seg.material_override = road_mat
+		seg.position = (a + c) * 0.5 + Vector3(0, 0.005, 0)
+		seg.rotation.y = atan2(c.x - a.x, c.z - a.z)
+		_road_root.add_child(seg)
+		_road_root.add_child(HdDev.cyl(rw * 0.5, rw * 0.5, 0.01, road_mat, a + Vector3(0, 0.006, 0), 20))
+	# Spawn-Tor, quer zur Straße; gesperrte Straßen haben einen Balken davor
+	var sp: Vector3 = r.points[0]
+	var sd := r.side(0.0)
+	var gate_mat := HdDev.mat(Color("5d4a6a") if on else Color("4a4a4a"), 0.5)
+	for side in [-1.0, 1.0]:
+		_road_root.add_child(HdDev.box(Vector3(0.8, 4.0, 0.8), gate_mat, sp + sd * side * (rw * 0.5 + 0.6) + Vector3(0, 2.0, 0)))
+	var top := HdDev.box(Vector3(rw + 2.0, 0.6, 0.8), gate_mat, sp + Vector3(0, 4.2, 0))
+	top.rotation.y = atan2(sd.x, sd.z) + PI * 0.5
+	_road_root.add_child(top)
+	if not on:
+		var bar := HdDev.box(Vector3(rw + 1.0, 1.0, 0.6), HdDev.mat(Color("6b4a2a"), 0.5), r.point(3.0) + Vector3(0, 0.8, 0))
+		bar.rotation.y = top.rotation.y
+		_road_root.add_child(bar)
+
+
+func road_point(s: float, lane := 0.0) -> Vector3:
+	return roads[0].point(s, lane)
+
+
+func road_project(pos: Vector3, s0: float, s1: float) -> float:
+	return roads[0].project(pos, s0, s1)
+
+
+func road_by_id(id: String) -> HdRoad:
+	for r in roads:
+		if r.id == id:
+			return r
+	return null
+
+
+## Straße, der der Punkt am nächsten liegt.
+func nearest_road(pos: Vector3) -> HdRoad:
+	var best: HdRoad = roads[0]
+	var bd := INF
+	for r in roads:
+		var d: float = r.distance(pos)
+		if d < bd:
+			bd = d
+			best = r
 	return best
 
 
+func gate_by_name(label: String):
+	for b in buildings:
+		if b.label() == label:
+			return b
+	return null
+
+
+## Neben der Feste, zwischen den Straßen (diagonal).
 func hero_spawn() -> Vector3:
-	return road_point(road_len - 2.0)
+	return fortress_pos + Vector3(6.5, 0, 6.5)
 
 
 # ---------------------------------------------------------------- Welt
@@ -202,26 +293,6 @@ func _build_world() -> void:
 	ground.position = Vector3((float(b[0]) + float(b[2])) * 0.5, -0.02, (float(b[1]) + float(b[3])) * 0.5)
 	ground.material_override = HdDev.mat(Color("4b5a44"))
 	add_child(ground)
-	# Straße aus Abschnitten, an den Knicken runde Scheiben
-	var rw := float(cfg.arena.road_width)
-	var road_mat := HdDev.mat(Color("8a7356"))
-	for i in road.size() - 1:
-		var a: Vector3 = road[i]
-		var c: Vector3 = road[i + 1]
-		var seg := MeshInstance3D.new()
-		var sm := PlaneMesh.new()
-		sm.size = Vector2(rw, a.distance_to(c))
-		seg.mesh = sm
-		seg.material_override = road_mat
-		seg.position = (a + c) * 0.5 + Vector3(0, 0.005, 0)
-		seg.rotation.y = atan2(c.x - a.x, c.z - a.z)
-		add_child(seg)
-		add_child(HdDev.cyl(rw * 0.5, rw * 0.5, 0.01, road_mat, a + Vector3(0, 0.006, 0), 20))
-	# Spawn-Tor
-	var sp: Vector3 = road[0]
-	for side in [-1.0, 1.0]:
-		add_child(HdDev.box(Vector3(0.8, 4.0, 0.8), HdDev.mat(Color("5d4a6a"), 0.5), sp + Vector3(side * (rw * 0.5 + 0.6), 2.0, 0)))
-	add_child(HdDev.box(Vector3(rw + 2.0, 0.6, 0.8), HdDev.mat(Color("5d4a6a"), 0.5), sp + Vector3(0, 4.2, 0)))
 	# Felsen (Hindernisse)
 	for o in cfg.arena.obstacles:
 		var p := Vector3(float(o[0]), 0, float(o[1]))
@@ -239,13 +310,6 @@ func _build_world() -> void:
 	for k in 6:
 		var a := k * TAU / 6.0
 		add_child(HdDev.box(Vector3(1.2, 1.4, 1.2), wall, fortress_pos + Vector3(cos(a) * fr * 0.92, 3.5, sin(a) * fr * 0.92)))
-	lives = int(cfg.arena.lives)
-	max_lives = lives
-	for bd in cfg.arena.buildings:
-		var bl := HdBuilding.new()
-		bl.setup(self, bd)
-		add_child(bl)
-		buildings.append(bl)
 	fx = HdFx.new()
 	add_child(fx)
 	hero = HdHero.new()
@@ -314,6 +378,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	if key == KEY_Y:
 		cam_follow = not cam_follow
+		return
+	if key == KEY_B:
+		hud.econ.toggle()
 		return
 	if key == KEY_N:
 		call_early()
@@ -427,6 +494,10 @@ func _physics_process(dt: float) -> void:
 func start(diff_index: int) -> void:
 	difficulty = diff_index
 	Session.difficulty = diff_index
+	lives = int(diff().get("lives", 20))
+	max_lives = lives
+	if active_road_ids().size() != roads.size():
+		_build_roads()
 	state = "play"
 	start_wave(1)
 	hud.on_started()
@@ -434,6 +505,7 @@ func start(diff_index: int) -> void:
 
 func start_wave(n: int) -> void:
 	if wave > 0:
+		_wave_reward(wave)
 		wave_log.append({"wave": wave, "kills": _wave_kills, "leaks": _wave_leaks, "damage": roundi(hero.damage_done - _wave_damage0)})
 	wave = n
 	wave_time = 0.0
@@ -454,16 +526,21 @@ func start_wave(n: int) -> void:
 				order.append(g[0])
 				g[1] -= 1
 				any = true
+	# reihum auf die aktiven Straßen, gleichzeitig an allen Toren; der Boss nimmt eine zufällige
 	var window := float(cfg.waves.spawn_window)
+	var per := ceili(order.size() / float(roads.size()))
+	var boss_road: HdRoad = roads[rng.randi() % roads.size()]
 	for i in order.size():
 		var id: String = order[i]
-		var t := window * i / maxf(order.size(), 1.0)
+		var rd: HdRoad = roads[i % roads.size()]
+		var t := window * (i / roads.size()) / maxf(per, 1.0)
 		if str(enemy_defs[id].get("rank", "")) == "boss":
 			t = minf(6.0, window)
-		spawn_queue.append({"t": play_time + t, "id": id})
+			rd = boss_road
+		spawn_queue.append({"t": play_time + t, "id": id, "road": rd})
 	spawn_queue.sort_custom(func(a, b): return a.t < b.t)
 	if bool(w.get("boss", false)):
-		message.emit(tr("Welle %d: Der Moorkönig kommt!") % n)
+		message.emit(tr("Welle %d: Der Moorkönig kommt über die %s!") % [n, tr(boss_road.name)])
 	else:
 		message.emit(tr("Welle %d") % n)
 	changed.emit()
@@ -475,7 +552,19 @@ func can_call_early() -> bool:
 
 func call_early() -> void:
 	if can_call_early():
+		var bonus := roundi(maxf(0.0, float(cfg.waves.time) - wave_time) * float(cfg.economy.early_gold))
+		if bonus > 0:
+			shop.add_gold(bonus)
+			message.emit(tr("Früher gerufen: +%d Gold") % bonus)
 		start_wave(wave + 1)
+
+
+## Belohnung für eine überstandene Welle (beim Start der nächsten bzw. beim Sieg).
+func _wave_reward(n: int) -> void:
+	shop.add_gold(shop.wave_gold(n))
+	var w: Dictionary = cfg.waves.list[n - 1]
+	var wd := int(cfg.economy.boss_wood) if bool(w.get("boss", false)) else int(cfg.economy.wave_wood)
+	shop.add_wood(maxi(1, roundi(wd * float(diff().get("wood", 1.0)))))
 
 
 func step(dt: float) -> void:
@@ -486,10 +575,11 @@ func step(dt: float) -> void:
 	var now := play_time
 	while not spawn_queue.is_empty() and spawn_queue[0].t <= now:
 		var s: Dictionary = spawn_queue.pop_front()
-		spawn(s.id)
+		spawn(s.id, null, 0.0, s.get("road"))
 	if wave < int(cfg.waves.count) and wave_time >= float(cfg.waves.time):
 		start_wave(wave + 1)
 	hero.step(dt, now)
+	_step_stones(dt)
 	for e in enemies:
 		if e.dead:
 			continue
@@ -505,11 +595,44 @@ func step(dt: float) -> void:
 		_finish(true)
 
 
-func spawn(id: String, at = null, road_s := 0.0) -> HdEnemy:
+## Teleport-Steine: Held steht kurz drauf (teleport.hold) → zur anderen Seite (Feste ↔ vor das Vorwerk).
+func _step_stones(dt: float) -> void:
+	_tp_cd = maxf(0.0, _tp_cd - dt)
+	if _tp_cd > 0.0 or not hero.alive() or hero.dodging():
+		return
+	var tp: Dictionary = cfg.arena.teleport
+	for st in stones:
+		var d: Vector3 = hero.position - st.pos
+		d.y = 0.0
+		if d.length() <= float(tp.radius):
+			tp_stone = st
+			tp_hold += dt
+			if tp_hold >= float(tp.get("hold", 0.8)):
+				teleport_hero(st.to)
+			return
+	tp_hold = 0.0
+	tp_stone = {}
+
+
+func teleport_hero(to: Vector3) -> void:
+	fx.nova(hero.position, 2.0, UiTheme.PURPLE_LIGHT)
+	hero.position = to
+	hero.order = {}
+	_resolve(hero)
+	fx.nova(hero.position, 2.0, UiTheme.PURPLE_LIGHT)
+	_tp_cd = float(cfg.arena.teleport.cooldown)
+	tp_hold = 0.0
+	tp_stone = {}
+	if not bot:
+		cam_pos = hero.position
+
+
+func spawn(id: String, at = null, road_s := 0.0, rd = null) -> HdEnemy:
 	var e := HdEnemy.new()
+	e.road = rd if rd != null else (nearest_road(at) if at != null else roads[0])
 	e.setup(self, enemy_defs[id], wave)
 	e.road_s = road_s
-	e.position = at if at != null else road_point(road_s, e.lane)
+	e.position = at if at != null else e.road.point(road_s, e.lane)
 	add_child(e)
 	enemies.append(e)
 	return e
@@ -520,7 +643,7 @@ func summon(src: HdEnemy, id: String, count: int, r: float) -> void:
 	for k in count:
 		var a := TAU * k / maxf(count, 1)
 		var p := src.position + Vector3(cos(a), 0, sin(a)) * r * 0.7
-		var e := spawn(id, p, src.road_s)
+		var e := spawn(id, p, src.road_s, src.road)
 		_resolve(e)
 
 
@@ -555,6 +678,10 @@ func _kill(e: HdEnemy) -> void:
 	_wave_kills += 1
 	hero.kills += 1
 	hero.add_xp(float(e.def.get("xp", 10)))
+	var g := shop.kill_gold(e)
+	if g > 0:
+		shop.add_gold(g)
+		floater(e.position + Vector3(0, e.height() + 1.0, 0), "+%d" % g, UiTheme.COIN)
 	changed.emit()
 
 
@@ -702,6 +829,8 @@ func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 	e.hp -= dmg
 	e.hit_flash = 0.12
 	hero.damage_done += dmg
+	if hero.b("lifesteal") > 0.0 and hero.alive():
+		hero.hp = minf(hero.max_hp, hero.hp + dmg * hero.b("lifesteal"))
 	e.provoke(hero)
 	if not quiet:
 		floater(e.position + Vector3(0, e.height() + 0.4, 0), str(roundi(dmg)), UiTheme.TEXT)
@@ -735,6 +864,8 @@ func damage_hero(amount: float, _src, quiet := false) -> void:
 	if hero.dodging():
 		return
 	var dmg := amount * armor_factor(hero.armor - hero.cc.armor_reduction(play_time))
+	if play_time < hero.shield_until:
+		dmg *= 1.0 - hero.shield
 	hero.hp -= dmg
 	hero.damage_taken += dmg
 	if not quiet:
@@ -752,7 +883,10 @@ func damage_building(b: HdBuilding, amount: float) -> void:
 	if b.hp <= 0.0:
 		b.hp = 0.0
 		b.destroy()
-		message.emit(tr("%s zerstört!") % tr(str(b.def.name)))
+		message.emit(tr("%s zerstört!") % b.label())
+		if b.kind == "vorwerk" and b.road != null:
+			message.emit(tr("Gegner der %s laufen schneller!") % tr(b.road.name))
+		changed.emit()
 
 
 ## Ausgelöste Warnfläche: trifft den Helden (wenn er nicht ausweicht) und Gebäude darin.
@@ -862,6 +996,8 @@ func _finish(victory: bool) -> void:
 		return
 	state = "over"
 	Engine.time_scale = 1.0
+	if victory:
+		_wave_reward(wave)
 	wave_log.append({"wave": wave, "kills": _wave_kills, "leaks": _wave_leaks, "damage": roundi(hero.damage_done - _wave_damage0)})
 	result_news = _record(victory)
 	ended.emit(victory)
@@ -879,7 +1015,7 @@ func _record(victory: bool) -> Dictionary:
 		"best_wave_damage": 0.0, "best_wave": 0, "alive": 1}}
 	var towers: Array = [{"id": hid, "label": label, "kills": hero.kills, "damage": roundi(hero.damage_done),
 		"best_wave_damage": 0, "best_wave": 0}]
-	var info := {"map": "Sumpfstraße", "difficulty": difficulty, "victory": victory, "wave": wave,
+	var info := {"map": "Morgenwacht", "difficulty": difficulty, "victory": victory, "wave": wave,
 		"waves": int(cfg.waves.count), "lives": lives, "max_lives": max_lives, "score": score(),
 		"kills": kills, "play_time": roundi(play_time), "debug": debug, "hero": hid, "hero_level": hero.level}
 	return Profile.record_run("heroes", info, {"types": types, "towers": towers, "wave_log": wave_log})
@@ -887,7 +1023,7 @@ func _record(victory: bool) -> Dictionary:
 
 func leave() -> void:
 	if state == "play":
-		Profile.record_abort("heroes", {"map": "Sumpfstraße", "difficulty": difficulty, "wave": wave,
+		Profile.record_abort("heroes", {"map": "Morgenwacht", "difficulty": difficulty, "wave": wave,
 			"waves": int(cfg.waves.count), "play_time": roundi(play_time), "debug": debug})
 	Engine.time_scale = 1.0
 	Session.goto(Session.return_scene)
@@ -902,11 +1038,18 @@ func restart() -> void:
 # ---------------------------------------------------------------- Bot (Tests, Bilder)
 
 ## Einfacher Spieler: weicht Warnflächen aus (Ausweichen, wenn es knapp wird), greift den nächsten
-## Gegner an, nutzt Fähigkeiten, wartet sonst beim Vorwerk. Steuert über dieselben Felder wie WASD.
+## Gegner an, nutzt Fähigkeiten, Tränke und den Shop (BOT_PLAN), repariert Torwerke und hält die
+## Straße mit dem größten Druck. Steuert über dieselben Felder wie WASD.
+const BOT_PLAN := ["brecherklinge", "turmschild", "windlaeufer", "schmiedesonne", "bollwerkplatte", "sturmschwinge",
+	"blutdorn", "vampirklinge", "festungsherz", "morgenwacht"]
+var _bot_road: HdRoad
+
+
 func bot_turn() -> void:
 	var h := hero
 	if h.dead:
 		return
+	_bot_shop()
 	h.attack_held = false
 	h.order = {}
 	var danger := _danger(h.position, h.radius + 0.4)
@@ -915,12 +1058,9 @@ func bot_turn() -> void:
 		if danger.urgent:
 			h.dodge(danger.dir)
 		return
-	var e := nearest_enemy(h.position, 40.0)
+	var e := nearest_enemy(h.position, 14.0)
 	if e == null:
-		var guard := road_point(road_len * 0.45)
-		var to := guard - h.position
-		to.y = 0.0
-		h.move_dir = to.normalized() if to.length() > 1.5 else Vector3.ZERO
+		_bot_walk(_bot_goal())
 		return
 	var to := e.position - h.position
 	to.y = 0.0
@@ -940,6 +1080,102 @@ func bot_turn() -> void:
 	else:
 		h.move_dir = Vector3.ZERO
 	h.attack_held = true
+
+
+## Ziel ohne Gegner in der Nähe: Ausrüstung aus dem Lager holen, sonst zur Straße mit dem meisten
+## Druck (Gegner weiter vorn zählen mehr), dort zum vordersten Gegner oder vor das Vorwerk.
+func _bot_goal() -> Vector3:
+	var threat := {}
+	var lead := {}
+	for r in roads:
+		threat[r] = 0.0
+	for e in enemies:
+		if e.dead or e.road == null:
+			continue
+		var w: float = e.hp / 200.0 * (1.0 + 2.0 * e.road_s / e.road.length)
+		threat[e.road] = float(threat.get(e.road, 0.0)) + w
+		if not lead.has(e.road) or e.road_s > lead[e.road].road_s:
+			lead[e.road] = e
+	var best: HdRoad = _bot_road if _bot_road != null else roads[0]
+	for r in roads:
+		if threat[r] > float(threat.get(best, 0.0)) * 1.5 + 0.5:
+			best = r
+	_bot_road = best
+	var total := 0.0
+	for r in roads:
+		total += float(threat[r])
+	if total < 3.0 and _stash_gear():
+		return hero_spawn()
+	if lead.has(best):
+		return lead[best].position
+	return best.point(best.length * float(best.gate("vorwerk").def.at) + 3.0)
+
+
+## Laufen mit Umweg um die Feste (sonst bleibt er an ihrer Mauer hängen).
+func _bot_walk(goal: Vector3) -> void:
+	var h := hero
+	var to := goal - h.position
+	to.y = 0.0
+	if to.length() < 1.5:
+		h.move_dir = Vector3.ZERO
+		return
+	var dir := to.normalized()
+	var f := fortress_pos - h.position
+	f.y = 0.0
+	var along := f.dot(dir)
+	var keep := float(cfg.arena.fortress_radius) + 2.5
+	if along > 0.0 and along < to.length() and (f - dir * along).length() < keep:
+		var lat := Vector3(-dir.z, 0, dir.x)
+		if (f - dir * along).dot(lat) > 0.0:
+			lat = -lat
+		dir = (fortress_pos + lat * (keep + 2.0) - h.position).normalized()
+	h.move_dir = dir
+
+
+func _stash_gear() -> bool:
+	for x in shop.stash:
+		if x != null:
+			return true
+	return false
+
+
+func _bot_owns(id: String) -> bool:
+	if shop.owned_count(id) > 0:
+		return true
+	for up in shop.used_in.get(id, []):
+		if _bot_owns(up):
+			return true
+	return false
+
+
+func _bot_shop() -> void:
+	var h := hero
+	if shop.in_fortress():
+		for i in shop.stash.size():
+			if shop.stash[i] != null:
+				var free := shop.inv.find(null)
+				if free >= 0:
+					shop.move("stash", i, "hero", free)
+	if h.hp < h.max_hp * 0.35:
+		for i in shop.inv.size():
+			if shop.inv[i] != null and shop.inv[i].id == "heiltrank":
+				shop.use(i)
+				break
+	for g in buildings:
+		if g.road != null and shop.can_repair(g) == "" and shop.repair_cost(g) < shop.gold * 0.6:
+			shop.repair(g)
+	for id in BOT_PLAN:
+		if _bot_owns(id):
+			continue
+		if shop.can_craft(id, true) == "":
+			shop.craft(id, true)
+		break
+	if shop.owned_count("heiltrank") == 0 and shop.gold >= 150:
+		shop.buy("heiltrank")
+	var order := ["schaerfe", "kraft", "haerte"]
+	var pick: String = order[(shop.wood_bought.values().reduce(func(a, b): return a + b, 0)) % order.size()]
+	if shop.wood >= shop.wood_price(pick):
+		shop.buy_wood(pick)
 
 
 ## Fluchtrichtung aus allen gegnerischen Warnflächen und Pfützen, in denen der Punkt liegt.

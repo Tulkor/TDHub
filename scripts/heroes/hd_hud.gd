@@ -32,6 +32,7 @@ var _banner_t := 0.0
 var _overlay: Control
 var _floaters: Array = []        ## {pos, text, color, t}
 var _tick := 0.0
+var econ: HdShopUi               ## Gold, Inventar, Shop, Straßenleiste
 
 
 func _ready() -> void:
@@ -48,6 +49,8 @@ func _ready() -> void:
 	_build_top()
 	_build_boss()
 	_build_hero()
+	econ = HdShopUi.new(game)
+	root.add_child(econ)
 	_hint = _label("", root, 12, UiTheme.MUTED)
 	_hint.position = Vector2(16, 62)
 	_banner = Label.new()
@@ -276,8 +279,9 @@ func refresh() -> void:
 	_status.text = "  ".join(st)
 	for i in 5:
 		_fill_slot(i)
-	_hint.text = tr("WASD laufen · Maus zielen · Linksklick angreifen · Leertaste ausweichen · Y Kamera · P Pause") if game.control == "wasd" \
-		else tr("Rechtsklick laufen/angreifen · Q W E R zielen, Linksklick wirken · Leertaste ausweichen · Y Kamera · P Pause")
+	_hint.text = tr("WASD laufen · Maus zielen · Linksklick angreifen · Leertaste ausweichen · B Shop · Y Kamera · P Pause") if game.control == "wasd" \
+		else tr("Rechtsklick laufen/angreifen · Q W E R zielen, Linksklick wirken · Leertaste ausweichen · B Shop · Y Kamera · P Pause")
+	econ.refresh()
 	var boss: HdEnemy = null
 	for e in game.enemies:
 		if not e.dead and e.rank == "boss":
@@ -456,7 +460,7 @@ func show_setup() -> void:
 	UiTheme.title(t, 32)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	var d := _label("Halte die Sumpfstraße: Gegner kommen in 10 Wellen auf die Feste zu. Rote Flächen am Boden kündigen ihre Fähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
+	var d := _label("Halte die Feste Morgenwacht: Gegner kommen in 10 Wellen über die Straßen, Vorwerk und Innentor bremsen sie. Mit Gold kaufst du Items und schmiedest Rezepte, Holz gibt dauerhafte Werte. Farbige Flächen am Boden kündigen Gegnerfähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	UiTheme.caption("Held", v)
 	var card := PanelContainer.new()
@@ -483,10 +487,32 @@ func show_setup() -> void:
 	_choice_row(v, [tr("WASD + Maus"), tr("Maus (wie WC3)")], 0 if game.control == "wasd" else 1, func(k):
 		game.control = "wasd" if k == 0 else "maus"
 		game.save_settings())
+	UiTheme.caption("Straßen", v)
+	_choice_row(v, [tr("2 (wie bei 1–3 Spielern)"), tr("alle 4")], 1 if game.road_choice == 4 else 0, func(k):
+		game.road_choice = 4 if k == 1 else 0
+		game.save_settings())
+	_warn_options(v)
 	var go := UiUtil.button("Start", v, func(): game.start(chosen[0]))
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	go.custom_minimum_size.y = 46
 	UiUtil.button("Zurück zum Menü", v, func(): game.leave())
+
+
+## Barrierefreiheit: Farbe und Umriss der gegnerischen Warnflächen (gilt für neue Flächen).
+func _warn_options(v: VBoxContainer) -> void:
+	UiTheme.caption("Warnflächen", v)
+	var cols: Array = []
+	for pl in HdTelegraph.PALETTES:
+		cols.append(tr(str(pl.name)))
+	_choice_row(v, cols, HdTelegraph.palette, func(k):
+		HdTelegraph.palette = k
+		game.save_settings())
+	var outs: Array = []
+	for o in HdTelegraph.OUTLINES:
+		outs.append(tr(str(o)))
+	_choice_row(v, outs, HdTelegraph.outline, func(k):
+		HdTelegraph.outline = k
+		game.save_settings())
 
 
 func toggle_menu() -> void:
@@ -520,6 +546,7 @@ func toggle_menu() -> void:
 		game.quickcast = on
 		game.save_settings())
 	v.add_child(qc)
+	_warn_options(v)
 	UiUtil.button("Neu starten", v, func(): game.restart())
 	UiUtil.button("Zurück zum Menü", v, func(): game.leave())
 	refresh()

@@ -4,6 +4,8 @@ extends Node
 ## Zurücksetzen, Verlangsamung und Rüstungssenkung auf Bossen halb), Warnflächen-Formen,
 ## Gegner-KI (Straße, Aggro, Leine, Angreifer, Helden vor Gebäuden), Fähigkeit beim Aufladen
 ## unterbrechen = trotzdem Cooldown, niemand bleibt stecken, Heldenfähigkeiten, Bot-Lauf bis zum Ende.
+## Etappe 2a: Straßen nach Spielerzahl, Torwerke (schneller nach Fall, reparieren, neu bauen),
+## Teleport-Steine, Gold/Holz, Shop, Fernkauf ins Lager, Rezepte, Item-Werte am Helden, Tränke, Warnflächen-Farbe.
 
 var failures := 0
 const DT := 1.0 / 30.0
@@ -28,6 +30,9 @@ func _ready() -> void:
 	await _interrupt()
 	await _hero_kit()
 	await _no_stuck()
+	_items_data()
+	await _roads_gates()
+	await _economy()
 	await _bot_run(0)
 	print("FERTIG, Fehler: %d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
@@ -164,6 +169,11 @@ func _park_hero(g: HdGame) -> void:
 func _ai() -> void:
 	var g := await _new_game()
 	_park_hero(g)
+	# Torwerke beiseite, damit nur der Held lockt (Gegner greifen nahe Torwerke sonst an)
+	var spots: Array = []
+	for b in g.buildings:
+		spots.append(b.position)
+		b.position = Vector3(75, 0, 75)
 	var e := g.spawn("sumpfling")
 	_run(g, 3.0)
 	check(e.state == "road" and e.road_s > 5.0, "Gegner läuft die Straße (s=%.1f)" % e.road_s)
@@ -191,6 +201,8 @@ func _ai() -> void:
 	e.hp = 0.0
 	g._kill(e)
 	# Helden vor Gebäuden
+	for i in g.buildings.size():
+		g.buildings[i].position = spots[i]
 	var b: HdBuilding = g.buildings[0]
 	var e2 := g.spawn("moorklauer", b.position + Vector3(3, 0, 0), g.road_project(b.position, 0, g.road_len))
 	g.hero.position = b.position + Vector3(7, 0, 2)
@@ -307,7 +319,9 @@ func _no_stuck() -> void:
 	g.hero.die()
 	g.hero.respawn_t = 9999.0
 	g.lives = 9999
-	g.buildings[0].destroy()
+	for b in g.buildings:
+		b.destroy()
+	g.wave_time = -1e6
 	var ids := ["sumpfling", "moorbrute", "giftkroete", "moorklauer"]
 	for k in 40:
 		g.spawn_queue.append({"t": k * 0.4, "id": ids[k % ids.size()]})
@@ -320,7 +334,10 @@ func _no_stuck() -> void:
 			for ob in g.obstacles:
 				if Vector2(e.position.x - ob[0].x, e.position.z - ob[0].z).length() < ob[1] + e.radius - 0.05:
 					inside += 1
-	check(g.leaks == 40, "alle 40 Gegner erreichen die Feste (%d, %.0f s)" % [g.leaks, t])
+	var left_at: Array = []
+	for e in g.enemies:
+		left_at.append("%s %s s=%.0f %s" % [e.id, e.position, e.road_s, e.state])
+	check(g.leaks == 40, "alle 40 Gegner erreichen die Feste (%d, %.0f s) %s" % [g.leaks, t, left_at])
 	check(inside == 0, "kein Gegner steckt in einem Felsen (%d)" % inside)
 	# Verfolgung um einen Felsen herum: Held hinter einem Felsen, Gegner muss drumherum
 	g.hero.dead = false
@@ -348,6 +365,152 @@ func _no_stuck() -> void:
 	await get_tree().process_frame
 
 
+func _items_data() -> void:
+	var cfg = Database.load_json(HdShop.DATA)
+	var ids := {}
+	var tiers := {}
+	for it in cfg.items:
+		check(not ids.has(it.id), "Item %s nur einmal" % it.id)
+		ids[it.id] = it
+		tiers[int(it.tier)] = true
+	for it in cfg.items:
+		if it.has("recipe"):
+			check(it.recipe.size() >= 2 and it.recipe.size() <= 4, "Rezept %s hat 2–4 Teile" % it.id)
+			for c in it.recipe:
+				check(ids.has(c), "Rezeptteil %s von %s existiert" % [c, it.id])
+				if ids.has(c):
+					check(int(ids[c].tier) <= int(it.tier), "Rezept %s nicht schwächer als Teil %s" % [it.id, c])
+		else:
+			check(str(it.get("shop", "")) in ["grund", "ruest"], "Item %s ist im Laden zu kaufen" % it.id)
+	check(tiers.size() == 5, "alle 5 Stufen kommen vor (%d)" % tiers.size())
+	for st in cfg.wood.stats:
+		check(not HdShop.stat_text(st.stats).is_empty(), "Holzwert %s hat Text" % st.id)
+
+
+func _roads_gates() -> void:
+	var g := await _new_game()
+	check(g.roads.size() == 2 and g.road_by_id("nord") != null and g.road_by_id("sued") != null, "Einzelspieler: 2 Straßen (Nord, Süd)")
+	check(g.buildings.size() == 4, "je Straße Vorwerk und Innentor (%d)" % g.buildings.size())
+	var r: HdRoad = g.roads[0]
+	var vw = r.gate("vorwerk")
+	check(absf(r.speed_mult() - 1.0) < 0.001, "Torwerke stehen: normales Tempo")
+	vw.destroy()
+	check(absf(r.speed_mult() - float(vw.def.fast)) < 0.001, "Vorwerk gefallen: Gegner %.2f× schneller" % r.speed_mult())
+	check(absf(g.roads[1].speed_mult() - 1.0) < 0.001, "andere Straße unberührt")
+	# schneller laufen: Gegner auf der Straße mit gefallenem Vorwerk kommt weiter
+	_park_hero(g)
+	var a := g.spawn("sumpfling", null, 0.0, g.roads[0])
+	var b := g.spawn("sumpfling", null, 0.0, g.roads[1])
+	a.lane = 0.0
+	b.lane = 0.0
+	_run(g, 4.0)
+	check(a.road_s > b.road_s * 1.15, "Gegner hinter gefallenem Vorwerk ist schneller (%.1f vs %.1f)" % [a.road_s, b.road_s])
+	# Teleport-Stein: kurz draufstehen → vor das Vorwerk
+	var st: Dictionary = g.stones[0]
+	g.hero.position = st.pos
+	g.hero.move_dir = Vector3.ZERO
+	_run(g, 1.0)
+	check(g.hero.position.distance_to(st.to) < 1.5, "Teleport-Stein bringt den Helden zur Straße")
+	g.queue_free()
+	await get_tree().process_frame
+	# alle vier Straßen per Einstellung
+	var keep: int = 0
+	Session.skip_setup = true
+	var g4: HdGame = load("res://scenes/heroes_game.tscn").instantiate()
+	g4.bot = true
+	add_child(g4)
+	await get_tree().process_frame
+	g4.road_choice = 4
+	g4._build_roads()
+	check(g4.roads.size() == 4 and g4.buildings.size() == 8, "Einstellung: alle 4 Straßen (%d, %d Torwerke)" % [g4.roads.size(), g4.buildings.size()])
+	g4.road_choice = keep
+	g4.save_settings()
+	g4.queue_free()
+	await get_tree().process_frame
+
+
+func _economy() -> void:
+	var g := await _new_game()
+	var sh: HdShop = g.shop
+	var h := g.hero
+	check(sh.gold == int(g.cfg.economy.start_gold), "Startgold %d" % sh.gold)
+	h.position = g.hero_spawn()
+	check(sh.in_fortress(), "Held startet in der Feste")
+	check(sh.act({"kind": "buy", "id": "heiltrank"}) == "", "Heiltrank kaufen")
+	check(sh.inv[0] != null and sh.inv[0].id == "heiltrank", "in der Feste: direkt ins Inventar")
+	sh.act({"kind": "buy", "id": "heiltrank"})
+	check(int(sh.inv[0].n) == 2 and sh.inv[1] == null, "Tränke stapeln sich (%d)" % int(sh.inv[0].n))
+	# Fernkauf
+	h.position = g.roads[0].point(20.0)
+	sh.gold = 2000
+	check(not sh.in_fortress(), "an der Straße: nicht in der Feste")
+	check(sh.act({"kind": "buy", "id": "eisenklinge"}) == "", "Fernkauf Eisenklinge")
+	check(sh.stash[0] != null and sh.stash[0].id == "eisenklinge", "Fernkauf landet im Lager")
+	check(sh.act({"kind": "move", "from": "stash", "fi": 0, "to": "hero", "ti": 2}) != "", "Lager → Held nur in der Feste")
+	# Rezept: Kraftring fehlt
+	check(sh.missing("brecherklinge") == ["kraftring"], "Rezept zeigt fehlendes Teil (%s)" % [sh.missing("brecherklinge")])
+	check(sh.can_craft("brecherklinge") != "", "ohne alle Teile kein Schmieden")
+	var cost := sh.craft_cost("brecherklinge", true)
+	check(cost == 300 + 160, "mit Teilen: Rezeptgold + Teilpreis (%d)" % cost)
+	var g0 := sh.gold
+	check(sh.act({"kind": "craft", "id": "brecherklinge", "buy_missing": true}) == "", "Brecherklinge schmieden (mit Kraftring)")
+	check(sh.gold == g0 - cost and sh.owned_count("eisenklinge") == 0 and sh.owned_count("brecherklinge") == 1, "Teile verbraucht, Gold abgezogen")
+	h.position = g.hero_spawn()
+	var hp0 := h.max_hp
+	var pw0 := h.power()
+	var at := sh.stash.find(sh.stash.filter(func(x): return x != null)[0])
+	check(sh.act({"kind": "move", "from": "stash", "fi": at, "to": "hero", "ti": 2}) == "", "in der Feste: Lager → Held")
+	check(h.max_hp > hp0 + 170.0 and h.power() > pw0 * 1.2, "Werte am Helden (Leben %d → %d, Kraft %.2f → %.2f)" % [hp0, h.max_hp, pw0, h.power()])
+	# mehrstufig: Schmiedesonne aus Brecherklinge + Glutkern
+	check(sh.act({"kind": "craft", "id": "schmiedesonne", "buy_missing": true}) == "", "Schmiedesonne (Stufe Selten) schmieden")
+	check(sh.inv[2] != null and sh.inv[2].id == "schmiedesonne", "Ergebnis am Platz des Bauteils")
+	# Verkaufen
+	g0 = sh.gold
+	sh.act({"kind": "sell", "where": "hero", "i": 2})
+	check(sh.gold == g0 + sh.sell_price("schmiedesonne") and sh.inv[2] == null, "Verkaufen gibt %d Gold" % sh.sell_price("schmiedesonne"))
+	check(absf(h.max_hp - hp0) < 1.0, "verkauftes Item nimmt seine Werte mit")
+	# Trank
+	h.hp = 100.0
+	check(sh.act({"kind": "use", "i": 0}) == "" and h.hp > 400.0 and int(sh.inv[0].n) == 1, "Heiltrank heilt und verbraucht eine Ladung")
+	# Holz
+	sh.wood = 10
+	var p1 := sh.wood_price("schaerfe")
+	sh.act({"kind": "wood", "id": "schaerfe"})
+	sh.act({"kind": "wood", "id": "schaerfe"})
+	var p3 := sh.wood_price("schaerfe")
+	check(p3 > p1 and h.b("damage") > 0.06, "Holzwert wirkt, Preis steigt (%d → %d)" % [p1, p3])
+	# Torwerk reparieren / neu bauen
+	var gate = g.roads[0].gate("vorwerk")
+	gate.hp = gate.max_hp * 0.5
+	var e := g.spawn("sumpfling", gate.position + Vector3(2, 0, 0), 0.0, g.roads[0])
+	check(sh.can_repair(gate) == tr("Gegner in der Nähe"), "nicht reparieren, solange Gegner nah sind")
+	g._remove(e)
+	g.enemies.clear()
+	g0 = sh.gold
+	var rc := sh.repair_cost(gate)
+	check(sh.act({"kind": "repair", "gate": gate}) == "" and gate.hp >= gate.max_hp - 0.1 and sh.gold == g0 - rc, "Reparatur kostet %d Gold" % rc)
+	g.damage_building(gate, 99999.0)
+	check(gate.destroyed, "Vorwerk zerstört")
+	check(sh.act({"kind": "repair", "gate": gate}) == "" and gate.alive(), "Vorwerk neu gebaut")
+	# Kill-Gold
+	g0 = sh.gold
+	var k := g.spawn("sumpfling", null, 5.0, g.roads[1])
+	g.hero_hit(k, 99999.0, "test")
+	check(sh.gold > g0, "Kill gibt Gold (+%d)" % (sh.gold - g0))
+	# Warnflächen-Farbe (Barrierefreiheit)
+	var keep := HdTelegraph.palette
+	HdTelegraph.palette = 3
+	var t1 := HdTelegraph.circle(2.0)
+	var t2 := HdTelegraph.circle(2.0, HdTelegraph.BLUE)
+	check(t1.color == HdTelegraph.PALETTES[3].color, "Warnflächen nehmen die eingestellte Farbe")
+	check(t2.color == HdTelegraph.BLUE, "Heldenflächen bleiben blau")
+	t1.free()
+	t2.free()
+	HdTelegraph.palette = keep
+	g.queue_free()
+	await get_tree().process_frame
+
+
 func _bot_run(diff: int) -> void:
 	Session.skip_setup = true
 	Session.difficulty = diff
@@ -368,5 +531,6 @@ func _bot_run(diff: int) -> void:
 	for e in g.enemies:
 		stuck += e.stuck_events
 	check(not g.result_news.is_empty() or g.state == "over", "Run im Profil eingetragen")
+	check(g.shop.gold_earned > 1000 and g.shop.crafted > 0, "Bot verdient Gold und schmiedet (%d Gold, %d Rezepte)" % [g.shop.gold_earned, g.shop.crafted])
 	g.queue_free()
 	await get_tree().process_frame

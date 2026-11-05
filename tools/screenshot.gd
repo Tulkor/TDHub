@@ -3,7 +3,9 @@ extends Node
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
 ##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes   Standard spiel
 ##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
-##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher
+##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher,
+##                           --weit Kamera weit weg (ganze Karte), --shop[=grund|ruest|rezept|holz|tore] Shop offen,
+##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -446,6 +448,12 @@ func _prepare_heroes(game: Node) -> void:
 		return
 	game.set_physics_process(false)
 	game.rng.seed = int(opts.get("seed", "1"))
+	if opts.has("farbe"):
+		HdTelegraph.palette = int(opts.farbe)
+	if opts.has("umriss"):
+		HdTelegraph.outline = int(opts.umriss)
+	if opts.has("gold"):
+		game.shop.add_gold(int(opts.gold))
 	if opts.has("boss"):
 		game.spawn_queue.clear()
 		game.hero.add_xp(4000.0)
@@ -476,8 +484,22 @@ func _prepare_heroes(game: Node) -> void:
 			k += 1
 			tries += 1
 	game.paused = true
+	if opts.has("shop"):
+		var t := str(opts.shop)
+		game.hud.econ.tab = t if t != "1" else "grund"
+		if game.hud.econ.tab == "rezept":
+			game.hud.econ.picked = "schmiedesonne"
+		game.hud.econ.toggle()
+		game.hud.refresh()
 	if opts.has("nah"):
 		game.cam_dist = 17.0
+	if opts.has("weit"):
+		game.cam_dist = 150.0
+		game.cam_pos = game.fortress_pos
+		game.camera.far = 400.0
+		game._place_camera()
+		await _frames(12)
+		return
 	game.cam_pos = game.hero.position
 	game._place_camera()
 	await _frames(12)

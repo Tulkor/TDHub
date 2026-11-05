@@ -39,6 +39,11 @@ var damage_done := 0.0
 var damage_taken := 0.0
 var kills := 0
 var deaths := 0
+## Werte aus Items und Holz (HdShop.bonus): hp, mana, armor, hp_regen, mana_regen und Anteile damage,
+## attack_speed, speed, cdr, lifesteal (0,1 = +10 %).
+var bonus: Dictionary = {}
+var shield_until := 0.0         ## Schutzrolle: weniger Schaden bis dahin
+var shield := 0.0
 var dodges := 0
 var _body: Node3D
 var _axes: Array = []
@@ -80,11 +85,28 @@ func _apply_level() -> void:
 	var lv: Dictionary = def.level
 	var k := level - 1
 	var old_max := max_hp
-	max_hp = float(def.hp) + float(lv.hp) * k
-	max_mana = float(def.mana) + float(lv.mana) * k
-	armor = float(def.armor) + float(lv.armor) * k
+	max_hp = float(def.hp) + float(lv.hp) * k + b("hp")
+	max_mana = float(def.mana) + float(lv.mana) * k + b("mana")
+	armor = float(def.armor) + float(lv.armor) * k + b("armor")
+	speed = float(def.speed) * (1.0 + b("speed"))
 	if old_max > 0.0 and hp > 0.0:
 		hp += max_hp - old_max
+	hp = clampf(hp, 1.0 if hp > 0.0 else 0.0, max_hp)
+	mana = minf(mana, max_mana)
+
+
+func b(key: String) -> float:
+	return float(bonus.get(key, 0.0))
+
+
+## Neue Item-/Holzwerte übernehmen (Leben wächst mit, wie in WC3).
+func set_bonus(d: Dictionary) -> void:
+	bonus = d
+	_apply_level()
+
+
+func attack_interval() -> float:
+	return float(def.attack.interval) / (1.0 + b("attack_speed"))
 
 
 func xp_needed(lvl: int) -> float:
@@ -104,7 +126,7 @@ func add_xp(amount: float) -> void:
 
 
 func power() -> float:
-	return 1.0 + float(def.level.damage) * (level - 1)
+	return (1.0 + float(def.level.damage) * (level - 1)) * (1.0 + b("damage"))
 
 
 func alive() -> bool:
@@ -151,8 +173,8 @@ func step(dt: float, now: float) -> void:
 		if respawn_t <= 0.0:
 			_respawn()
 		return
-	hp = minf(max_hp, hp + float(def.hp_regen) * dt)
-	mana = minf(max_mana, mana + float(def.mana_regen) * dt)
+	hp = minf(max_hp, hp + (float(def.hp_regen) + b("hp_regen")) * dt)
+	mana = minf(max_mana, mana + (float(def.mana_regen) + b("mana_regen")) * dt)
 	cc.update(now)
 	if dodge_t > 0.0:
 		dodge_t -= dt
@@ -212,7 +234,7 @@ func _face(v: Vector3) -> void:
 func _try_swing(e) -> void:
 	if attack_cd > 0.0:
 		return
-	attack_cd = float(def.attack.interval)
+	attack_cd = attack_interval()
 	_face(e.position - position)
 	_swing_fx()
 	game.hero_hit(e, float(def.attack.damage) * power(), "attack")
@@ -273,7 +295,7 @@ func cast(slot: int, at: Vector3) -> bool:
 	dir = dir.normalized()
 	_face(dir)
 	mana -= ability_cost(slot)
-	cd[slot] = float(a.cooldown)
+	cd[slot] = float(a.cooldown) * (1.0 - minf(b("cdr"), 0.4))
 	var pw := power()
 	match slot:
 		0:
