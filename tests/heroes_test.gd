@@ -320,7 +320,8 @@ func _hero_kit() -> void:
 
 ## Gegner vor den Helden stellen, ohne dass er eigene Fähigkeiten einsetzt.
 func _dummy(g: HdGame, id: String, at: Vector3) -> HdEnemy:
-	var e := g.spawn(id, at, g.road_len - 6.0)
+	var r := g.nearest_road(at)
+	var e := g.spawn(id, at, r.project(at, 0.0, r.length), r)
 	for a in e.def.abilities:
 		e.ab_ready[a] = 999.0
 	return e
@@ -435,7 +436,7 @@ func _zix() -> void:
 	var e := _dummy(g, "moorbrute", h.position + Vector3(4, 0, -7))
 	e.hp = 99999.0
 	e.max_hp = 99999.0
-	_run(g, 4.0)
+	_run(g, 3.5)
 	check(e.hp < 99999.0, "Gebäude machen Schaden")
 	check(e.taunt_src != null or e.target is HdGadget, "Schrottbot/Magnetköder ziehen den Gegner auf sich")
 	h.free_kit()

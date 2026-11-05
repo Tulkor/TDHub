@@ -84,12 +84,12 @@ func speed_mult() -> float:
 	var m := 1.0
 	for g in gates:
 		if g.destroyed:
-			m *= float(fast.get(g.kind, 1.0))
+			m *= float(fast.get(g.gate_kind, 1.0))
 	return m
 
 
 func gate(kind: String):
 	for g in gates:
-		if g.kind == kind:
+		if g.gate_kind == kind:
 			return g
 	return null

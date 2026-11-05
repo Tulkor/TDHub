@@ -705,7 +705,7 @@ func teleport_hero(to: Vector3) -> void:
 
 func spawn(id: String, at = null, road_s := 0.0, rd = null) -> HdEnemy:
 	var e := HdEnemy.new()
-	e.road = rd if rd != null else (nearest_road(at) if at != null else roads[0])
+	e.road = rd if rd != null else roads[0]  ## ohne Angabe: erste Straße, wie road_point/road_len
 	e.setup(self, enemy_defs[id], wave)
 	e.road_s = road_s
 	e.position = at if at != null else e.road.point(road_s, e.lane)
@@ -1021,7 +1021,7 @@ func damage_building(b: HdBuilding, amount: float) -> void:
 			buildings.erase(b)
 		else:
 			message.emit(tr("%s zerstört!") % b.label())
-			if b.kind == "vorwerk" and b.road != null:
+			if b.gate_kind == "vorwerk" and b.road != null:
 				message.emit(tr("Gegner der %s laufen schneller!") % tr(b.road.name))
 		changed.emit()
 

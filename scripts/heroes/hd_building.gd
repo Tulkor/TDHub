@@ -13,7 +13,7 @@ var armor := 0.0
 var radius := 1.5
 var cd := 0.0
 var destroyed := false
-var kind := ""
+var gate_kind := ""
 var road  ## HdRoad
 var _meshes: Array = []
 var boost_until := 0.0         ## Hochdosis: mehr Schaden, weniger erlittener Schaden
@@ -27,7 +27,7 @@ func setup(g, d: Dictionary, r = null) -> void:
 	game = g
 	def = d
 	road = r
-	kind = str(d.get("kind", "vorwerk"))
+	gate_kind = str(d.get("kind", "vorwerk"))
 	max_hp = float(d.hp)
 	hp = max_hp
 	armor = float(d.get("armor", 0))
@@ -39,11 +39,11 @@ func setup(g, d: Dictionary, r = null) -> void:
 		var p: Array = d.pos
 		position = Vector3(float(p[0]), 0, float(p[1]))
 	var stone := HdDev.mat(Color("8d8f96"), 0.5)
-	var h := 3.2 if kind == "vorwerk" else 4.2
+	var h := 3.2 if gate_kind == "vorwerk" else 4.2
 	_meshes.append(HdDev.cyl(radius * 0.8, radius, h, stone, Vector3(0, h * 0.5, 0), 8))
 	_meshes.append(HdDev.cyl(radius * 0.95, radius * 0.95, 0.5, HdDev.mat(Color("6d6f76"), 0.5), Vector3(0, h + 0.25, 0), 8))
 	_meshes.append(HdDev.box(Vector3(0.25, 1.2, 0.25), HdDev.mat(Color("5a3a22"), 0.5), Vector3(0, h + 1.0, 0)))
-	_meshes.append(HdDev.box(Vector3(0.9, 0.55, 0.05), HdDev.mat(UiTheme.CYAN if kind == "vorwerk" else UiTheme.COIN, 0.5, 0.8), Vector3(0.5, h + 1.3, 0)))
+	_meshes.append(HdDev.box(Vector3(0.9, 0.55, 0.05), HdDev.mat(UiTheme.CYAN if gate_kind == "vorwerk" else UiTheme.COIN, 0.5, 0.8), Vector3(0.5, h + 1.3, 0)))
 	for m in _meshes:
 		add_child(m)
 
@@ -58,7 +58,7 @@ func alive() -> bool:
 
 
 func height() -> float:
-	return 4.0 if kind == "vorwerk" else 5.0
+	return 4.0 if gate_kind == "vorwerk" else 5.0
 
 
 func boosted() -> bool:
