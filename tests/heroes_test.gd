@@ -28,7 +28,11 @@ func _ready() -> void:
 	await _interrupt()
 	await _hero_kit()
 	await _no_stuck()
-	await _bot_run(0)
+	await _unrat()
+	await _vesna()
+	await _zix()
+	for held in ["torvik", "unrat", "vesna", "zix"]:
+		await _bot_run(0, held)
 	print("FERTIG, Fehler: %d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -129,11 +133,12 @@ func _shapes() -> void:
 	t.free()
 
 
-func _new_game() -> HdGame:
+func _new_game(held := "torvik") -> HdGame:
 	Session.skip_setup = true
 	Session.difficulty = 1
 	var g: HdGame = load("res://scenes/heroes_game.tscn").instantiate()
 	g.bot = true
+	g.force_hero = held
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
@@ -301,6 +306,154 @@ func _hero_kit() -> void:
 	await get_tree().process_frame
 
 
+## Gegner vor den Helden stellen, ohne dass er eigene Fähigkeiten einsetzt.
+func _dummy(g: HdGame, id: String, at: Vector3) -> HdEnemy:
+	var e := g.spawn(id, at, g.road_len - 6.0)
+	for a in e.def.abilities:
+		e.ab_ready[a] = 999.0
+	return e
+
+
+func _unrat() -> void:
+	var g := await _new_game("unrat")
+	var h := g.hero
+	check(h is HdHeroUnrat, "König Unrat gewählt")
+	var e := _dummy(g, "moorbrute", h.position + Vector3(0, 0, -6))
+	var e2 := _dummy(g, "moorklauer", h.position + Vector3(1.5, 0, -6))
+	for x in [e, e2]:
+		x.max_hp = 99999.0
+		x.hp = x.max_hp
+	var hp0 := e.hp
+	check(h.cast(0, e.position), "Schrottbombe wirkt")
+	_run(g, 2.2)
+	check(e.hp < hp0 and e.cc.speed_factor(g.play_time) < 1.0, "Schrottbombe: Schaden und Verlangsamung")
+	var arm0 := e.cc.armor_reduction(g.play_time)
+	check(h.cast(1, e.position) and e.rats > 0 and e.rats <= 5, "Rattenschwarm: bis 5 Ratten je Ziel (%d)" % e.rats)
+	_run(g, 2.1)
+	check(e.cc.armor_reduction(g.play_time) > arm0, "Ratten senken die Rüstung")
+	_run(g, 3.5)
+	check(e.rats == 0 and e.plagued(), "Ratten fallen ab, Rattenseuche bleibt")
+	var dmg_plague := e.out_mult()
+	check(dmg_plague < e.dmg_mult, "Seuche senkt den Schaden (%.2f < %.2f)" % [dmg_plague, e.dmg_mult])
+	e2.plague_until = 0.0
+	g._kill(e)
+	check(e2.plagued(), "Seuche springt beim Tod über")
+	check(h.cast(2, h.position) and h.shield_left() > 0.0, "Königsgewand gibt Schild")
+	var before := h.hp
+	g.damage_hero(30.0, null)
+	check(is_equal_approx(h.hp, before), "Schild fängt Schaden ab")
+	h.add_xp(100000.0)
+	h.mana = h.max_mana
+	check(h.cast(3, h.position + Vector3(0, 0, -2)), "Rattenbanner wirkt")
+	_run(g, 0.3)
+	check(h.slow_immune() and h.speed_mult() > 1.0, "im Banner schneller und immun gegen Verlangsamung")
+	var e3 := _dummy(g, "moorbrute", h.position + Vector3(2, 0, -2))
+	e3.hp = 99999.0
+	e3.max_hp = 99999.0
+	_run(g, 12.2)
+	check(e3.rats > 0 or e3.plagued(), "Ausbruch am Ende: Rattenschwarm auf Getroffene")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _vesna() -> void:
+	var g := await _new_game("vesna")
+	var h := g.hero
+	check(h is HdHeroVesna, "Vesna gewählt")
+	var e := _dummy(g, "moorbrute", h.position + Vector3(0, 0, -8))
+	h.aim = e.position
+	h.attack_held = true
+	var hp0 := e.hp
+	_run(g, 0.6)
+	check(e.hp < hp0 and e.heal_cut_until > g.play_time, "Spritzengewehr trifft und senkt Heilung")
+	_run(g, 3.0)
+	check(h.ammo < 8 or h.reload_t > 0.0, "Magazin leert sich, Nachladen")
+	h.attack_held = false
+	# Schuss heilt eigenes Gebäude
+	var b: HdBuilding = g.buildings[0]
+	b.hp = b.max_hp * 0.5
+	var bhp := b.hp
+	h.position = b.position + Vector3(0, 0, 6)
+	h.reload_t = 0.0
+	h.ammo = 8
+	h.attack_cd = 0.0
+	e.position = h.position + Vector3(20, 0, 20)
+	h._ranged_shot((b.position - h.position).normalized(), null)
+	_run(g, 0.5)
+	check(b.hp > bhp, "Schuss heilt das Vorwerk")
+	e.position = h.position + Vector3(0, 0, -6)
+	h.hp = h.max_hp * 0.5
+	var hhp := h.hp
+	check(h.cast(0, e.position) and not h.link.is_empty(), "Aderlass bindet einen Gegner")
+	_run(g, 1.0)
+	check(h.hp > hhp, "Aderlass heilt Vesna")
+	h.link = {}
+	e.position = h.position + Vector3(25, 0, 25)
+	var e2 := _dummy(g, "moorklauer", h.position + Vector3(0, 0, -5))
+	e2.start_cast("klauenhieb", g.play_time)
+	var cast_ok := h.cast(1, e2.position)
+	_run(g, 0.4)
+	check(cast_ok and not e2.casting() and e2.cc.stunned(g.play_time), "Betäubungspfeil trifft, betäubt und unterbricht")
+	check(h.cast(2, h.position) and h.capsules.size() == 1, "Notfallkapsel auf sich selbst")
+	h.hp = h.max_hp * 0.2
+	_run(g, 0.1)
+	check(h.hp > h.max_hp * 0.4 and h.capsules.is_empty(), "Kapsel platzt unter 30 %%")
+	h.add_xp(100000.0)
+	h.mana = h.max_mana
+	check(h.cast(3, h.position) and h.has_buff("hochdosis") and h.out_mult() > 1.4, "Hochdosis auf sich selbst")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _zix() -> void:
+	var g := await _new_game("zix")
+	var h := g.hero
+	check(h is HdHeroZix, "Zix gewählt")
+	check(g.set_zix_kit(["bolzenturm", "teslaspule", "schrottbot"]), "Baukasten ohne Gegner änderbar")
+	check(h.ability(0).name == "Bolzenturm" and h.ability(2).name == "Schrottbot", "Baukasten auf Q W E")
+	var all: Array = g.gadget_defs.keys()
+	check(all.size() == 10, "10 Gebäude im Baukasten")
+	for id in all:
+		var gd: Dictionary = g.gadget_defs[id]
+		var gg := HdGadget.new()
+		gg.setup_gadget(g, id, gd, h.position + Vector3(4, 0, -4), h, Vector3(0, 0, -1))
+		g.add_child(gg)
+		g.buildings.append(gg)
+		h.gadgets.append(gg)
+	var e := _dummy(g, "moorbrute", h.position + Vector3(4, 0, -7))
+	e.hp = 99999.0
+	e.max_hp = 99999.0
+	_run(g, 4.0)
+	check(e.hp < 99999.0, "Gebäude machen Schaden")
+	check(e.taunt_src != null or e.target is HdGadget, "Schrottbot/Magnetköder ziehen den Gegner auf sich")
+	h.free_kit()
+	check(h.gadgets.is_empty(), "Gebäude entfernt")
+	h.mana = h.max_mana
+	check(h.cast(0, h.position + Vector3(0, 0, -5)) and h.cast(0, h.position + Vector3(0, 0, -5)) == false, "Bolzenturm gestellt, danach Abklingzeit")
+	h.cd[0] = 0.0
+	h.mana = h.max_mana
+	h.cast(0, h.position + Vector3(3, 0, -5))
+	h.cd[0] = 0.0
+	h.mana = h.max_mana
+	h.cast(0, h.position + Vector3(-3, 0, -5))
+	check(h.count("bolzenturm") == 2, "höchstens 2 Bolzentürme (%d)" % h.count("bolzenturm"))
+	var t = h.gadgets[0]
+	t.hp = t.max_hp * 0.5
+	var thp: float = t.hp
+	e.position = h.position + Vector3(30, 0, 30)
+	e.provoked_hero = false
+	h.attack_cd = 0.0
+	h._kit_step(0.0, g.play_time)
+	check(t.hp > thp, "Funkenpistole repariert eigene Gebäude")
+	h.add_xp(100000.0)
+	h.mana = h.max_mana
+	t.hp = t.max_hp * 0.5
+	check(h.cast(3, h.position) and t.over() and is_equal_approx(t.hp, t.max_hp), "Überspannung: volle Reparatur, Gebäude verstärkt")
+	check(not g.set_zix_kit(["bolzenturm", "teslaspule", "magnetkoeder"]) or g.enemies.is_empty(), "Baukasten in der Welle gesperrt")
+	g.queue_free()
+	await get_tree().process_frame
+
+
 ## 40 Gegner ohne Helden: alle müssen die Feste erreichen, niemand steckt in einem Felsen fest.
 func _no_stuck() -> void:
 	var g := await _new_game()
@@ -348,19 +501,20 @@ func _no_stuck() -> void:
 	await get_tree().process_frame
 
 
-func _bot_run(diff: int) -> void:
+func _bot_run(diff: int, held := "torvik") -> void:
 	Session.skip_setup = true
 	Session.difficulty = diff
 	var g: HdGame = load("res://scenes/heroes_game.tscn").instantiate()
 	g.bot = true
+	g.force_hero = held
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
 	var runs_before: int = Profile.data().get("runs", []).size() if Profile.data().has("runs") else -1
 	_run(g, 900.0, true)
 	var h := g.hero
-	print("Bot %s: Welle %d, Feste %d/%d, Kills %d, Stufe %d, Tode %d, ausgewichen %d, Zeit %.0f s" % [
-		g.cfg.difficulties[diff].name, g.wave, g.lives, g.max_lives, g.kills, h.level, h.deaths, h.dodges, g.play_time])
+	print("Bot %s %s: Welle %d, Feste %d/%d, Kills %d, Stufe %d, Tode %d, ausgewichen %d, Zeit %.0f s" % [
+		held, g.cfg.difficulties[diff].name, g.wave, g.lives, g.max_lives, g.kills, h.level, h.deaths, h.dodges, g.play_time])
 	check(g.state == "over", "Bot-Lauf endet (%s)" % g.state)
 	check(g.wave >= 5, "Bot kommt mindestens bis Welle 5 (%d)" % g.wave)
 	check(h.dodges > 0, "Bot weicht Warnflächen aus (%d)" % h.dodges)

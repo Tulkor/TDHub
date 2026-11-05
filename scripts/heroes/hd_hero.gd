@@ -1,10 +1,19 @@
 class_name HdHero
 extends Node3D
-## Der Held im Hero-Defense-Modus. Etappe 1: Torvik Sturmruf (hero-defense-helden.md, Nr. 13).
+## Grundlage aller Helden im Hero-Defense-Modus: Werte, Stufen, Bewegung, Grundangriff (Nahkampf im
+## Bogen oder Fernkampf), Ausweichen, Stärkungen (buffs), Schild und Heilung. Das eigene Kit steckt
+## in der Unterklasse je Held (KITS), Daten in data/heroes_helden.json.
 ## Steuerung kommt von HdGame (WASD-Modus: move_dir + aim + attack_held; Maus-Modus: order) oder
-## vom Bot. Fähigkeiten über cast(slot, punkt), Ausweichen über dodge(richtung).
-## Ergänzung zum Design: der zweite Blitz von Donnerhieb betäubt kurz (0,6 s), damit Torvik
-## Gegner beim Aufladen unterbrechen kann (sonst kann er das nur mit der Ultimativen).
+## vom Bot (bot_act). Fähigkeiten über cast(slot, punkt), Ausweichen über dodge(richtung).
+## Unterklassen überschreiben: _build_body, _cast, _kit_step, _ranged_shot, on_hit, status_lines,
+## slot_glow, ability, bot_act.
+
+const KITS := {
+	"torvik": "res://scripts/heroes/hd_hero_torvik.gd",
+	"unrat": "res://scripts/heroes/hd_hero_unrat.gd",
+	"vesna": "res://scripts/heroes/hd_hero_vesna.gd",
+	"zix": "res://scripts/heroes/hd_hero_zix.gd",
+}
 
 var game  ## HdGame
 var def: Dictionary
@@ -31,18 +40,25 @@ var cd: Array = [0.0, 0.0, 0.0, 0.0]
 var dodge_cd := 0.0
 var dodge_t := 0.0
 var dodge_dir := Vector3.ZERO
-var form_t := 0.0               ## Windaufstieg läuft
-var empowered := false          ## nächster Donnerhieb verstärkt (Sturmbrandung)
-var gust_ready := 0.0
-var nova_discount := false
+var buffs: Dictionary = {}      ## Name → {until, dmg_out, dmg_in, speed, slow_immune}
+var shield := 0.0
+var shield_until := 0.0
 var damage_done := 0.0
 var damage_taken := 0.0
+var healing_done := 0.0
 var kills := 0
 var deaths := 0
 var dodges := 0
 var _body: Node3D
-var _axes: Array = []
-var _form_glow: MeshInstance3D
+var _glow: MeshInstance3D
+
+
+## Neuen Helden zur Datenzeile anlegen (Unterklasse nach id).
+static func create(d: Dictionary) -> HdHero:
+	var path: String = KITS.get(str(d.get("id", "")), "")
+	if path == "":
+		return HdHero.new()
+	return load(path).new()
 
 
 func setup(g, d: Dictionary) -> void:
@@ -54,26 +70,16 @@ func setup(g, d: Dictionary) -> void:
 	_apply_level()
 	hp = max_hp
 	mana = max_mana
+	_body = Node3D.new()
+	add_child(_body)
 	_build_body()
+	_glow = HdDev.cyl(1.1, 1.1, 0.05, HdDev.flat(Color(1.0, 0.85, 0.4), 0.35), Vector3(0, 0.05, 0), 24)
+	_glow.visible = false
+	add_child(_glow)
 
 
 func _build_body() -> void:
-	_body = Node3D.new()
-	add_child(_body)
-	var steel := HdDev.mat(Color("3d8fd6"), 0.5)
-	_body.add_child(HdDev.cyl(0.55, 0.65, 1.5, steel, Vector3(0, 0.75, 0)))
-	_body.add_child(HdDev.sphere(0.38, HdDev.mat(Color("d8b48a"), 0.5), Vector3(0, 1.75, 0)))
-	_body.add_child(HdDev.box(Vector3(1.5, 0.25, 0.5), HdDev.mat(Color("2b5f96"), 0.5), Vector3(0, 1.38, 0)))
-	for side in [-1.0, 1.0]:
-		var axe := Node3D.new()
-		axe.position = Vector3(0.85 * side, 0.9, -0.25)
-		axe.add_child(HdDev.box(Vector3(0.1, 1.1, 0.1), HdDev.mat(Color("6b4a2a"), 0.5), Vector3(0, 0, 0)))
-		axe.add_child(HdDev.box(Vector3(0.12, 0.45, 0.5), HdDev.mat(UiTheme.CYAN, 0.5, 1.2), Vector3(0, 0.4, -0.2)))
-		_body.add_child(axe)
-		_axes.append(axe)
-	_form_glow = HdDev.cyl(1.1, 1.1, 0.05, HdDev.flat(Color(0.6, 0.9, 1.0), 0.35), Vector3(0, 0.05, 0), 24)
-	_form_glow.visible = false
-	_body.add_child(_form_glow)
+	_body.add_child(HdDev.cyl(0.55, 0.65, 1.5, HdDev.mat(Color("3d8fd6"), 0.5), Vector3(0, 0.75, 0)))
 
 
 func _apply_level() -> void:
@@ -116,23 +122,87 @@ func dodging() -> bool:
 
 
 func ability(slot: int) -> Dictionary:
-	var a: Dictionary = def.abilities[slot]
-	if slot == 0 and form_t > 0.0:
-		var asc: Dictionary = a.ascended.duplicate()
-		asc.merge(a)
-		return asc
-	return a
+	return def.abilities[slot]
 
 
 func ability_cost(slot: int) -> float:
-	var c := float(def.abilities[slot].mana)
-	if slot == 1 and nova_discount:
-		c *= 1.0 - float(def.abilities[1].discount)
-	return c
+	return float(ability(slot).get("mana", 0))
 
 
 func unlocked(slot: int) -> bool:
-	return level >= int(def.abilities[slot].get("unlock", 1))
+	return level >= int(ability(slot).get("unlock", 1))
+
+
+func attack_range() -> float:
+	return float(def.attack.range)
+
+
+func ranged() -> bool:
+	return bool(def.attack.get("ranged", false))
+
+
+# ---------------------------------------------------------------- Stärkungen, Schild, Heilung
+
+func add_buff(id: String, d: Dictionary, time: float) -> void:
+	var b := d.duplicate()
+	b.until = game.play_time + time
+	buffs[id] = b
+
+
+func has_buff(id: String) -> bool:
+	return buffs.has(id) and game.play_time < float(buffs[id].until)
+
+
+## Faktor auf den eigenen Schaden (Hochdosis).
+func out_mult() -> float:
+	var m := 1.0
+	for b in buffs.values():
+		m *= 1.0 + float(b.get("dmg_out", 0.0))
+	return m
+
+
+func speed_mult() -> float:
+	var m := 1.0
+	for b in buffs.values():
+		m *= 1.0 + float(b.get("speed", 0.0))
+	return m
+
+
+func slow_immune() -> bool:
+	for b in buffs.values():
+		if bool(b.get("slow_immune", false)):
+			return true
+	return false
+
+
+## Eingehender Schaden nach Stärkungen und Schild (Rüstung rechnet HdGame vorher).
+func incoming(amount: float) -> float:
+	for b in buffs.values():
+		amount *= 1.0 - float(b.get("dmg_in", 0.0))
+	if shield > 0.0 and game.play_time < shield_until:
+		var soak := minf(shield, amount)
+		shield -= soak
+		amount -= soak
+	return amount
+
+
+func add_shield(amount: float, time: float) -> void:
+	shield = maxf(shield if game.play_time < shield_until else 0.0, 0.0) + amount
+	shield_until = game.play_time + time
+
+
+func shield_left() -> float:
+	return shield if game.play_time < shield_until else 0.0
+
+
+func heal(amount: float, quiet := false) -> float:
+	if dead or amount <= 0.0:
+		return 0.0
+	var got := minf(amount, max_hp - hp)
+	hp += got
+	if not quiet and got >= 1.0:
+		game.floater(position + Vector3(0, 2.4, 0), "+%d" % roundi(got), UiTheme.HAVE)
+	return got
 
 
 # ---------------------------------------------------------------- Schritt
@@ -142,10 +212,11 @@ func step(dt: float, now: float) -> void:
 		cd[i] = maxf(0.0, cd[i] - dt)
 	dodge_cd = maxf(0.0, dodge_cd - dt)
 	attack_cd -= dt
-	if form_t > 0.0:
-		form_t -= dt
-	_form_glow.visible = form_t > 0.0
-	_body.scale = Vector3.ONE * (1.12 if form_t > 0.0 else 1.0)
+	for k in buffs.keys():
+		if now >= float(buffs[k].until):
+			buffs.erase(k)
+	_glow.visible = not buffs.is_empty() and not dead
+	_kit_step(dt, now)
 	if dead:
 		respawn_t -= dt
 		if respawn_t <= 0.0:
@@ -163,7 +234,7 @@ func step(dt: float, now: float) -> void:
 		_body.rotation.x = -0.5
 		return
 	_body.rotation.x = 0.0
-	var spd := speed * cc.speed_factor(now)
+	var spd := speed * speed_mult() * (1.0 if slow_immune() else cc.speed_factor(now))
 	if move_dir.length_squared() > 0.01:
 		order = {}
 		game.move_unit(self, move_dir.limit_length(1.0), spd, dt)
@@ -183,23 +254,32 @@ func step(dt: float, now: float) -> void:
 		else:
 			var to: Vector3 = e.position - position
 			to.y = 0.0
-			if to.length() > float(def.attack.range) + e.radius + radius:
+			if to.length() > attack_range() + e.radius + radius:
 				game.move_unit(self, to.normalized(), spd, dt)
 				_face(to)
 			else:
-				_try_swing(e)
+				_try_attack(e)
 	# Grundangriff
 	if attack_held:
 		var aim_dir := aim - position
 		aim_dir.y = 0.0
 		_face(aim_dir)
-		var e = game.enemy_in_arc(position, aim_dir, float(def.attack.range) + radius, float(def.attack.arc))
-		if e:
-			_try_swing(e)
+		if ranged():
+			if attack_cd <= 0.0:
+				_ranged_shot(facing, null)
+		else:
+			var e = game.enemy_in_arc(position, aim_dir, attack_range() + radius, float(def.attack.get("arc", 120)))
+			if e:
+				_try_attack(e)
 	elif auto_attack and order.is_empty() and move_dir.length_squared() < 0.01:
-		var e = game.nearest_enemy(position, 4.5)
+		var e = game.nearest_enemy(position, maxf(4.5, attack_range() if ranged() else 0.0))
 		if e:
 			order = {"kind": "attack", "target": e}
+
+
+## Wird jeden Schritt aufgerufen, auch tot (Kit-Zustände, Zeitgeber).
+func _kit_step(_dt: float, _now: float) -> void:
+	pass
 
 
 func _face(v: Vector3) -> void:
@@ -209,32 +289,39 @@ func _face(v: Vector3) -> void:
 		rotation.y = atan2(facing.x, facing.z) + PI
 
 
-func _try_swing(e) -> void:
+func _try_attack(e) -> void:
 	if attack_cd > 0.0:
+		return
+	if ranged():
+		_face(e.position - position)
+		_ranged_shot(facing, e)
 		return
 	attack_cd = float(def.attack.interval)
 	_face(e.position - position)
 	_swing_fx()
 	game.hero_hit(e, float(def.attack.damage) * power(), "attack")
-	# Sturmbrandung: Windstoß = 2 Zusatzangriffe, je Windstoß Chance auf verstärkten, zurückgesetzten Donnerhieb
-	var p: Dictionary = def.passive
-	var chance := float(p.chance) * (float(def.abilities[3].gust_mult) if form_t > 0.0 else 1.0)
-	if game.play_time >= gust_ready and game.rng.randf() < chance:
-		gust_ready = game.play_time + float(p.icd)
-		game.floater(position + Vector3(0, 2.4, 0), tr("Windstoß"), UiTheme.CYAN)
-		for k in int(p.extra):
-			if e.alive():
-				game.hero_hit(e, float(def.attack.damage) * power(), "gust")
-			if game.rng.randf() < float(p.reset_chance):
-				cd[0] = 0.0
-				empowered = true
+	on_hit(e)
+
+
+## Fernkampf-Grundangriff in Richtung dir (target = angeklicktes Ziel oder null).
+func _ranged_shot(dir: Vector3, target) -> void:
+	attack_cd = float(def.attack.interval)
+	var e = target if target else game.enemy_in_arc(position, dir, attack_range() + radius, 20.0)
+	if e:
+		game.fx.tracer(position + Vector3(0, 1.2, 0), e.position + Vector3(0, e.height() * 0.6, 0), UiTheme.CYAN)
+		game.hero_hit(e, float(def.attack.damage) * power(), "attack")
+		on_hit(e)
+
+
+## Grundangriff hat getroffen (Torvik: Sturmbrandung).
+func on_hit(_e) -> void:
+	pass
 
 
 func _swing_fx() -> void:
-	for a in _axes:
-		var tw := create_tween()
-		tw.tween_property(a, "rotation:x", -1.4, 0.08)
-		tw.tween_property(a, "rotation:x", 0.0, 0.14)
+	var tw := create_tween()
+	tw.tween_property(_body, "rotation:y", -0.5, 0.08)
+	tw.tween_property(_body, "rotation:y", 0.0, 0.14)
 
 
 func _respawn() -> void:
@@ -252,9 +339,15 @@ func die() -> void:
 	deaths += 1
 	visible = false
 	order = {}
-	form_t = 0.0
+	buffs.clear()
+	shield = 0.0
+	_on_death()
 	respawn_t = float(def.respawn.base) + float(def.respawn.per_level) * level
 	game.message.emit(tr("%s ist gefallen") % tr(str(def.name)))
+
+
+func _on_death() -> void:
+	pass
 
 
 # ---------------------------------------------------------------- Fähigkeiten
@@ -271,65 +364,28 @@ func cast(slot: int, at: Vector3) -> bool:
 	if dir.length_squared() < 0.01:
 		dir = facing
 	dir = dir.normalized()
+	var cost := ability_cost(slot)
+	if not _cast(slot, a, dir, at):
+		return false
 	_face(dir)
-	mana -= ability_cost(slot)
-	cd[slot] = float(a.cooldown)
-	var pw := power()
-	match slot:
-		0:
-			if form_t > 0.0:
-				# Windschlag: Linie, durchschlägt alle
-				game.fx.flash_shape(HdTelegraph.line(float(a.range), float(a.width), HdTelegraph.BLUE), position, dir)
-				for e in game.enemies_in(HdTelegraph.LINE, position, dir, 0, 0, 0, float(a.range), float(a.width)):
-					game.hero_hit(e, float(a.damage[0]) * pw, "q")
-			else:
-				var mult := pw * ((1.0 + float(def.passive.empower)) if empowered else 1.0)
-				var hits: Array = game.enemies_in(HdTelegraph.CONE, position, dir, float(a.range), 0, float(a.angle), 0, 0)
-				game.fx.flash_shape(HdTelegraph.cone(float(a.range), float(a.angle), HdTelegraph.BLUE), position, dir)
-				for e in hits:
-					game.hero_hit(e, float(a.damage[0]) * mult, "q")
-					if e.alive():
-						game.hero_hit(e, float(a.damage[1]) * mult, "q")
-						game.fx.bolt(position + Vector3(0, 1.4, 0), e.position + Vector3(0, e.height(), 0))
-					if e.alive():
-						game.stun(e, float(a.stun))
-				if empowered and not hits.is_empty():
-					var done: Array = hits.duplicate()
-					var from = hits[0]
-					for k in int(def.passive.empower_hops):
-						var nxt = game.nearest_enemy(from.position, float(def.passive.hop_range), done)
-						if nxt == null:
-							break
-						game.fx.bolt(from.position + Vector3(0, 1.0, 0), nxt.position + Vector3(0, 1.0, 0))
-						game.hero_hit(nxt, float(a.damage[0]) * mult, "q")
-						done.append(nxt)
-						from = nxt
-				empowered = false
-		1:
-			var hits: Array = game.enemies_in(HdTelegraph.CIRCLE, position, dir, float(a.radius), 0, 0, 0, 0)
-			game.fx.nova(position, float(a.radius), Color("ff8a3a"))
-			for e in hits:
-				game.hero_hit(e, float(a.damage) * pw, "w")
-				e.burn_dps = float(a.burn) * pw
-				e.burn_until = game.play_time + float(a.burn_time)
-			nova_discount = hits.size() >= int(a.discount_hits)
-		2:
-			game.hero_projectile(position + dir * radius, dir, a, pw)
-		3:
-			form_t = float(a.duration)
-			cd[0] = minf(cd[0], float(def.abilities[0].ascended.cooldown))
-			game.fx.nova(position, float(a.radius), Color(0.7, 0.95, 1.0))
-			for e in game.enemies_in(HdTelegraph.CIRCLE, position, dir, float(a.radius), 0, 0, 0, 0):
-				var away: Vector3 = e.position - position
-				away.y = 0.0
-				if away.length_squared() < 0.01:
-					away = dir
-				var stun_t: float = game.stun(e, float(a.stun))
-				if stun_t > 0.0:
-					e.knock = away.normalized() * float(a.knockback) / 0.25
-					e.knock_t = 0.25
-				game.hero_hit(e, 40.0 * pw, "r")
+	mana -= cost
+	if cd[slot] <= 0.0:
+		cd[slot] = float(a.cooldown)
 	return true
+
+
+## Kit: Fähigkeit ausführen. false = ging nicht (kein Mana/Abklingzeit verbraucht).
+func _cast(_slot: int, _a: Dictionary, _dir: Vector3, _at: Vector3) -> bool:
+	return false
+
+
+## Punkt für Ortsfähigkeiten: höchstens range vom Helden entfernt.
+func clamp_point(at: Vector3, r: float) -> Vector3:
+	var to := at - position
+	to.y = 0.0
+	if to.length() > r:
+		to = to.normalized() * r
+	return Vector3(position.x + to.x, 0, position.z + to.z)
 
 
 func dodge(dir: Vector3) -> bool:
@@ -345,3 +401,29 @@ func dodge(dir: Vector3) -> bool:
 	dodges += 1
 	game.fx.dash_trail(position, dodge_dir * float(def.dodge.distance))
 	return true
+
+
+# ---------------------------------------------------------------- Anzeige und Bot
+
+## Zustandszeilen für die Heldenleiste.
+func status_lines() -> Array:
+	var st: Array = []
+	if shield_left() > 0.0:
+		st.append(tr("Schild %d") % roundi(shield_left()))
+	return st
+
+
+## Fähigkeitsfeld golden umranden (z. B. verstärkter Donnerhieb).
+func slot_glow(_slot: int) -> bool:
+	return false
+
+
+## Bot: Fähigkeiten gegen das nächste Ziel e einsetzen (to = Richtung, d = Abstand, near = Gegner im
+## Umkreis von 5). Gibt den Wunschabstand zum Ziel zurück (Bewegung macht HdGame.bot_turn).
+func bot_act(_e, _to: Vector3, _d: float, _near: int) -> float:
+	return attack_range()
+
+
+## Held wird ersetzt oder das Spiel endet: eigene Objekte in der Welt (Banner, Gebäude) entfernen.
+func free_kit() -> void:
+	pass

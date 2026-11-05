@@ -13,11 +13,18 @@ signal floated(pos: Vector3, text: String, color: Color)
 signal ended(victory: bool)
 
 const DATA := "res://data/heroes.json"
+const HEROES := "res://data/heroes_helden.json"
 const SETTINGS := "user://heroes.cfg"
 ## Tasten der Fähigkeiten 1–4 je Steuerung (WASD belegt W, deshalb dort Q E F R).
 const KEYS := {"wasd": [KEY_Q, KEY_E, KEY_F, KEY_R], "maus": [KEY_Q, KEY_W, KEY_E, KEY_R]}
 
 var cfg: Dictionary = {}
+var hero_defs: Dictionary = {}  ## id → Held (data/heroes_helden.json)
+var hero_list: Array = []       ## ids in Anzeige-Reihenfolge
+var gadget_defs: Dictionary = {}  ## Zix' Baukasten
+var hero_id := "torvik"         ## gewählter Held (user://heroes.cfg)
+var zix_kit: Array = []         ## Zix: 3 Gebäude auf Q W E
+var force_hero := ""            ## Tests/Bilder/Sim: diesen Helden statt der gespeicherten Wahl
 var ability_defs: Dictionary = {}
 var enemy_defs: Dictionary = {}
 
@@ -67,12 +74,19 @@ var rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	UiTheme.use_skin(UiTheme.ARCADE)
 	cfg = Database.load_json(DATA)
+	var hd: Dictionary = Database.load_json(HEROES)
+	for h in hd.heroes:
+		hero_defs[str(h.id)] = h
+		hero_list.append(str(h.id))
+	gadget_defs = hd.get("gadgets", {})
 	for k in cfg.abilities:
 		ability_defs[k] = cfg.abilities[k]
 	for e in cfg.enemies:
 		enemy_defs[str(e.id)] = e
 	rng.randomize()
 	_load_settings()
+	if hero_defs.has(force_hero):
+		hero_id = force_hero
 	_build_road()
 	_build_world()
 	hud = load("res://scripts/heroes/hd_hud.gd").new()
@@ -93,15 +107,63 @@ func _load_settings() -> void:
 	if c.load(SETTINGS) == OK:
 		control = str(c.get_value("steuerung", "modus", "wasd"))
 		quickcast = bool(c.get_value("steuerung", "schnellzauber", false))
+		hero_id = str(c.get_value("held", "id", hero_id))
+		zix_kit = Array(c.get_value("held", "zix_kit", []))
 	if not KEYS.has(control):
 		control = "wasd"
+	if not hero_defs.has(hero_id):
+		hero_id = str(hero_list[0])
+	_check_kit()
 
 
 func save_settings() -> void:
 	var c := ConfigFile.new()
 	c.set_value("steuerung", "modus", control)
 	c.set_value("steuerung", "schnellzauber", quickcast)
+	c.set_value("held", "id", hero_id)
+	c.set_value("held", "zix_kit", zix_kit)
 	c.save(SETTINGS)
+
+
+## Zix' Auswahl gültig halten: 3 verschiedene bekannte Gebäude, sonst die Vorgabe aus den Daten.
+func _check_kit() -> void:
+	var ok: Array = []
+	for g in zix_kit:
+		if gadget_defs.has(str(g)) and not ok.has(str(g)):
+			ok.append(str(g))
+	if ok.size() != 3 and hero_defs.has("zix"):
+		ok = Array(hero_defs.zix.get("default_kit", []))
+	zix_kit = ok
+
+
+## Helden wechseln (Startfenster, Tests). Der alte Held verschwindet, der neue steht am Start.
+func set_hero(id: String) -> void:
+	if not hero_defs.has(id):
+		return
+	hero_id = id
+	if hero:
+		hero.free_kit()
+		hero.queue_free()
+	hero = HdHero.create(hero_defs[id])
+	hero.setup(self, hero_defs[id])
+	hero.position = hero_spawn()
+	add_child(hero)
+
+
+## Zix' Baukasten ändern (nur zwischen den Wellen bzw. im Startfenster).
+func set_zix_kit(kit: Array) -> bool:
+	if not can_change_kit():
+		return false
+	zix_kit = kit.duplicate()
+	_check_kit()
+	save_settings()
+	if hero and hero.has_method("kit_changed"):
+		hero.kit_changed()
+	return true
+
+
+func can_change_kit() -> bool:
+	return state == "setup" or (spawn_queue.is_empty() and enemies.is_empty())
 
 
 func diff() -> Dictionary:
@@ -248,10 +310,7 @@ func _build_world() -> void:
 		buildings.append(bl)
 	fx = HdFx.new()
 	add_child(fx)
-	hero = HdHero.new()
-	hero.setup(self, cfg.hero)
-	hero.position = hero_spawn()
-	add_child(hero)
+	set_hero(hero_id)
 	camera = Camera3D.new()
 	camera.fov = 50
 	add_child(camera)
@@ -354,14 +413,22 @@ func _update_preview() -> void:
 		return
 	var a := hero.ability(preview_slot)
 	var want := ""
-	match str(a.kind):
+	if a.has("preview"):
+		want = str(a.preview)
+	else:
+		want = str(a.kind)
+	if a.has("preview_radius"):
+		a = a.duplicate()
+		a.radius = a.preview_radius
+	match want:
 		"cone":
 			want = "cone"
 		"line", "skillshot":
 			want = "line"
 		_:
 			want = "circle"
-	if _preview == null or _preview.get_meta("kind", "") != want:
+	var key := "%s:%d" % [want, preview_slot]
+	if _preview == null or _preview.get_meta("kind", "") != key:
 		if _preview:
 			_preview.queue_free()
 		match want:
@@ -371,8 +438,12 @@ func _update_preview() -> void:
 				_preview = HdTelegraph.line(float(a.range), float(a.get("width", 1.0)), HdTelegraph.BLUE)
 			_:
 				_preview = HdTelegraph.circle(float(a.get("radius", 3.0)), HdTelegraph.BLUE)
-		_preview.set_meta("kind", want)
+		_preview.set_meta("kind", key)
 		add_child(_preview)
+	if bool(a.get("at_point", false)):
+		var at := hero.clamp_point(mouse_ground(), float(a.get("range", 10.0)))
+		_preview.position = Vector3(at.x, 0.04, at.z)
+		return
 	_preview.position = Vector3(hero.position.x, 0.04, hero.position.z)
 	_preview.aim(mouse_ground() - hero.position)
 
@@ -427,6 +498,7 @@ func _physics_process(dt: float) -> void:
 func start(diff_index: int) -> void:
 	difficulty = diff_index
 	Session.difficulty = diff_index
+	_check_kit()
 	state = "play"
 	start_wave(1)
 	hud.on_started()
@@ -494,9 +566,11 @@ func step(dt: float) -> void:
 		if e.dead:
 			continue
 		e.step(dt, now)
+		if not e.dead:
+			e.step_debuffs(dt, now)
 		if not e.dead and now < e.burn_until:
 			hero_hit(e, e.burn_dps * dt, "burn", true)
-	for b in buildings:
+	for b in buildings.duplicate():
 		b.step(dt)
 	_step_projectiles(dt)
 	_step_pools(dt, now)
@@ -551,11 +625,27 @@ func _kill(e: HdEnemy) -> void:
 	if e.dead:
 		return
 	_remove(e)
+	if e.plagued():
+		_spread_plague(e)
 	kills += 1
 	_wave_kills += 1
 	hero.kills += 1
 	hero.add_xp(float(e.def.get("xp", 10)))
 	changed.emit()
+
+
+## Rattenseuche springt beim Tod auf bis zu jumps Gegner in der Nähe über.
+func _spread_plague(e: HdEnemy) -> void:
+	var p: Dictionary = e.plague
+	var skip: Array = [e]
+	for k in int(p.get("jumps", 2)):
+		var n := nearest_enemy(e.position, float(p.get("range", 6.0)), skip)
+		if n == null:
+			break
+		skip.append(n)
+		if not n.plagued():
+			n.apply_plague(p)
+			fx.bolt(e.position + Vector3(0, 0.6, 0), n.position + Vector3(0, 0.6, 0), Color("9ac23a"))
 
 
 func on_level_up() -> void:
@@ -614,14 +704,21 @@ func _all_obstacles() -> Array:
 	var all := obstacles.duplicate()
 	for b in buildings:
 		if b.alive():
-			all.append([b.position, b.radius])
+			all.append([b.position, b.radius, b])
 	all.append([fortress_pos, float(cfg.arena.fortress_radius)])
 	return all
+
+
+## Neues Gebäude (Zix) frei stellen: aus Felsen, Feste und anderen Gebäuden schieben.
+func place_free(u: Node3D) -> void:
+	_resolve(u)
 
 
 ## Aus Hindernissen herausschieben und im Spielfeld halten.
 func _resolve(u: Node3D) -> void:
 	for ob in _all_obstacles():
+		if ob.size() > 2 and ob[2] == u:
+			continue
 		var d: Vector3 = u.position - ob[0]
 		d.y = 0.0
 		var min_d: float = ob[1] + u.radius
@@ -679,6 +776,37 @@ func enemies_in(kind: int, origin: Vector3, dir: Vector3, r: float, r_in: float,
 	return out
 
 
+## Mitspieler für Heil- und Stärkungsfähigkeiten: der Held selbst und eigene Gebäude (im
+## Einzelspieler gibt es keine anderen Helden).
+func allies() -> Array:
+	var out: Array = []
+	if hero.alive():
+		out.append(hero)
+	for b in buildings:
+		if b.alive():
+			out.append(b)
+	return out
+
+
+## Mitspieler nächst at im Umkreis r (Held oder Gebäude), sonst null.
+func ally_near(at: Vector3, r: float) -> Node3D:
+	var best: Node3D = null
+	var best_d := r
+	for a in allies():
+		var d: float = Vector2(a.position.x - at.x, a.position.z - at.z).length() - a.radius
+		if d <= best_d:
+			best_d = d
+			best = a
+	return best
+
+
+## Heilung durch den Helden (zählt für die Auswertung).
+func heal_target(t: Node3D, amount: float, quiet := false) -> float:
+	var got: float = t.heal(amount, quiet)
+	hero.healing_done += got
+	return got
+
+
 func building_near(at: Vector3, r: float) -> HdBuilding:
 	for b in buildings:
 		if b.alive() and at.distance_to(b.position) - b.radius <= r:
@@ -698,7 +826,7 @@ static func armor_factor(a: float) -> float:
 func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 	if e.dead:
 		return
-	var dmg := amount * armor_factor(e.armor - e.cc.armor_reduction(play_time))
+	var dmg := amount * hero.out_mult() * armor_factor(e.armor - e.cc.armor_reduction(play_time))
 	e.hp -= dmg
 	e.hit_flash = 0.12
 	hero.damage_done += dmg
@@ -712,7 +840,11 @@ func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 func building_hit(e: HdEnemy, amount: float, b: HdBuilding) -> void:
 	if e.dead:
 		return
-	e.hp -= amount * armor_factor(e.armor - e.cc.armor_reduction(play_time))
+	var dmg := amount * armor_factor(e.armor - e.cc.armor_reduction(play_time))
+	e.hp -= dmg
+	e.hit_flash = 0.12
+	if b is HdGadget:
+		hero.damage_done += dmg
 	e.provoke(b)
 	if e.hp <= 0.0:
 		_kill(e)
@@ -734,7 +866,7 @@ func damage_hero(amount: float, _src, quiet := false) -> void:
 		return
 	if hero.dodging():
 		return
-	var dmg := amount * armor_factor(hero.armor - hero.cc.armor_reduction(play_time))
+	var dmg := hero.incoming(amount * armor_factor(hero.armor - hero.cc.armor_reduction(play_time)))
 	hero.hp -= dmg
 	hero.damage_taken += dmg
 	if not quiet:
@@ -748,11 +880,14 @@ func damage_hero(amount: float, _src, quiet := false) -> void:
 func damage_building(b: HdBuilding, amount: float) -> void:
 	if not b.alive():
 		return
-	b.hp -= amount * armor_factor(b.armor)
+	b.hp -= b.incoming(amount * armor_factor(b.armor))
 	if b.hp <= 0.0:
 		b.hp = 0.0
 		b.destroy()
-		message.emit(tr("%s zerstört!") % tr(str(b.def.name)))
+		if b is HdGadget:
+			buildings.erase(b)
+		else:
+			message.emit(tr("%s zerstört!") % tr(str(b.def.name)))
 
 
 ## Ausgelöste Warnfläche: trifft den Helden (wenn er nicht ausweicht) und Gebäude darin.
@@ -811,11 +946,28 @@ func enemy_projectile(src: HdEnemy, from: Vector3, dir: Vector3, spd: float, len
 
 
 func hero_projectile(from: Vector3, dir: Vector3, a: Dictionary, pw: float) -> void:
-	var n := HdDev.sphere(0.4, HdDev.mat(Color("a07850"), 0.5, 0.3))
+	shoot(from, dir, float(a.speed), float(a.range), float(a.width), float(a.damage) * pw,
+		{"slow": float(a.slow), "slow_time": float(a.slow_time), "color": Color("a07850"), "size": 0.4})
+
+
+## Geschoss des Helden. opt: hit (Callable(e) statt Standardschaden), ally (Callable(ziel) → true =
+## verbraucht, trifft eigene Gebäude), slow/slow_time, color, size, pierce (durchschlägt).
+func shoot(from: Vector3, dir: Vector3, spd: float, length: float, width: float, dmg: float, opt := {}) -> void:
+	var sz := float(opt.get("size", 0.25))
+	var n := HdDev.sphere(sz, HdDev.mat(opt.get("color", Color("a07850")), 0.5, 0.6))
 	add_child(n)
-	projectiles.append({"pos": Vector3(from.x, 1.0, from.z), "dir": dir.normalized(), "speed": float(a.speed),
-		"left": float(a.range), "width": float(a.width), "dmg": float(a.damage) * pw, "node": n, "from_hero": true,
-		"slow": float(a.slow), "slow_time": float(a.slow_time)})
+	var p := {"pos": Vector3(from.x, 1.0, from.z), "dir": dir.normalized(), "speed": spd, "left": length,
+		"width": width, "dmg": dmg, "node": n, "from_hero": true, "done_hits": []}
+	p.merge(opt)
+	projectiles.append(p)
+
+
+## Fliegt ein gegnerisches Geschoss in eine Schildkuppel?
+func _blocked(pos: Vector3) -> bool:
+	for b in buildings:
+		if b is HdGadget and b.blocks(pos):
+			return true
+	return false
 
 
 func _step_projectiles(dt: float) -> void:
@@ -830,25 +982,64 @@ func _step_projectiles(dt: float) -> void:
 			n.rotation.y = atan2(p.dir.x, p.dir.z)
 		var done := float(p.left) <= 0.0
 		if p.from_hero:
-			for e in enemies:
-				if e.dead:
-					continue
-				if Vector2(e.position.x - p.pos.x, e.position.z - p.pos.z).length() <= e.radius + float(p.width) * 0.5:
-					hero_hit(e, float(p.dmg), "e")
-					if not e.dead:
-						e.cc.slow("erdschock", float(p.slow), float(p.slow_time), play_time)
-						floater(e.position + Vector3(0, e.height() + 0.9, 0), tr("Verlangsamt"), UiTheme.CYAN)
-					done = true
-					break
+			if p.has("ally"):
+				for b in buildings:
+					if b.alive() and Vector2(b.position.x - p.pos.x, b.position.z - p.pos.z).length() <= b.radius + float(p.width) * 0.5:
+						if p.ally.call(b):
+							done = true
+							break
+			if not done:
+				for e in enemies:
+					if e.dead or p.done_hits.has(e):
+						continue
+					if Vector2(e.position.x - p.pos.x, e.position.z - p.pos.z).length() <= e.radius + float(p.width) * 0.5:
+						if p.has("hit"):
+							p.hit.call(e)
+						else:
+							hero_hit(e, float(p.dmg), "e")
+							if not e.dead and float(p.get("slow", 0.0)) > 0.0:
+								e.cc.slow("erdschock", float(p.slow), float(p.slow_time), play_time)
+								floater(e.position + Vector3(0, e.height() + 0.9, 0), tr("Verlangsamt"), UiTheme.CYAN)
+						if bool(p.get("pierce", false)):
+							p.done_hits.append(e)
+						else:
+							done = true
+						break
+		elif _blocked(p.pos):
+			done = true
 		elif hero.alive() and Vector2(hero.position.x - p.pos.x, hero.position.z - p.pos.z).length() <= hero.radius + float(p.width) * 0.5:
 			if hero.dodging():
 				floater(hero.position + Vector3(0, 2.4, 0), tr("Ausgewichen"), UiTheme.CYAN)
+			elif _reflect(p):
+				pass
 			else:
 				damage_hero(float(p.dmg), p.get("src"))
 				done = true
 		if done:
 			n.queue_free()
 			projectiles.remove_at(i)
+
+
+## Königsgewand: Chance, ein Geschoss zum Schützen zurückzuwerfen. Es wird zum Geschoss des Helden.
+func _reflect(p: Dictionary) -> bool:
+	if _reflect_chance() <= 0.0 or rng.randf() >= _reflect_chance():
+		return false
+	var src = p.get("src")
+	var back: Vector3 = -p.dir
+	if src and is_instance_valid(src) and not src.dead:
+		back = (src.position - hero.position)
+		back.y = 0.0
+	p.dir = back.normalized()
+	p.from_hero = true
+	p.done_hits = []
+	p.left = 20.0
+	p.erase("slow")
+	floater(hero.position + Vector3(0, 2.4, 0), tr("Zurückgeworfen"), UiTheme.GOLD)
+	return true
+
+
+func _reflect_chance() -> float:
+	return float(hero.reflect_chance()) if hero.has_method("reflect_chance") else 0.0
 
 
 func floater(at: Vector3, text: String, c: Color) -> void:
@@ -873,8 +1064,8 @@ func score() -> int:
 
 
 func _record(victory: bool) -> Dictionary:
-	var hid := str(cfg.hero.id)
-	var label := "%s %d" % [tr(str(cfg.hero.name)), hero.level]
+	var hid := str(hero.def.id)
+	var label := "%s %d" % [tr(str(hero.def.name)), hero.level]
 	var types := {hid: {"built": 1, "tiers": {str(hero.level): 1}, "kills": hero.kills, "damage": hero.damage_done,
 		"best_wave_damage": 0.0, "best_wave": 0, "alive": 1}}
 	var towers: Array = [{"id": hid, "label": label, "kills": hero.kills, "damage": roundi(hero.damage_done),
@@ -927,16 +1118,12 @@ func bot_turn() -> void:
 	var d := to.length()
 	h.aim = e.position
 	var near := enemies_in(HdTelegraph.CIRCLE, h.position, to, 5.0, 0, 0, 0, 0).size()
-	if near >= 3 and h.unlocked(3):
-		h.cast(3, e.position)
-	if near >= 2:
-		h.cast(1, e.position)
-	if d < 3.4 + e.radius:
-		h.cast(0, e.position)
-	if d < 14.0 and e.hp > 90.0:
-		h.cast(2, e.position)
-	if d > float(h.def.attack.range) + e.radius + h.radius - 0.3:
+	var want: float = h.bot_act(e, to, d, near)
+	var gap := d - e.radius - h.radius
+	if gap > want - 0.3:
 		h.move_dir = to.normalized()
+	elif h.ranged() and gap < want * 0.4 and h.hp < h.max_hp * 0.5:
+		h.move_dir = -to.normalized()
 	else:
 		h.move_dir = Vector3.ZERO
 	h.attack_held = true
