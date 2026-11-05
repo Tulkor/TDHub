@@ -3,7 +3,8 @@ extends Node
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
 ##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes   Standard spiel
 ##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
-##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher
+##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher,
+##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -157,6 +158,7 @@ func _ready() -> void:
 			Session.difficulty = int(opts.get("stufe", "1"))
 			node = load("res://scenes/heroes_game.tscn").instantiate()
 			node.bot = true
+			node.force_hero = str(opts.get("held", ""))
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
