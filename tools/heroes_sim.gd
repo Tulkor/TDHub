@@ -1,6 +1,6 @@
 extends Node
 ## Balance-Probe für Bollwerk (Modus heroes): der Bot spielt Läufe ohne Bild.
-##   godot --headless --path . tools/heroes_sim.tscn -- --laeufe=3 --stufen=0,1,2 [--helden=torvik,unrat,vesna,zix]
+##   godot --headless --path . tools/heroes_sim.tscn -- --laeufe=3 --stufen=0,1,2 [--helden=torvik,unrat,vesna,zix] [--wellen=N --zeit=S]
 ## Ausgabe je Lauf: erreichte Welle, Feste-Leben, Stufe, Tode, Durchbrüche je Welle, Gold/Holz/Inventar.
 
 func _ready() -> void:
@@ -26,8 +26,10 @@ func _ready() -> void:
 		await get_tree().process_frame
 		g.set_physics_process(false)
 		g.rng.seed = 1000 + j[2]
+		if opts.has("wellen"):
+			g.wave_limit = int(opts.wellen)
 		var k := 0
-		while g.state == "play" and g.play_time < 900.0:
+		while g.state == "play" and g.play_time < float(opts.get("zeit", "3600")):
 			if k % 3 == 0:
 				g.bot_turn()
 			g.step(1.0 / 30.0)

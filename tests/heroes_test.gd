@@ -1023,6 +1023,9 @@ func _events() -> void:
 		g.step(DT)
 	check(ev.active.has("ally") and g.buildings.has(ev.active.ally), "Befreite kämpft mit")
 	var ally: HdAlly = ev.active.ally
+	for x in g.enemies:
+		g._remove(x)
+	g.spawn_queue.clear()
 	g.hero.position = g.road_point(20.0)
 	ally.position = g.hero.position + Vector3(1.5, 0, 0)
 	var foe := _dummy(g, "sumpfling", g.road_point(22.0))

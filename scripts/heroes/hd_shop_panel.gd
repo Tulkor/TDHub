@@ -278,7 +278,7 @@ func is_open() -> bool:
 
 ## Alles neu aufbauen, wenn sich am Wirtschaftsstand etwas geändert hat (oder force).
 func _rebuild(force := false) -> void:
-	var sig := "%s|%d|%d|%s|%s|%s|%s|%s" % [tab, shop.gold, shop.wood, str(shop.inv), str(shop.stash), shop.in_fortress(), picked, _gate_sig()]
+	var sig := "%s|%d|%d|%d|%d|%s|%s|%s|%s|%s" % [tab, shop.gold, shop.wood, shop.trophies, shop.marks, str(shop.inv), str(shop.stash), shop.in_fortress(), picked, _gate_sig()]
 	if sig == _sig and not force:
 		return
 	_sig = sig
@@ -295,6 +295,11 @@ func _rebuild(force := false) -> void:
 			_fill_wood()
 		"tore":
 			_fill_gates()
+		"trophae":
+			_label(tr("Trophäen %d · Arena-Marken %d. Jeder Kriegsherr lässt eine Trophäe fallen, jeder Arena-Sieg eine Marke.") % [shop.trophies, shop.marks],
+				_list, 12, UiTheme.DIM).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			for id in shop.shop_items(tab):
+				_item_row(id)
 		_:
 			for id in shop.shop_items(tab):
 				_item_row(id)

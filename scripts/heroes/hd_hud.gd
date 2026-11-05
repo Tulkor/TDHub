@@ -33,6 +33,7 @@ var _overlay: Control
 var _floaters: Array = []        ## {pos, text, color, t}
 var _tick := 0.0
 var econ: HdShopUi               ## Gold, Inventar, Shop, Straßenleiste
+var side: HdSideUi               ## Ereignisse, Sonderzonen, nächster Kriegsherr (rechts)
 
 
 func _ready() -> void:
@@ -51,6 +52,8 @@ func _ready() -> void:
 	_build_hero()
 	econ = HdShopUi.new(game)
 	root.add_child(econ)
+	side = HdSideUi.new(game)
+	root.add_child(side)
 	_hint = _label("", root, 12, UiTheme.MUTED)
 	_hint.position = Vector2(16, 62)
 	_banner = Label.new()
@@ -245,11 +248,11 @@ func _on_float(pos: Vector3, text: String, c: Color) -> void:
 func refresh() -> void:
 	if game.state == "setup":
 		return
-	var count := int(game.cfg.waves.count)
+	var count: int = game.wave_count()
 	_wave.text = tr("Welle %d / %d") % [game.wave, count]
 	if game.wave < count:
-		_wave_bar.max_value = float(game.cfg.waves.time)
-		_wave_bar.value = float(game.cfg.waves.time) - game.wave_time
+		_wave_bar.max_value = game.wave_len(game.wave)
+		_wave_bar.value = game.wave_len(game.wave) - game.wave_time
 	else:
 		_wave_bar.max_value = 1.0
 		_wave_bar.value = 1.0
@@ -279,6 +282,7 @@ func refresh() -> void:
 	_hint.text = tr("WASD laufen · Maus zielen · Linksklick angreifen · Leertaste ausweichen · B Shop · Y Kamera · P Pause") if game.control == "wasd" \
 		else tr("Rechtsklick laufen/angreifen · Q W E R zielen, Linksklick wirken · Leertaste ausweichen · B Shop · Y Kamera · P Pause")
 	econ.refresh()
+	side.refresh()
 	var boss: HdEnemy = null
 	for e in game.enemies:
 		if not e.dead and e.rank == "boss":
@@ -286,6 +290,9 @@ func refresh() -> void:
 	_boss_panel.visible = boss != null and game.state == "play"
 	if boss:
 		_boss_name.text = tr(str(boss.def.name))
+		var phs: Array = boss.def.get("phases", [])
+		if not phs.is_empty():
+			_boss_name.text += "  " + tr("Phase %d / %d") % [boss.phase + 1, phs.size() + 1]
 		_boss_bar.max_value = boss.max_hp
 		_boss_bar.value = boss.hp
 		if boss.cc.immune(game.play_time):
@@ -355,7 +362,9 @@ func _draw_world() -> void:
 		var r := Rect2(p.x - w * 0.5, p.y - 8, w, 6)
 		_world.draw_rect(r.grow(1), Color(0, 0, 0, 0.75))
 		_world.draw_rect(Rect2(r.position, Vector2(w * clampf(e.hp / e.max_hp, 0, 1), 6)), UiTheme.MISSING if e.hit_flash <= 0.0 else UiTheme.TEXT)
-		if e.rank == "elite":
+		if e.shield > 0.0 and e.max_shield > 0.0:
+			_world.draw_rect(Rect2(r.position + Vector2(0, -3), Vector2(w * clampf(e.shield / e.max_shield, 0, 1), 2)), UiTheme.CYAN)
+		if e.rank == "elite" or not e.traits.is_empty():
 			_world.draw_rect(r.grow(2), UiTheme.COIN, false, 1.0)
 		# Aufladebalken
 		if e.casting() and str(e.cast.phase) == "windup":
@@ -637,7 +646,7 @@ func _show_end(victory: bool) -> void:
 	v.add_child(t)
 	var h: HdHero = game.hero
 	var lines: Array = [
-		tr("Welle %d / %d") % [game.wave, int(game.cfg.waves.count)],
+		tr("Welle %d / %d") % [game.wave, game.wave_count()],
 		tr("Feste %d / %d") % [game.lives, game.max_lives],
 		tr("Kills %d") % game.kills,
 		tr("%s Stufe %d: %d Schaden, %d mal ausgewichen, %d mal gefallen") % [tr(str(h.def.name)), h.level, roundi(h.damage_done), h.dodges, h.deaths],
