@@ -865,7 +865,7 @@ func _bosses() -> void:
 		v.shield = 0.0
 		v.take(v.max_hp * 0.36)
 		check(v.phase == 1 and v.extra_abilities.has("verschl_speere") and g.spawn_queue.size() >= 5 * g.roads.size(), "Phase 2: neue Fähigkeit, Gegner über alle Straßen")
-		v.take(v.max_hp * 0.31)
+		v.take(v.max_hp * 0.35)
 		check(v.phase == 2 and v.cd_mult < 0.65, "Phase 3: schnellere Fähigkeiten")
 		g.spawn_queue.clear()
 		g.hero_hit(v, 99999999.0, "test")
