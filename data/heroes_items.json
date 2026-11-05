@@ -1,5 +1,5 @@
 {
-	"_info": "Bollwerk Etappe 2a: Shop, Items, Rezepte, Holzwerte. Stufen 1–5 = Gewöhnlich, Gut, Selten, Episch, Legendär. stats: hp, mana, armor, hp_regen, mana_regen (fest) und damage, attack_speed, speed, cdr, lifesteal (Anteil, 0.1 = +10 %). price = Preis im Laden bzw. Rezeptgold, recipe = Bauteile (mehrfach möglich). use = Verbrauchs-Item mit Wirkung, stack = Ladungen je Platz. Holz: Preis = round((base + bought * growth) * Schwierigkeit.wood_price).",
+	"_info": "Bollwerk Etappe 2a: Shop, Items, Rezepte, Holzwerte. Stufen 1–5 = Gewöhnlich, Gut, Selten, Episch, Legendär. stats: hp, mana, armor, hp_regen, mana_regen (fest) und damage, attack_speed, speed, cdr, lifesteal (Anteil, 0.1 = +10 %). price = Preis im Laden bzw. Rezeptgold, recipe = Bauteile (mehrfach möglich). use = Verbrauchs-Item mit Wirkung, stack = Ladungen je Platz. Holz: Preis = round((base + bought * growth) * Schwierigkeit.wood_price). trophy/marks = Preis in Trophäen der Kriegsherren bzw. Arena-Marken (Kriegsherren-Händler, Etappe 3).",
 	"tiers": [
 		{"name": "Gewöhnlich", "color": "c8c8d0"},
 		{"name": "Gut", "color": "5ce08a"},
@@ -12,14 +12,14 @@
 		{"id": "ruest", "name": "Rüstkammer"},
 		{"id": "rezept", "name": "Rezeptmeister"},
 		{"id": "holz", "name": "Holzwerte"},
-		{"id": "tore", "name": "Torwerke"}
+		{"id": "tore", "name": "Torwerke"},
+		{"id": "trophae", "name": "Kriegsherren-Händler"}
 	],
 	"items": [
 		{"id": "heiltrank", "name": "Heiltrank", "shop": "grund", "tier": 1, "price": 50, "stack": 5, "use": {"heal": 320}, "desc": "Heilt sofort 320 Leben."},
 		{"id": "manatrank", "name": "Manatrank", "shop": "grund", "tier": 1, "price": 40, "stack": 5, "use": {"mana": 160}, "desc": "Stellt sofort 160 Mana her."},
 		{"id": "heimkehr", "name": "Schriftrolle der Heimkehr", "shop": "grund", "tier": 1, "price": 60, "stack": 3, "use": {"home": true}, "desc": "Bringt den Helden sofort in die Feste."},
 		{"id": "schutzrolle", "name": "Schutzrolle", "shop": "grund", "tier": 1, "price": 90, "stack": 3, "use": {"shield": 0.4, "time": 8.0}, "desc": "8 s lang 40 % weniger Schaden."},
-
 		{"id": "eisenklinge", "name": "Eisenklinge", "shop": "ruest", "tier": 1, "price": 180, "stats": {"damage": 0.1}},
 		{"id": "holzschild", "name": "Holzschild", "shop": "ruest", "tier": 1, "price": 150, "stats": {"armor": 2}},
 		{"id": "kraftring", "name": "Kraftring", "shop": "ruest", "tier": 1, "price": 160, "stats": {"hp": 120}},
@@ -28,22 +28,24 @@
 		{"id": "wetzstein", "name": "Wetzstein", "shop": "ruest", "tier": 1, "price": 170, "stats": {"attack_speed": 0.1}},
 		{"id": "lebensstein", "name": "Lebensstein", "shop": "ruest", "tier": 1, "price": 140, "stats": {"hp_regen": 2.5}},
 		{"id": "glutkern", "name": "Glutkern", "shop": "ruest", "tier": 2, "price": 320, "stats": {"damage": 0.08, "attack_speed": 0.06}},
-
 		{"id": "brecherklinge", "name": "Brecherklinge", "tier": 2, "price": 300, "recipe": ["eisenklinge", "kraftring"], "stats": {"damage": 0.22, "hp": 180}},
 		{"id": "turmschild", "name": "Turmschild", "tier": 2, "price": 200, "recipe": ["holzschild", "lebensstein"], "stats": {"armor": 5, "hp_regen": 4.0}},
 		{"id": "windlaeufer", "name": "Windläufer", "tier": 2, "price": 250, "recipe": ["lederstiefel", "wetzstein"], "stats": {"speed": 0.12, "attack_speed": 0.15}},
 		{"id": "weisenstab", "name": "Weisenstab", "tier": 2, "price": 250, "recipe": ["lehrlingsstab", "kraftring"], "stats": {"mana": 180, "mana_regen": 2.5, "hp": 120, "cdr": 0.1}},
 		{"id": "blutdorn", "name": "Blutdorn", "tier": 2, "price": 250, "recipe": ["eisenklinge", "lebensstein"], "stats": {"damage": 0.12, "lifesteal": 0.1, "hp_regen": 2.5}},
-
 		{"id": "schmiedesonne", "name": "Schmiedesonne", "tier": 3, "price": 600, "recipe": ["brecherklinge", "glutkern"], "stats": {"damage": 0.4, "attack_speed": 0.12, "hp": 220}},
 		{"id": "bollwerkplatte", "name": "Bollwerkplatte", "tier": 3, "price": 500, "recipe": ["turmschild", "kraftring", "kraftring"], "stats": {"armor": 9, "hp": 450, "hp_regen": 6.0}},
 		{"id": "sturmschwinge", "name": "Sturmschwinge", "tier": 3, "price": 500, "recipe": ["windlaeufer", "wetzstein", "glutkern"], "stats": {"speed": 0.15, "attack_speed": 0.32, "damage": 0.1}},
 		{"id": "erzmagierstab", "name": "Erzmagierstab", "tier": 3, "price": 500, "recipe": ["weisenstab", "lehrlingsstab"], "stats": {"mana": 350, "mana_regen": 5.0, "hp": 150, "cdr": 0.2}},
-
 		{"id": "vampirklinge", "name": "Vampirklinge", "tier": 4, "price": 900, "recipe": ["blutdorn", "schmiedesonne"], "stats": {"damage": 0.58, "attack_speed": 0.12, "hp": 240, "lifesteal": 0.18}},
 		{"id": "festungsherz", "name": "Festungsherz", "tier": 4, "price": 900, "recipe": ["bollwerkplatte", "turmschild"], "stats": {"armor": 14, "hp": 900, "hp_regen": 10.0}},
-
-		{"id": "morgenwacht", "name": "Klinge der Morgenwacht", "tier": 5, "price": 1500, "recipe": ["vampirklinge", "festungsherz", "sturmschwinge"], "stats": {"damage": 0.9, "attack_speed": 0.45, "speed": 0.15, "armor": 16, "hp": 1300, "hp_regen": 12.0, "lifesteal": 0.2}}
+		{"id": "morgenwacht", "name": "Klinge der Morgenwacht", "tier": 5, "price": 1500, "recipe": ["vampirklinge", "festungsherz", "sturmschwinge"], "stats": {"damage": 0.9, "attack_speed": 0.45, "speed": 0.15, "armor": 16, "hp": 1300, "hp_regen": 12.0, "lifesteal": 0.2}},
+		{"id": "moorkrone", "name": "Moorkrone", "shop": "trophae", "tier": 4, "price": 0, "trophy": 1, "stats": {"hp": 500, "hp_regen": 8.0, "armor": 3}, "desc": "Trophäe des Moorkönigs."},
+		{"id": "gruftsiegel", "name": "Gruftsiegel", "shop": "trophae", "tier": 4, "price": 0, "trophy": 1, "stats": {"damage": 0.25, "lifesteal": 0.08, "cdr": 0.1}, "desc": "Trophäe des Gruftfürsten."},
+		{"id": "glutherz", "name": "Glutherz", "shop": "trophae", "tier": 4, "price": 0, "trophy": 1, "stats": {"damage": 0.3, "attack_speed": 0.2}, "desc": "Trophäe aus der Glut."},
+		{"id": "kriegsherrenklinge", "name": "Kriegsherrenklinge", "shop": "trophae", "tier": 5, "price": 0, "trophy": 2, "stats": {"damage": 0.6, "attack_speed": 0.2, "lifesteal": 0.1, "hp": 400}, "desc": "Aus zwei Trophäen geschmiedet."},
+		{"id": "arenagurt", "name": "Arenagurt", "shop": "trophae", "tier": 3, "price": 0, "marks": 2, "stats": {"hp": 300, "armor": 4, "damage": 0.1}, "desc": "Für Arena-Marken."},
+		{"id": "siegerkranz", "name": "Siegerkranz", "shop": "trophae", "tier": 4, "price": 0, "marks": 4, "stats": {"damage": 0.2, "attack_speed": 0.15, "speed": 0.06}, "desc": "Für Arena-Marken."}
 	],
 	"wood": {
 		"base": 1.0,

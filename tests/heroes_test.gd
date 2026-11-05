@@ -4,6 +4,9 @@ extends Node
 ## Zurücksetzen, Verlangsamung und Rüstungssenkung auf Bossen halb), Warnflächen-Formen,
 ## Gegner-KI (Straße, Aggro, Leine, Angreifer, Helden vor Gebäuden), Fähigkeit beim Aufladen
 ## unterbrechen = trotzdem Cooldown, niemand bleibt stecken, Heldenfähigkeiten, Bot-Lauf bis zum Ende.
+## Etappe 3: 40 Wellen in 4 Fraktionen (Wiederauferstehen, Todesexplosion, Leerenschild), Flieger,
+## Elite-Eigenschaften, Kriegsherren mit Ansage und Rast, Endboss mit Landung/Belagerung/Phasen,
+## Sonderzonen (Arena, Holzhain, Schmiede, Prüfungen), Ereignisse, Kriegsherren-Händler.
 ## Etappe 2a: Straßen nach Spielerzahl, Torwerke (schneller nach Fall, reparieren, neu bauen),
 ## Teleport-Steine, Gold/Holz, Shop, Fernkauf ins Lager, Rezepte, Item-Werte am Helden, Tränke, Warnflächen-Farbe.
 
@@ -36,6 +39,12 @@ func _ready() -> void:
 	_items_data()
 	await _roads_gates()
 	await _economy()
+	_stage3_data()
+	await _factions()
+	await _flyer_elite()
+	await _bosses()
+	await _zones()
+	await _events()
 	for held in ["torvik", "unrat", "vesna", "zix"]:
 		await _bot_run(0, held)
 	print("FERTIG, Fehler: %d" % failures)
@@ -51,7 +60,7 @@ func _data() -> void:
 		ids[e.id] = true
 		for a in e.abilities:
 			check(cfg.abilities.has(a), "Fähigkeit %s von %s existiert" % [a, e.id])
-	check(cfg.waves.list.size() == int(cfg.waves.count) and int(cfg.waves.count) == 10, "10 Wellen")
+	check(cfg.waves.list.size() == int(cfg.waves.count) and int(cfg.waves.count) == 40, "40 Wellen")
 	for w in cfg.waves.list:
 		for g in w.groups:
 			check(ids.has(g[0]), "Wellen-Gegner %s existiert" % g[0])
@@ -535,7 +544,7 @@ func _items_data() -> void:
 				if ids.has(c):
 					check(int(ids[c].tier) <= int(it.tier), "Rezept %s nicht schwächer als Teil %s" % [it.id, c])
 		else:
-			check(str(it.get("shop", "")) in ["grund", "ruest"], "Item %s ist im Laden zu kaufen" % it.id)
+			check(str(it.get("shop", "")) in ["grund", "ruest", "trophae"], "Item %s ist im Laden zu kaufen" % it.id)
 	check(tiers.size() == 5, "alle 5 Stufen kommen vor (%d)" % tiers.size())
 	for st in cfg.wood.stats:
 		check(not HdShop.stat_text(st.stats).is_empty(), "Holzwert %s hat Text" % st.id)
@@ -674,6 +683,7 @@ func _bot_run(diff: int, held := "torvik") -> void:
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
+	g.wave_limit = 10
 	var runs_before: int = Profile.data().get("runs", []).size() if Profile.data().has("runs") else -1
 	_run(g, 900.0, true)
 	var h := g.hero
@@ -687,5 +697,344 @@ func _bot_run(diff: int, held := "torvik") -> void:
 		stuck += e.stuck_events
 	check(not g.result_news.is_empty() or g.state == "over", "Run im Profil eingetragen")
 	check(g.shop.gold_earned > 1000 and g.shop.crafted > 0, "Bot verdient Gold und schmiedet (%d Gold, %d Rezepte)" % [g.shop.gold_earned, g.shop.crafted])
+	g.queue_free()
+	await get_tree().process_frame
+
+
+# ---------------------------------------------------------------- Etappe 3
+
+func _stage3_data() -> void:
+	var cfg: Dictionary = Database.load_json("res://data/heroes.json")
+	var ids := {}
+	for e in cfg.enemies:
+		ids[str(e.id)] = e
+		for a in e.abilities:
+			check(cfg.abilities.has(a), "Fähigkeit %s von %s existiert" % [a, e.id])
+		if e.has("faction"):
+			check(cfg.factions.has(str(e.faction)), "Fraktion von %s existiert" % e.id)
+		for ph in e.get("phases", []):
+			for a in ph.get("add", []):
+				check(cfg.abilities.has(a), "Phasen-Fähigkeit %s existiert" % a)
+			if ph.has("summon"):
+				check(ids.has(str(ph.summon.id)) or true, "Phasen-Beschwörung")
+	for a in cfg.abilities.values():
+		if str(a.kind) == "summon":
+			check(ids.has(str(a.summon)), "Beschwörung %s existiert" % a.summon)
+	var bosses: Array = []
+	for i in cfg.waves.list.size():
+		var w: Dictionary = cfg.waves.list[i]
+		for g in w.groups:
+			check(ids.has(str(g[0])), "Welle %d: Gegner %s existiert" % [i + 1, g[0]])
+		if bool(w.get("boss", false)):
+			bosses.append(i + 1)
+	check(bosses == [10, 20, 30, 40], "Kriegsherren in Welle 10/20/30, Endboss 40 (%s)" % [bosses])
+	for z in ["arena", "hain", "schmiede", "pruefung"]:
+		var found := false
+		for x in cfg.zones.list:
+			found = found or str(x.id) == z
+		check(found, "Sonderzone %s" % z)
+	check(cfg.events.list.size() == 5, "5 Ereignisse")
+
+
+func _factions() -> void:
+	var g := await _new_game()
+	_park_hero(g)
+	g.cfg.factions.knochen.chance = 1.0
+	g.wave = 12
+	# Knochenheer: steht einmal mit 40 % Leben wieder auf
+	var e := _dummy(g, "knochenknecht", g.road_point(20.0))
+	g.hero_hit(e, 99999.0, "test")
+	_run(g, 2.5)
+	var risen: HdEnemy = null
+	for x in g.enemies:
+		if x.id == "knochenknecht" and not x.dead:
+			risen = x
+	check(risen != null and risen.risen and absf(risen.hp - risen.max_hp) < 1.0 and risen.max_hp < e.max_hp * 0.5, "Knochenknecht steht mit 40 %% Leben wieder auf")
+	if risen:
+		g.hero_hit(risen, 99999.0, "test")
+		_run(g, 2.5)
+		var again := 0
+		for x in g.enemies:
+			if x.id == "knochenknecht" and not x.dead:
+				again += 1
+		check(again == 0, "Nur einmal wieder aufstehen")
+	# Glutbrut: Todesexplosion mit Warnfläche trifft den Helden
+	g.hero.position = g.road_point(30.0) + Vector3(0.5, 0, 0)
+	var gl := _dummy(g, "glutling", g.road_point(30.0))
+	var hp0 := g.hero.hp
+	g.hero_hit(gl, 99999.0, "test")
+	check(g.blasts.size() == 1, "Glutling hinterlässt eine Warnfläche")
+	_run(g, 1.2)
+	check(g.hero.hp < hp0, "Todesexplosion trifft den Helden in der Fläche")
+	# Leere: Schild schluckt erst
+	_park_hero(g)
+	var l := _dummy(g, "leerling", g.road_point(25.0))
+	check(l.shield > 0.0 and absf(l.shield - l.max_hp * 0.3) < 1.0, "Leerling hat 30 %% Schild")
+	var hp1 := l.hp
+	l.take(l.shield * 0.5)
+	check(l.hp == hp1 and l.shield > 0.0, "Schaden geht zuerst auf den Schild")
+	l.take(l.shield + 10.0)
+	check(absf(l.hp - (hp1 - 10.0)) < 0.01, "Rest geht aufs Leben")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _flyer_elite() -> void:
+	var g := await _new_game()
+	_park_hero(g)
+	g.wave = 12
+	var f := g.spawn("knochengeier", null, 0.0, g.roads[0])
+	f.max_hp = 1e7
+	f.hp = f.max_hp
+	check(f.fly and f.fly_road != null and f.fly_road.points.size() == 2, "Flieger nimmt die gerade Fluglinie")
+	var lives0 := g.lives
+	_run(g, 30.0)
+	check(f.dead and g.lives < lives0, "Flieger erreicht die Feste über Felsen und Torwerke hinweg")
+	# Teiler: zerfällt in zwei schwächere
+	var t := _dummy(g, "glutling", g.road_point(20.0))
+	for tr_ in g.cfg.elites.traits:
+		if str(tr_.id) == "teiler":
+			t.add_trait(tr_)
+	g.hero_hit(t, 99999.0, "test")
+	_run(g, 0.2)
+	var parts := 0
+	for x in g.enemies:
+		if x.id == "glutling" and not x.dead and x.split_done:
+			parts += 1
+	check(parts == 2, "Teiler zerfällt in 2 (%d)" % parts)
+	# Elite-Eigenschaften werden in Welle 12+ verteilt
+	g.spawn_queue.clear()
+	g.start_wave(15)
+	var with_trait := 0
+	for q in g.spawn_queue:
+		if q.has("trait"):
+			with_trait += 1
+	check(with_trait == int(g.cfg.waves.list[14].elites), "Welle 15 hat %d Elite-Eigenschaften" % with_trait)
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _bosses() -> void:
+	var g := await _new_game()
+	_park_hero(g)
+	# Ansage 20 s vorher mit Straße
+	g.start_wave(19)
+	g.spawn_queue.clear()
+	var road := g.boss_road
+	check(road != null and g.roads.has(road), "Straße des Kriegsherrn steht in Welle 19 fest")
+	g.wave_time = g.wave_len(19) - 19.0
+	g.step(DT)
+	check(g.boss_warned and g._boss_marker != null, "Kriegsherr wird 20 s vorher angesagt (Markierung)")
+	g.wave_time = g.wave_len(19)
+	g.step(DT)
+	check(g.wave == 20, "Welle 20 startet")
+	var vargul = null
+	_run(g, 7.0)
+	for e in g.enemies:
+		if e.id == "vargul":
+			vargul = e
+	check(vargul != null and vargul.road == road, "Vargul kommt über die angesagte Straße")
+	check(not g.can_call_early(), "Früher rufen gesperrt, solange der Kriegsherr lebt")
+	if vargul:
+		g.hero_hit(vargul, 9999999.0, "test")
+	check(g.shop.trophies == 1, "Kriegsherr gibt eine Trophäe")
+	_run(g, 1.0)
+	check(g.rest_given and g.wave_len(20) - g.wave_time <= 45.1, "Rast: höchstens 45 s bis zur nächsten Welle")
+	# Kriegsherren-Händler
+	check(g.shop.act({"kind": "buy", "id": "moorkrone"}) == "" and g.shop.trophies == 0, "Trophäe kauft die Moorkrone")
+	check(g.shop.can_buy("glutherz") != "", "Ohne Trophäe kein weiteres Trophäen-Item")
+	# Endboss: landet vor der Feste, belagert, Phasen
+	for e in g.enemies:
+		g._remove(e)
+	g.spawn_queue.clear()
+	g.start_wave(40)
+	_run(g, 7.0)
+	var v = null
+	for e in g.enemies:
+		if e.id == "verschlinger":
+			v = e
+	check(v != null and v.zone == "siege" and v.position.distance_to(g.fortress_pos) < 16.0, "Verschlinger landet vor der Feste")
+	if v:
+		for e in g.enemies:
+			if e != v:
+				g._remove(e)
+		g.spawn_queue.clear()
+		var lives0 := g.lives
+		_run(g, 9.0)
+		check(g.lives < lives0, "Endboss ohne Ziel belagert die Feste")
+		v.shield = 0.0
+		v.take(v.max_hp * 0.36)
+		check(v.phase == 1 and v.extra_abilities.has("verschl_speere") and g.spawn_queue.size() >= 5 * g.roads.size(), "Phase 2: neue Fähigkeit, Gegner über alle Straßen")
+		v.take(v.max_hp * 0.35)
+		check(v.phase == 2 and v.cd_mult < 0.65, "Phase 3: schnellere Fähigkeiten")
+		g.spawn_queue.clear()
+		g.hero_hit(v, 99999999.0, "test")
+		for e in g.enemies:
+			g._remove(e)
+		_run(g, 0.5)
+		check(g.state == "over" and g.lives > 0, "Sieg nach dem Endboss")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _zones() -> void:
+	var g := await _new_game()
+	var z := g.zones
+	check(g.stones.filter(func(s): return s.has("zone")).size() == 8, "Je Sonderzone zwei Teleport-Steine")
+	g.wave = 5
+	check(not z.is_open("arena") and not z.is_open("schmiede"), "Arena/Schmiede anfangs zu")
+	# Stein in der Feste bringt in die Schmiede (ab Welle 6)
+	g.wave = 6
+	for st in g.stones:
+		if st.get("zone", "") == "schmiede" and st.out:
+			g.hero.position = st.pos
+	_run(g, 1.2)
+	check(z.hero_zone() == "schmiede", "Teleport-Stein bringt in die Schmiede")
+	# Schmiede: veredeln und Edelstein
+	g.shop.gold = 5000
+	g.shop.inv[0] = {"id": "eisenklinge", "n": 1}
+	g.shop._changed()
+	var dmg0 := g.hero.b("damage")
+	check(g.shop.act({"kind": "upgrade", "where": "hero", "i": 0}) == "" and int(g.shop.inv[0].up) == 1, "Veredeln auf +1")
+	check(g.hero.b("damage") > dmg0, "Veredeltes Item gibt mehr Schaden")
+	check(g.shop.act({"kind": "socket", "where": "hero", "i": 0, "gem": "rubin"}) == "", "Rubin einsetzen")
+	check(g.shop.act({"kind": "socket", "where": "hero", "i": 0, "gem": "topas"}) == "" and g.shop.inv[0].gems == ["topas"], "Voller Sockel: neuer Stein ersetzt den alten")
+	check(g.hero.b("attack_speed") >= 0.06, "Topas gibt Angriffstempo")
+	for k in 6:
+		g.shop.act({"kind": "upgrade", "where": "hero", "i": 0})
+	check(int(g.shop.inv[0].up) <= 5, "Höchstens +5")
+	# Arena ab Welle 11
+	g.wave = 11
+	g.hero.position = z.center("arena") + Vector3(6, 0, 0)
+	g.hero.move_dir = Vector3.ZERO
+	check(g.shop.act({"kind": "arena"}) == "" and z.arena_fight != null, "Arena-Kampf beginnt")
+	check(g.shop.act({"kind": "arena"}) != "", "Nur ein Wächter gleichzeitig")
+	var wh0: float = z.arena_fight.max_hp
+	var hp0 := g.hero.max_hp
+	g.hero_hit(z.arena_fight, 9999999.0, "test")
+	check(z.arena_wins == 1 and g.shop.marks == 1 and g.hero.max_hp > hp0, "Arena-Sieg: Marke und dauerhafte Werte")
+	g.shop.act({"kind": "arena"})
+	check(z.arena_fight.max_hp > wh0 * 1.3, "Nächster Wächter ist stärker")
+	g.hero.position = g.hero_spawn()
+	_run(g, 3.5)
+	check(z.arena_fight == null, "Arena verlassen = Kampf verloren")
+	# Holzhain: Geister geben Holz, Holzfäller arbeiten im Hain
+	g.hero.position = z.center("hain")
+	_run(g, 6.0)
+	var spirit = null
+	for e in g.enemies:
+		if e.zone == "hain" and not e.dead:
+			spirit = e
+	check(spirit != null, "Hain-Geist erscheint")
+	var w0 := g.shop.wood
+	var gold0 := g.shop.gold
+	if spirit:
+		g.hero_hit(spirit, 99999.0, "test")
+	check(g.shop.wood == w0 + 1 and g.shop.gold == gold0, "Hain-Geist gibt Holz statt Gold")
+	check(g.shop.act({"kind": "lumberjack"}) == "" and z.lumberjacks == 1, "Holzfäller kaufen")
+	w0 = g.shop.wood
+	z._jack_t = 0.0
+	for e in g.enemies:
+		if e.zone == "hain":
+			g._remove(e)
+	g.hero.position = z.center("hain")
+	g.hero.hp = g.hero.max_hp
+	for k in int(16.0 / DT):
+		g.hero.position = z.center("hain")
+		g.step(DT)
+	check(g.shop.wood > w0, "Holzfäller bringt Holz, solange der Held im Hain ist")
+	# Prüfungen: Jagd
+	g.wave = 13
+	g.hero.position = z.center("pruefung")
+	check(g.shop.act({"kind": "trial", "id": "jagd"}) == "", "Prüfung Jagd startet")
+	var stash0 := g.shop.count_free("stash")
+	var k := 0
+	while not z.trial.is_empty() and k < 2000:
+		g.hero.position = z.center("pruefung")
+		for e in g.enemies:
+			if e.zone == "pruefung" and not e.dead:
+				g.hero_hit(e, 9999.0, "test")
+				break
+		g.step(DT)
+		k += 1
+	check(g.shop.count_free("stash") == stash0 - 1, "Jagd bestanden: seltenes Item im Lager")
+	check(g.shop.act({"kind": "trial", "id": "jagd"}) != "", "Prüfung danach einige Wellen gesperrt")
+	# Funkentanz: stehen bleiben = getroffen
+	check(g.shop.act({"kind": "trial", "id": "tanz"}) == "", "Funkentanz startet")
+	_run(g, 4.0)
+	check(z.trial.is_empty(), "Funkentanz: Treffer beendet die Prüfung")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+func _events() -> void:
+	var g := await _new_game()
+	var ev := g.events
+	_park_hero(g)
+	g.wave = 4
+	# Wanderhändler
+	ev.start("haendler")
+	check(g.shop.merchant.size() == 3, "Händler bietet 3 Items")
+	g.shop.gold = 99999
+	check(g.shop.act({"kind": "merchant", "i": 0}) == "" and g.shop.merchant[0].sold, "Händler-Item kaufen")
+	_run(g, 61.0)
+	check(g.shop.merchant.is_empty() and ev.active.is_empty(), "Händler zieht nach 60 s weiter")
+	# Blutmond
+	g.spawn_queue.clear()
+	ev.start("blutmond")
+	check(not ev.choice.is_empty(), "Blutmond fragt nach")
+	check(g.shop.act({"kind": "event", "pick": 0}) == "" and g.blood_wave == g.wave + 1, "Ja: Blutmond auf der nächsten Welle")
+	g.start_wave(g.wave + 1)
+	var e := g.spawn("sumpfling", null, 0.0, g.roads[0])
+	var plain := float(e.def.hp) * float(g.diff().hp) * float(g.scaling().hp) * (1.0 + float(g.cfg.waves.scale_hp) * (g.wave - 1))
+	check(absf(e.max_hp - plain * 2.0) < 1.0 and e.reward == 2.0, "Blutmond: doppeltes Leben, doppelte Belohnung")
+	for x in g.enemies:
+		g._remove(x)
+	g.spawn_queue.clear()
+	# Schrein: Gold opfern → Segen
+	ev.start("schrein")
+	var dmg0 := g.hero.b("damage")
+	check(g.shop.act({"kind": "event", "pick": 1}) == "" and g.hero.b("damage") > dmg0, "Schrein: Gold gegen Segen")
+	g.start_wave(g.wave + 3)
+	check(g.blessing.is_empty() and absf(g.hero.b("damage") - dmg0) < 0.001, "Segen endet nach 3 Wellen")
+	# Schrein ohne Antwort = abgelehnt
+	ev.start("schrein")
+	_run(g, float(g.cfg.events.choose_time) + 0.5)
+	check(ev.choice.is_empty() and g.blessing.is_empty(), "Ohne Antwort gilt Ablehnen")
+	g.spawn_queue.clear()
+	# Karawane
+	ev.start("karawane")
+	var c: HdAlly = ev.active.ally
+	check(c != null and g.buildings.has(c), "Karawane zieht los")
+	var gold0 := g.shop.gold
+	c.position = c.route[c.route.size() - 1] + Vector3(0.3, 0, 0)
+	c.leg = c.route.size() - 1
+	_run(g, 1.0)
+	check(ev.active.is_empty() and g.shop.gold > gold0, "Karawane am Ziel bringt Gold")
+	# Gefangener
+	g.spawn_queue.clear()
+	ev.start("gefangener")
+	check(ev.guards_left() == 3, "Gefangener mit 3 Wachen")
+	for x in g.enemies:
+		if x.zone == "kerker":
+			g.hero_hit(x, 999999.0, "test")
+	for k in int(2.5 / DT):
+		g.hero.position = ev.active.pos + Vector3(2.0, 0, 0)
+		g.step(DT)
+	check(ev.active.has("ally") and g.buildings.has(ev.active.ally), "Befreite kämpft mit")
+	var ally: HdAlly = ev.active.ally
+	for x in g.enemies:
+		g._remove(x)
+	g.spawn_queue.clear()
+	g.hero.position = g.road_point(20.0)
+	ally.position = g.hero.position + Vector3(1.5, 0, 0)
+	var foe := _dummy(g, "sumpfling", g.road_point(22.0))
+	foe.max_hp = 1e6
+	foe.hp = 1e6
+	var fhp := foe.hp
+	_run(g, 4.0)
+	check(foe.dead or foe.hp < fhp, "Befreite greift Gegner an")
+	g.start_wave(g.wave + 3)
+	check(ev.active.is_empty() and not is_instance_valid(ally) or ally.is_queued_for_deletion(), "Befreite zieht nach 2 Wellen weiter")
 	g.queue_free()
 	await get_tree().process_frame

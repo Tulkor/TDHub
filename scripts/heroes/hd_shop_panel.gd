@@ -114,7 +114,9 @@ func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 	if shop.item(entry.id).has("stack"):
 		s.set_count(str(int(entry.n)))
 	s.drag_data = {"inv": true, "where": where, "i": i}
-	var tip := shop.tooltip(entry.id)
+	var tip := shop.tooltip(entry.id, entry)
+	if int(entry.get("up", 0)) > 0:
+		s.set_count("+%d" % int(entry.up))
 	if where == "hero" and s.consumable:
 		tip += "\n" + tr("Klick: benutzen")
 	s.tooltip_text = tip
@@ -174,7 +176,7 @@ func _update_roads() -> void:
 			_road_rows.append({"road": r, "label": l})
 	var counts := {}
 	for e in game.enemies:
-		if not e.dead and e.road != null:
+		if not e.dead and e.zone == "":
 			counts[e.road] = int(counts.get(e.road, 0)) + 1
 	for row in _road_rows:
 		var r: HdRoad = row.road
@@ -185,7 +187,11 @@ func _update_roads() -> void:
 		row.label.add_theme_color_override("font_color", UiTheme.MISSING if hurt else (UiTheme.GOLD if n > 0 else UiTheme.TEXT))
 	if not game.tp_stone.is_empty():
 		var hold := float(game.cfg.arena.teleport.get("hold", 0.8))
-		var dest: String = tr("zur %s") % tr(game.tp_stone.road.name) if game.tp_stone.out else tr("zur Feste")
+		var dest: String = tr("zur Feste")
+		if game.tp_stone.has("zone"):
+			dest = tr("zur Sonderzone %s") % tr(str(game.zones.def(str(game.tp_stone.zone)).name)) if game.tp_stone.out else tr("zur Feste")
+		elif game.tp_stone.out:
+			dest = tr("zur %s") % tr(game.tp_stone.road.name)
 		_tp.text = tr("Teleport %s %d %%") % [dest, roundi(clampf(game.tp_hold / hold, 0, 1) * 100.0)]
 	else:
 		_tp.text = ""
@@ -272,7 +278,7 @@ func is_open() -> bool:
 
 ## Alles neu aufbauen, wenn sich am Wirtschaftsstand etwas geändert hat (oder force).
 func _rebuild(force := false) -> void:
-	var sig := "%s|%d|%d|%s|%s|%s|%s|%s" % [tab, shop.gold, shop.wood, str(shop.inv), str(shop.stash), shop.in_fortress(), picked, _gate_sig()]
+	var sig := "%s|%d|%d|%d|%d|%s|%s|%s|%s|%s" % [tab, shop.gold, shop.wood, shop.trophies, shop.marks, str(shop.inv), str(shop.stash), shop.in_fortress(), picked, _gate_sig()]
 	if sig == _sig and not force:
 		return
 	_sig = sig
@@ -289,6 +295,11 @@ func _rebuild(force := false) -> void:
 			_fill_wood()
 		"tore":
 			_fill_gates()
+		"trophae":
+			_label(tr("Trophäen %d · Arena-Marken %d. Jeder Kriegsherr lässt eine Trophäe fallen, jeder Arena-Sieg eine Marke.") % [shop.trophies, shop.marks],
+				_list, 12, UiTheme.DIM).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			for id in shop.shop_items(tab):
+				_item_row(id)
 		_:
 			for id in shop.shop_items(tab):
 				_item_row(id)
@@ -362,7 +373,7 @@ func _item_row(id: String) -> void:
 			b.disabled = shop.can_craft(id, true) != ""
 			b.tooltip_text = tr("Kauft die fehlenden Teile mit und schmiedet sofort")
 	else:
-		var b := UiUtil.button(tr("%d Gold") % int(it.price), h, func(): _say(shop.act({"kind": "buy", "id": id})))
+		var b := UiUtil.button(shop.price_text(id), h, func(): _say(shop.act({"kind": "buy", "id": id})))
 		b.disabled = shop.can_buy(id) != ""
 		b.tooltip_text = shop.can_buy(id)
 		b.custom_minimum_size.x = 92
