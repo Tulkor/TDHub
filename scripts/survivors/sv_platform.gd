@@ -39,8 +39,9 @@ func _ready() -> void:
 	var metal := SvDev.metal(Color("8a909c"))
 	var dark := SvDev.metal(Color("4a4f5a"))
 	# Fuß, schlanke Säule, die sich nach oben zum Deck hin aufweitet (Lukas 2026-11-04)
-	var foot := _cyl(2.0, 2.3, 0.35, 6, dark)
-	foot.position.y = 0.17
+	# Fuß reicht ins Wasser des Eislochs
+	var foot := _cyl(2.0, 2.3, 1.6, 6, dark)
+	foot.position.y = -0.45
 	var col := _cyl(DECK_R - 0.35, 1.25, DECK_Y - 0.6, 6, metal)
 	col.position.y = 0.35 + (DECK_Y - 0.6) * 0.5 - 0.05
 	# Leuchtleisten an den Kanten der Säule

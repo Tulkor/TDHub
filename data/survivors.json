@@ -1,6 +1,6 @@
 {
 	"_info": "Tower Survivors (Arbeitstitel): ein Turm als Waffenplattform in der Mitte, Gegner kommen von allen Seiten. Waffen kaufen und auf Montageplätze setzen (gleiche Waffe nochmal kaufen = Stufe hoch), Upgrades, alle 5 Wellen ein Bonus. Waffenmodelle sind Bausteine (model: s = box|cyl|cone|sphere, size, p = Position, r = Drehung in Grad, c = type|dark|light|glow), Lauf zeigt nach -Z. kind: bullet (Geschoss), lob (Bogen mit Fläche), beam (sofort, chain = Sprünge), line (durchschlagender Strahl), cone (Kegel, tickt), nova (Ring um den Turm). Werte je Stufe: damage * (1 + level_damage * (Stufe-1)).",
-	"arena": {"radius": 24.0, "spawn_radius": 25.0, "tower_radius": 4.5},
+	"arena": {"radius": 24.0, "spawn_radius": 25.0, "tower_radius": 6.2},
 	"start": {"gold": 120, "hp": 600, "armor": 2, "regen": 3.0, "income": 2.0, "slots": 3, "max_slots": 6, "weapon": "mg"},
 	"waves": {"count": 30, "duration": 30.0, "spawn_time": 24.0, "hp_growth": 1.085, "budget_base": 14, "budget_growth": 1.09, "boss_every": 10, "perk_every": 5, "wave_bonus": 30, "wave_bonus_growth": 8},
 	"difficulties": [

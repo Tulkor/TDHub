@@ -20,6 +20,7 @@ var slow_immune := false
 var stop_dist := 3.0
 var attacking := false
 var dead := false
+var ground: Callable  ## Bodenhöhe (x, z) → y, SvWorld.height_at
 
 var slow_pct := 0.0
 var slow_time := 0.0
@@ -137,13 +138,15 @@ func step(dt: float) -> float:
 	_bob += dt * 4.0
 	if fly:
 		_body.position.y = 2.2 + size * 0.5 + sin(_bob) * 0.15
-	var flat := Vector3(position.x, 0, position.z)
+	var flat := Vector3(position.x, 0, position.z)  # Abstand nur in der Ebene
 	var d := flat.length()
 	if d > stop_dist:
 		attacking = false
 		var mv := minf(current_speed() * dt, d - stop_dist)
 		position -= flat.normalized() * mv
-		look_at(Vector3(0, position.y, 0), Vector3.UP)
+		if ground.is_valid():
+			position.y = ground.call(position.x, position.z)
+		look_at(Vector3(0.001, position.y, 0), Vector3.UP)
 		return 0.0
 	attacking = true
 	# kleines Wippen beim Angriff

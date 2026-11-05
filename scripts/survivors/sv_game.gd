@@ -50,6 +50,7 @@ var _wave_damage := 0.0
 var _mods_cache: Dictionary = {}
 
 var platform: SvPlatform
+var land: SvWorld
 var fx: SvFx
 var world: Node3D
 var camera: Camera3D
@@ -131,11 +132,11 @@ func _build_world() -> void:
 
 	var r := float(cfg.arena.radius)
 	# Eisfläche mit verschneiten Inseln, weit draußen Ozean (SvWorld)
-	var land := SvWorld.new()
+	land = SvWorld.new()
 	world.add_child(land)
 	land.build(r)
 	# Rand der Arena in Akzentfarbe, Reichweiten-Hilfsringe alle 5 Einheiten
-	for k in [r] + [5.0, 10.0, 15.0]:
+	for k in [r]:
 		var rg := MeshInstance3D.new()
 		var tm := TorusMesh.new()
 		tm.inner_radius = k - (0.12 if k == r else 0.04)
@@ -143,7 +144,7 @@ func _build_world() -> void:
 		tm.rings = 96
 		tm.ring_segments = 3
 		rg.mesh = tm
-		rg.position.y = 0.02
+		rg.position.y = 0.4  # über den Bodenwellen der Arena
 		rg.material_override = SvDev.flat(UiTheme.GOLD if k == r else Color("8a90a0"), 1.0 if k == r else 0.5)
 		world.add_child(rg)
 
@@ -352,6 +353,8 @@ func _spawn(id: String, angle: float) -> void:
 	e.gold *= 1.0 + 0.04 * (wave - 1)
 	var r := float(cfg.arena.spawn_radius)
 	e.position = Vector3(cos(angle) * r, 0, sin(angle) * r)
+	e.ground = land.height_at
+	e.position.y = land.height_at(e.position.x, e.position.z)
 	world.add_child(e)
 	enemies.append(e)
 

@@ -20,8 +20,8 @@ var wave_damage := 0.0
 var _kick := 0.0
 
 ## Zuschläge wegen der großen Plattform: Zielsuche ab Turmmitte, Flächen (Kegel, Nova) ab dem Platz
-const REACH_BONUS := 1.5
-const AREA_BONUS := 1.2
+const REACH_BONUS := 3.0
+const AREA_BONUS := 2.6
 
 
 func _init(g, d: Dictionary, s: int) -> void:
