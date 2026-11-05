@@ -25,6 +25,7 @@ var dmg_mult := 1.0
 var cc: HdCc
 var dead := false
 var state := "road"            ## road | chase | return
+var road  ## HdRoad, auf der der Gegner läuft
 var road_s := 0.0
 var lane := 0.0
 var anchor_s := 0.0
@@ -46,6 +47,18 @@ var knock_t := 0.0
 var wants_move := false
 var stuck_events := 0
 var hit_flash := 0.0
+## Schwächungen durch Helden (König Unrat, Vesna, Zix)
+var rats := 0                  ## Ratten auf dem Gegner (Rattenschwarm)
+var rats_until := 0.0
+var rat_tick := 0.0
+var rat_bite := 0.0            ## Schaden je Ratte und Biss
+var rat_armor := 0.0           ## Rüstungssenkung je Biss-Stapel
+var rat_stacks := 0
+var plague_until := 0.0        ## Rattenseuche: weniger Schaden, weniger Heilung, springt beim Tod über
+var plague := {}               ## Werte der Seuche (weaken, heal_cut, time, jumps, range)
+var heal_cut_until := 0.0      ## Spritzengewehr/Seuche: erhaltene Heilung gesenkt (für künftige Heiler)
+var taunt_src: Node3D = null   ## Schrottbot/Magnetköder: muss dieses Ziel angreifen
+var taunt_until := 0.0
 var _stuck_t := 0.0
 var _stuck_pos := Vector3.ZERO
 var _stuck_n := 0
@@ -62,7 +75,7 @@ func setup(g, d: Dictionary, wave: int) -> void:
 	rank = str(d.get("rank", "normal"))
 	var diff: Dictionary = game.diff()
 	var w: Dictionary = game.cfg.waves
-	max_hp = float(d.hp) * float(diff.hp) * (1.0 + float(w.scale_hp) * (wave - 1))
+	max_hp = float(d.hp) * float(diff.hp) * float(game.scaling().hp) * (1.0 + float(w.scale_hp) * (wave - 1))
 	hp = max_hp
 	armor = float(d.get("armor", 0))
 	speed = float(d.speed)
@@ -106,6 +119,73 @@ func casting() -> bool:
 	return not cast.is_empty()
 
 
+## Schadensfaktor nach Schwierigkeit, Welle und Rattenseuche.
+func out_mult() -> float:
+	if game.play_time < plague_until:
+		return dmg_mult * (1.0 - float(plague.get("weaken", 0.0)))
+	return dmg_mult
+
+
+## Rattenschwarm: n Ratten springen auf (höchstens max), beißen jede Sekunde, senken je Biss die Rüstung.
+func add_rats(n: int, cap: int, time: float, bite: float, armor_per: float, plague_def: Dictionary) -> void:
+	rats = mini(cap, rats + n)
+	rats_until = game.play_time + time
+	rat_bite = bite
+	rat_armor = armor_per
+	plague = plague_def
+	if rat_tick <= 0.0:
+		rat_tick = 1.0
+
+
+## Ratten fallen ab (Zeit um oder abgeschüttelt): Rattenseuche bleibt auf dem Ziel.
+func drop_rats() -> void:
+	if rats <= 0:
+		return
+	rats = 0
+	rat_stacks = 0
+	if not plague.is_empty():
+		apply_plague(plague)
+
+
+func apply_plague(p: Dictionary) -> void:
+	plague = p
+	plague_until = game.play_time + float(p.get("time", 6.0))
+	heal_cut_until = maxf(heal_cut_until, plague_until)
+
+
+func plagued() -> bool:
+	return game.play_time < plague_until
+
+
+## Ratten beißen, Spott läuft ab. Ansturm/Sprung schüttelt die Ratten ab.
+func step_debuffs(dt: float, now: float) -> void:
+	if taunt_src and (now >= taunt_until or not is_instance_valid(taunt_src) or not taunt_src.alive()):
+		taunt_src = null
+	if rats <= 0:
+		return
+	if now >= rats_until or (casting() and str(cast.ab.kind) == "charge"):
+		drop_rats()
+		return
+	rat_tick -= dt
+	if rat_tick <= 0.0:
+		rat_tick += 1.0
+		rat_stacks = mini(rat_stacks + rats, 25)
+		cc.reduce_armor("ratten", rat_armor * rat_stacks, 4.0, now)
+		game.hero_hit(self, rat_bite * rats, "rats", true)
+
+
+## Spott: greift taunter für time Sekunden an (Leine gilt trotzdem).
+func taunt(taunter: Node3D, time: float) -> void:
+	if rank == "boss" and taunt_src == null and game.rng.randf() < 0.5:
+		return
+	taunt_src = taunter
+	taunt_until = game.play_time + time
+	if state == "road":
+		anchor_s = road_s
+	state = "chase"
+	target = taunter
+
+
 # ---------------------------------------------------------------- Schritt
 
 func step(dt: float, now: float) -> void:
@@ -143,7 +223,7 @@ func step(dt: float, now: float) -> void:
 		else:
 			_move(target.position - position, dt, now)
 	elif state == "return":
-		var p: Vector3 = game.road_point(anchor_s, lane)
+		var p: Vector3 = road.point(anchor_s, lane)
 		if _flat_dist(p) < 1.5:
 			state = "road"
 			road_s = anchor_s
@@ -155,15 +235,15 @@ func step(dt: float, now: float) -> void:
 
 
 func _follow_road(dt: float, now: float) -> void:
-	road_s = maxf(road_s, game.road_project(position, road_s - 2.0, road_s + 8.0))
-	if road_s >= game.road_len - 1.0:
+	road_s = maxf(road_s, road.project(position, road_s - 2.0, road_s + 8.0))
+	if road_s >= road.length - 1.0:
 		game.leak(self)
 		return
 	var ahead: float = road_s + float(game.cfg.ai.road_lookahead)
-	_move(game.road_point(ahead, lane) - position, dt, now)
+	_move(road.point(ahead, lane) - position, dt, now, road.speed_mult())
 
 
-func _move(v: Vector3, dt: float, now: float) -> void:
+func _move(v: Vector3, dt: float, now: float, mult := 1.0) -> void:
 	v.y = 0.0
 	if v.length_squared() < 0.0001:
 		return
@@ -174,7 +254,7 @@ func _move(v: Vector3, dt: float, now: float) -> void:
 		dir = (dir * 0.35 + _side_dir).normalized()
 	wants_move = true
 	_face(dir)
-	game.move_unit(self, dir, speed * cc.speed_factor(now), dt)
+	game.move_unit(self, dir, speed * mult * cc.speed_factor(now), dt)
 
 
 func _face(v: Vector3) -> void:
@@ -192,14 +272,16 @@ func _flat_dist(p: Vector3) -> float:
 
 func _choose_target() -> void:
 	if state == "chase":
-		var anchor: Vector3 = game.road_point(anchor_s, lane)
+		var anchor: Vector3 = road.point(anchor_s, lane)
 		var lost: bool = target == null or not is_instance_valid(target) or not target.alive()
 		if lost or _flat_dist(anchor) > float(def.leash):
 			drop_target(float(game.cfg.ai.reaggro_block))
 			return
 	var want: Node3D = null
 	var hero = game.hero
-	if hero and hero.alive() and reaggro_block <= 0.0 and (provoked_hero or _flat_dist(hero.position) <= float(def.aggro) + hero.radius):
+	if taunt_src and is_instance_valid(taunt_src) and taunt_src.alive():
+		want = taunt_src
+	elif hero and hero.alive() and reaggro_block <= 0.0 and (provoked_hero or _flat_dist(hero.position) <= float(def.aggro) + hero.radius):
 		want = hero
 	elif provoked_building and is_instance_valid(provoked_building) and provoked_building.alive():
 		want = provoked_building
@@ -219,6 +301,7 @@ func _choose_target() -> void:
 ## Ziel fallen lassen und zur Straße zurück (Leine gerissen, Ziel tot, festgehangen).
 func drop_target(block := 0.0) -> void:
 	target = null
+	taunt_src = null
 	provoked_hero = false
 	provoked_building = null
 	reaggro_block = block
@@ -238,7 +321,7 @@ func provoke(source: Node3D) -> void:
 func _attack() -> void:
 	var a: Dictionary = def.attack
 	attack_cd = float(a.interval)
-	var dmg := float(a.damage) * dmg_mult
+	var dmg := float(a.damage) * out_mult()
 	if bool(a.get("ranged", false)):
 		game.fx.tracer(position + Vector3(0, height() * 0.7, 0), target.position + Vector3(0, 1.0, 0), Color("c9a35a"))
 	if target == game.hero:
@@ -270,14 +353,14 @@ func _check_stuck(dt: float, now: float) -> void:
 			if state == "chase":
 				drop_target(2.0)
 			else:
-				road_s = game.road_project(position, 0.0, game.road_len)
+				road_s = road.project(position, 0.0, road.length)
 				anchor_s = road_s
 				lane = game.rng.randf_range(-0.5, 0.5)
 				if state == "return":
 					state = "road"
 		if _stuck_n >= 5:
 			# letzte Rettung: ein Stück direkt Richtung Straßenmitte schieben, Hindernisse lösen danach auf
-			var p: Vector3 = game.road_point(road_s + 2.0, 0.0)
+			var p: Vector3 = road.point(road_s + 2.0, 0.0)
 			position += (p - position).limit_length(1.5)
 			_stuck_n = 0
 	else:
@@ -429,7 +512,7 @@ func _step_cast(dt: float, now: float) -> void:
 				for t in cast.tele:
 					if is_instance_valid(t):
 						t.flash = 0.7
-				game.ability_hit_area(self, HdTelegraph.CIRCLE, position, facing, float(ab.radius), 0, 0, 0, 0, float(ab.damage) * dmg_mult, 0.0)
+				game.ability_hit_area(self, HdTelegraph.CIRCLE, position, facing, float(ab.radius), 0, 0, 0, 0, float(ab.damage) * out_mult(), 0.0)
 			if cast.t >= float(ab.duration):
 				_body.rotation.y = 0.0
 				_next_or_end()
@@ -437,14 +520,14 @@ func _step_cast(dt: float, now: float) -> void:
 
 func _fire(_now: float) -> void:
 	var ab: Dictionary = cast.ab
-	var dmg := float(ab.get("damage", 0.0)) * dmg_mult
+	var dmg := float(ab.get("damage", 0.0)) * out_mult()
 	var kind := str(ab.kind)
 	match kind:
 		"circle", "cone", "ring":
 			for t in cast.tele:
 				game.tele_hit(self, t, dmg, 0.0)
 				if kind == "circle" and float(ab.get("pool", 0.0)) > 0.0:
-					game.add_pool(t.position, float(ab.radius), float(ab.pool_dps) * dmg_mult, float(ab.pool), self)
+					game.add_pool(t.position, float(ab.radius), float(ab.pool_dps) * out_mult(), float(ab.pool), self)
 		"charge":
 			for t in cast.tele:
 				game.tele_hit(self, t, dmg, float(ab.get("knockdown", 0.0)))

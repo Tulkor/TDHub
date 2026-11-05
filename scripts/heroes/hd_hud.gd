@@ -32,6 +32,7 @@ var _banner_t := 0.0
 var _overlay: Control
 var _floaters: Array = []        ## {pos, text, color, t}
 var _tick := 0.0
+var econ: HdShopUi               ## Gold, Inventar, Shop, Straßenleiste
 
 
 func _ready() -> void:
@@ -48,6 +49,8 @@ func _ready() -> void:
 	_build_top()
 	_build_boss()
 	_build_hero()
+	econ = HdShopUi.new(game)
+	root.add_child(econ)
 	_hint = _label("", root, 12, UiTheme.MUTED)
 	_hint.position = Vector2(16, 62)
 	_banner = Label.new()
@@ -267,17 +270,15 @@ func refresh() -> void:
 	var st: Array = []
 	if h.dead:
 		st.append(tr("Wiederbelebung in %d s") % ceili(h.respawn_t))
-	if h.form_t > 0.0:
-		st.append(tr("Windaufstieg %d s") % ceili(h.form_t))
-	if h.empowered:
-		st.append(tr("Donnerhieb verstärkt"))
+	st.append_array(h.status_lines())
 	if h.cc.stunned(game.play_time):
 		st.append(tr("Betäubt"))
 	_status.text = "  ".join(st)
 	for i in 5:
 		_fill_slot(i)
-	_hint.text = tr("WASD laufen · Maus zielen · Linksklick angreifen · Leertaste ausweichen · Y Kamera · P Pause") if game.control == "wasd" \
-		else tr("Rechtsklick laufen/angreifen · Q W E R zielen, Linksklick wirken · Leertaste ausweichen · Y Kamera · P Pause")
+	_hint.text = tr("WASD laufen · Maus zielen · Linksklick angreifen · Leertaste ausweichen · B Shop · Y Kamera · P Pause") if game.control == "wasd" \
+		else tr("Rechtsklick laufen/angreifen · Q W E R zielen, Linksklick wirken · Leertaste ausweichen · B Shop · Y Kamera · P Pause")
+	econ.refresh()
 	var boss: HdEnemy = null
 	for e in game.enemies:
 		if not e.dead and e.rank == "boss":
@@ -326,7 +327,7 @@ func _fill_slot(i: int) -> void:
 		s.cd.text = "%.1f s" % cdv if cdv > 0.0 else tr("bereit")
 	var selected: bool = i == game.preview_slot
 	s.panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2, 6) if selected
-		else UiTheme.box(UiTheme.PANEL_2, UiTheme.GOLD if (i == 0 and h.empowered) else UiTheme.BORDER, 0, 2, 6))
+		else UiTheme.box(UiTheme.PANEL_2, UiTheme.GOLD if (i < 4 and h.slot_glow(i)) else UiTheme.BORDER, 0, 2, 6))
 	s.shade.visible = not ready
 	if cdv > 0.0:
 		s.shade.anchor_top = 1.0 - clampf(cdv / maxf(total, 0.01), 0.0, 1.0)
@@ -456,23 +457,20 @@ func show_setup() -> void:
 	UiTheme.title(t, 32)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	var d := _label("Halte die Sumpfstraße: Gegner kommen in 10 Wellen auf die Feste zu. Rote Flächen am Boden kündigen ihre Fähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
+	var d := _label("Halte die Feste Morgenwacht: Gegner kommen in 10 Wellen über die Straßen, Vorwerk und Innentor bremsen sie. Mit Gold kaufst du Items und schmiedest Rezepte, Holz gibt dauerhafte Werte. Farbige Flächen am Boden kündigen Gegnerfähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	UiTheme.caption("Held", v)
-	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_2, UiTheme.PURPLE, 0, 2, 12))
-	v.add_child(card)
-	var cv := VBoxContainer.new()
-	cv.add_theme_constant_override("separation", 4)
-	card.add_child(cv)
-	var hd: Dictionary = game.cfg.hero
-	_label("%s · %s" % [tr(str(hd.name)), tr(str(hd.title))], cv, 16, UiTheme.PURPLE_LIGHT, true)
-	var lines: Array = [tr("Passiv %s: %s") % [tr(str(hd.passive.name)), tr(str(hd.passive.desc))]]
-	for a in hd.abilities:
-		lines.append("%s: %s" % [tr(str(a.name)), tr(str(a.desc))])
-	var info := _label("\n".join(lines), cv, 12, UiTheme.DIM)
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.custom_minimum_size.x = 580
+	var names: Array = []
+	for id in game.hero_list:
+		names.append(tr(str(game.hero_defs[id].name)))
+	var info_box := VBoxContainer.new()
+	info_box.add_theme_constant_override("separation", 8)
+	_choice_row(v, names, game.hero_list.find(game.hero_id), func(k):
+		game.set_hero(str(game.hero_list[k]))
+		game.save_settings()
+		_fill_hero_info(info_box))
+	v.add_child(info_box)
+	_fill_hero_info(info_box)
 	UiTheme.caption("Schwierigkeit", v)
 	var diffs: Array = []
 	for x in game.cfg.difficulties:
@@ -483,10 +481,108 @@ func show_setup() -> void:
 	_choice_row(v, [tr("WASD + Maus"), tr("Maus (wie WC3)")], 0 if game.control == "wasd" else 1, func(k):
 		game.control = "wasd" if k == 0 else "maus"
 		game.save_settings())
+	UiTheme.caption("Straßen", v)
+	_choice_row(v, [tr("2 (wie bei 1–3 Spielern)"), tr("alle 4")], 1 if game.road_choice == 4 else 0, func(k):
+		game.road_choice = 4 if k == 1 else 0
+		game.save_settings())
+	_warn_options(v)
 	var go := UiUtil.button("Start", v, func(): game.start(chosen[0]))
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	go.custom_minimum_size.y = 46
 	UiUtil.button("Zurück zum Menü", v, func(): game.leave())
+
+
+## Karte des gewählten Helden im Startfenster; bei Zix darunter der Baukasten.
+func _fill_hero_info(box: VBoxContainer) -> void:
+	for c in box.get_children():
+		c.queue_free()
+	var hd: Dictionary = game.hero.def
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_2, UiTheme.PURPLE, 0, 2, 12))
+	box.add_child(card)
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", 4)
+	card.add_child(cv)
+	_label("%s · %s · %s" % [tr(str(hd.name)), tr(str(hd.title)), tr(str(hd.get("role", "")))], cv, 16, UiTheme.PURPLE_LIGHT, true)
+	var lines: Array = []
+	if hd.has("passive"):
+		lines.append(tr("Passiv %s: %s") % [tr(str(hd.passive.name)), tr(str(hd.passive.desc))])
+	if hd.has("kit_desc"):
+		lines.append(tr(str(hd.kit_desc)))
+	for slot in 4:
+		if game.hero.has_method("kit") and slot < 3:
+			continue
+		var a: Dictionary = game.hero.ability(slot)
+		lines.append("%s: %s" % [tr(str(a.name)), tr(str(a.desc))])
+	var info := _label("\n".join(lines), cv, 12, UiTheme.DIM)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.custom_minimum_size.x = 580
+	if game.hero.has_method("kit"):
+		_kit_picker(box)
+
+
+## Zix: 3 von 10 Gebäuden wählen. Ein Klick nimmt ein Gebäude dazu bzw. heraus; bei 3 gewählten
+## ersetzt ein neues das zuletzt gewählte.
+func _kit_picker(parent: Node) -> void:
+	UiTheme.caption("Baukasten (3 wählen)", parent)
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	parent.add_child(grid)
+	var ids: Array = game.gadget_defs.keys()
+	var buttons: Array = []
+	var desc := _label("", parent, 12, UiTheme.DIM)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size.x = 580
+	var paint := func():
+		var keys: Array = []
+		for k in ids.size():
+			var b: Button = buttons[k]
+			var on: bool = game.zix_kit.has(ids[k])
+			b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN) if on else UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER))
+			b.add_theme_color_override("font_color", UiTheme.BG if on else UiTheme.TEXT)
+		for i in game.zix_kit.size():
+			var g: Dictionary = game.gadget_defs[game.zix_kit[i]]
+			keys.append("%s %s: %s" % [game.key_name(i), tr(str(g.name)), tr(str(g.desc))])
+		desc.text = "\n".join(keys)
+	for k in ids.size():
+		var id: String = ids[k]
+		var g: Dictionary = game.gadget_defs[id]
+		var b := UiUtil.button(str(g.name), grid, func():
+			var kit: Array = game.zix_kit.duplicate()
+			if kit.has(id):
+				if kit.size() > 1:
+					kit.erase(id)
+			elif kit.size() >= 3:
+				kit[2] = id
+			else:
+				kit.append(id)
+			if kit.size() == 3:
+				game.set_zix_kit(kit)
+			else:
+				game.zix_kit = kit
+			paint.call())
+		b.tooltip_text = "%s\n%s\n%s %s" % [tr(str(g.role)), tr(str(g.desc)), tr("Überspannung:"), tr(str(g.over))]
+		b.custom_minimum_size = Vector2(108, 34)
+		b.add_theme_font_size_override("font_size", 12)
+		buttons.append(b)
+	paint.call()
+## Barrierefreiheit: Farbe und Umriss der gegnerischen Warnflächen (gilt für neue Flächen).
+func _warn_options(v: VBoxContainer) -> void:
+	UiTheme.caption("Warnflächen", v)
+	var cols: Array = []
+	for pl in HdTelegraph.PALETTES:
+		cols.append(tr(str(pl.name)))
+	_choice_row(v, cols, HdTelegraph.palette, func(k):
+		HdTelegraph.palette = k
+		game.save_settings())
+	var outs: Array = []
+	for o in HdTelegraph.OUTLINES:
+		outs.append(tr(str(o)))
+	_choice_row(v, outs, HdTelegraph.outline, func(k):
+		HdTelegraph.outline = k
+		game.save_settings())
 
 
 func toggle_menu() -> void:
@@ -520,6 +616,13 @@ func toggle_menu() -> void:
 		game.quickcast = on
 		game.save_settings())
 	v.add_child(qc)
+	_warn_options(v)
+	if game.hero.has_method("kit"):
+		if game.can_change_kit():
+			_kit_picker(v)
+		else:
+			var note := _label(tr("Baukasten ändern: zwischen den Wellen, wenn kein Gegner mehr auf dem Feld ist."), v, 12, UiTheme.MUTED)
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	UiUtil.button("Neu starten", v, func(): game.restart())
 	UiUtil.button("Zurück zum Menü", v, func(): game.leave())
 	refresh()
