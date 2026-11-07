@@ -1,5 +1,5 @@
 extends Control
-## Hauptmenü als Hub: zuerst Einzelspieler oder Mehrspieler, darunter Laden, Run-History, Editoren, Einstellungen.
+## Hauptmenü als Hub: zuerst Einzelspieler oder Mehrspieler, darunter Laden, Profil, Editoren, Einstellungen.
 ## Einzelspieler: TD-Modus (data/modes.json) und Map wählen, dann Spielen.
 ## Mehrspieler: Lobby (lobby_panel.gd), dort stimmen alle über den Modus ab.
 
@@ -27,13 +27,13 @@ var profile_page: Control
 var credits_page: Control
 var hub: Control
 var hub_bg: Wc3MenuBg
-var hub_tip: Label
 var hub_buttons: Array[Wc3Button] = []
 
 const SHADE := preload("res://scripts/ui/wc3_shade.gdshader")
 
 
 func _ready() -> void:
+	Session.load_last()
 	UiTheme.use_skin(UiTheme.ARCADE)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = DecoTheme.get_theme()
@@ -101,7 +101,7 @@ func show_page(page: String) -> void:
 
 
 ## Hub im Warcraft-III-Stil (Wc3Theme, Lukas 2026-10-30): 3D-Nachtszene, Logo links oben, Steinsäule mit Knöpfen
-## rechts, darunter links eine Hinweiszeile zum Knopf unter der Maus. Hotkeys wie in WC3 (heller Buchstabe).
+## rechts. Hotkeys wie in WC3 (heller Buchstabe).
 func _build_hub() -> void:
 	hub_bg = Wc3MenuBg.new()
 	add_child(hub_bg)
@@ -115,7 +115,7 @@ func _build_hub() -> void:
 	shade.material = ShaderMaterial.new()
 	shade.material.shader = SHADE
 	hub.add_child(shade)
-	# Linke Spalte: Logo, Untertitel, Modi; so breit, wie neben der Säule Platz ist
+	# Linke Spalte: Logo; so breit, wie neben der Säule Platz ist
 	var left := VBoxContainer.new()
 	left.anchor_bottom = 1.0
 	left.anchor_right = 1.0
@@ -134,36 +134,13 @@ func _build_hub() -> void:
 	left.add_child(logo_box)
 	logo_box.add_child(logo)
 	logo_box.resized.connect(func(): logo.custom_minimum_size.x = minf(logo_box.size.x, 640))
-	# Anzahl und Namen der Modi aus data/modes.json, damit neue Modi von selbst dazukommen
-	var names := Database.modes.filter(func(m): return bool(m.get("ready", false))).map(func(m): return str(m.get("name", m.id)))
-	var count_words := ["Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Neun"]
-	var count := tr(count_words[clampi(names.size() - 2, 0, count_words.size() - 1)]) if names.size() >= 2 else str(names.size())
-	var rule := HBoxContainer.new()
-	rule.alignment = BoxContainer.ALIGNMENT_CENTER
-	rule.add_theme_constant_override("separation", 12)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	left.add_child(rule)
-	rule.add_child(_rule_line())
-	Wc3Theme.label("◆  " + tr("%s Tower-Defense-Spiele") % count + "  ◆", rule, 19, Wc3Theme.CREAM, 5)
-	rule.add_child(_rule_line())
-	var modes := Wc3Theme.label(" · ".join(names), left, 15, Wc3Theme.MODES, 3)
-	modes.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	modes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	left.add_child(spacer)
-	hub_tip = Wc3Theme.label("", left, 17, Wc3Theme.CREAM, 1)
-	hub_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hub_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Unten links: Version, bei offener Sitzung die Zahl der Verbundenen
+	# Untertitel, Hinweiszeile und Versionsnummer sind weg (Lukas 2026-11-02), unten links nur noch bei offener
+	# Sitzung die Zahl der Verbundenen
 	var foot := HBoxContainer.new()
 	foot.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.offset_left = 24
 	foot.offset_top = -38
-	foot.add_theme_constant_override("separation", 18)
 	hub.add_child(foot)
-	Wc3Theme.label(CreditsPanel.version_text(), foot, 14, Wc3Theme.MUTED, 1)
 	net_tile_text = Wc3Theme.label("", foot, 14, Wc3Theme.HAVE, 1)
 	# Säule rechts, senkrecht mittig
 	var pillar := Wc3Pillar.new()
@@ -177,15 +154,23 @@ func _build_hub() -> void:
 	pillar.offset_left = -66 - 420
 	hub.add_child(pillar)
 	hub_buttons.clear()
+	# Weiterspielen: jüngster Einzelspiel-Stand (Autosave nach jeder Welle, Lukas 2026-11-03), ein Klick
+	var last := continue_save()
+	if not last.is_empty():
+		var meta: Dictionary = last.get("meta", {})
+		var mode_name := str(Database.mode(str(last.get("mode", "gemtd"))).get("name", last.get("mode", "")))
+		var desc := "%s · %s · %s" % [mode_name, tr(str(meta.get("map", ""))), tr("Welle %d") % int(meta.get("wave", 0))]
+		var cont := pillar.button("Weiterspielen", true, desc, func(): _load_save(last))
+		cont.set_meta("continue", true)
+		hub_buttons.append(cont)
 	hub_buttons.append(pillar.button("Einzelspieler", true, "Allein spielen, Modus und Map wählen und den Weg verteidigen.", func(): show_page("single")))
 	net_tile = pillar.button("Mehrspieler", true, "Sitzung hosten oder per IP beitreten. In der Lobby stimmt ihr gemeinsam über den Modus ab.", func(): show_page("lobby"))
 	hub_buttons.append(net_tile)
 	hub_buttons.append(pillar.button("Spiel laden", true, "Einen gespeicherten Spielstand fortsetzen.", func(): loader.show()))
 	pillar.separator()
+	# Run-History steckt im Profil (Knopf unten links), eigener Knopf weg (Lukas 2026-11-02)
+	hub_buttons.append(pillar.button("Profil", false, "Erfahrung, Rekorde und Werte aus allen Modi.", func(): show_page("profile")))
 	var row := pillar.row()
-	hub_buttons.append(pillar.button("Profil", false, "Erfahrung, Rekorde und Werte aus allen Modi.", func(): show_page("profile"), row))
-	hub_buttons.append(pillar.button("Run-History", false, "Frühere Läufe ansehen und eine Map nochmal spielen.", func(): show_page("history"), row))
-	row = pillar.row()
 	hub_buttons.append(pillar.button("Map-Editor", false, "Eigene Maps bauen und bearbeiten.", _open_map_editor, row))
 	hub_buttons.append(pillar.button("Tower-Editor", false, "Tower und ihre Fähigkeiten bearbeiten.", _open_tower_editor, row))
 	pillar.separator()
@@ -193,30 +178,16 @@ func _build_hub() -> void:
 	hub_buttons.append(pillar.button("Mitwirkende", false, "Wer am Spiel mitgewirkt hat, mit allen Lizenzen.", func(): show_page("credits")))
 	hub_buttons.append(pillar.button("Daten neu laden", false, "JSON-Dateien unter data/ neu einlesen", _reload))
 	hub_buttons.append(pillar.button("Beenden", true, "Das Spiel beenden.", func(): get_tree().quit()))
-	for b in hub_buttons:
-		b.mouse_entered.connect(func(): hub_tip.text = tr(b.description))
-		b.mouse_exited.connect(_reset_tip)
 	_assign_hotkeys()
-	_reset_tip()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and not hub_buttons.is_empty():
 		_assign_hotkeys()
-		_reset_tip()
 
 
 func _rule_line() -> Control:
-	var line := ColorRect.new()
-	line.color = Wc3Theme.GOLD
-	line.custom_minimum_size = Vector2(110, 2)
-	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return line
-
-
-func _reset_tip() -> void:
-	hub_tip.text = tr(hub_buttons[0].description)
+	return Wc3Theme.Rule.new(110, 6.0, false)
 
 
 ## Hotkey je Knopf: erster freier Wortanfang im übersetzten Text, sonst der erste freie Buchstabe.
@@ -403,15 +374,9 @@ func _panel_caption(text_de: String, parent: Node) -> Label:
 	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(row)
-	var a := _rule_line()
-	a.custom_minimum_size.x = 30
-	a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(a)
+	row.add_child(Wc3Theme.Rule.new())
 	var l := Wc3Theme.label(tr(text_de).to_upper(), row, 18, Wc3Theme.CREAM, 4)
-	var b := _rule_line()
-	b.custom_minimum_size.x = 30
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(b)
+	row.add_child(Wc3Theme.Rule.new())
 	l.set_meta("row", row)
 	return l
 
@@ -635,6 +600,14 @@ func _start_session() -> void:
 	elif m != null or not Net.session.get("map", {}).is_empty():
 		# Eigene Felder, gemischt mit Koop-Gruppen (gleiche Feldnummer in der Lobby)
 		Net.start_session(m.to_dict() if m != null else {}, lobby.field_groups())
+
+
+## Jüngster Einzelspiel-Spielstand (ganze Daten) oder {}.
+static func continue_save() -> Dictionary:
+	for e in SaveGame.list():
+		if str(e.kind) == "single":
+			return SaveGame.read(SaveGame.path_for(str(e.id)))
+	return {}
 
 
 ## Spielstand laden: Einzelspiel geht direkt weiter, eine Mehrspieler-Sitzung wird gehostet.

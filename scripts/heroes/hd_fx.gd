@@ -45,7 +45,7 @@ func tracer(a: Vector3, b: Vector3, c: Color) -> void:
 
 
 ## Zackiger Blitz von a nach b.
-func bolt(a: Vector3, b: Vector3) -> void:
+func bolt(a: Vector3, b: Vector3, c := Color(0.75, 0.95, 1.0)) -> void:
 	var pts: Array = [a]
 	for k in [0.33, 0.66]:
 		var p := a.lerp(b, k)
@@ -54,8 +54,22 @@ func bolt(a: Vector3, b: Vector3) -> void:
 	pts.append(b)
 	var holder := Node3D.new()
 	for i in pts.size() - 1:
-		holder.add_child(_segment(pts[i], pts[i + 1], 0.08, Color(0.75, 0.95, 1.0)))
+		holder.add_child(_segment(pts[i], pts[i + 1], 0.08, c))
 	_add(holder, 0.18)
+
+
+## Dicker Strahl für einen Schritt (Heilstrahl, Aderlass-Band, Stromzaun): jeden Frame neu zeichnen.
+func beam(a: Vector3, b: Vector3, c: Color, w := 0.12) -> void:
+	_add(_segment(a, b, w, c), 0.05)
+
+
+## Kreis am Boden, der kurz stehen bleibt (Heilfläche, Kuppel-Rand, Banner).
+func disc(at: Vector3, r: float, c: Color, life := 0.3) -> void:
+	var t := HdTelegraph.circle(r, c)
+	t.progress = 1.0
+	t.position = Vector3(at.x, 0.05, at.z)
+	add_child(t)
+	t.trigger(life)
 
 
 func dash_trail(at: Vector3, delta: Vector3) -> void:

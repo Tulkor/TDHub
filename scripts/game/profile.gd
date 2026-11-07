@@ -23,7 +23,7 @@ extends RefCounted
 
 const VERSION := 2
 const MAX_INDEX := 5000  ## Einträge in der Liste; die Run-Dateien selbst bleiben alle
-const MODES := ["gemtd", "roguelike", "eeve", "maul", "randgruppen", "youtd", "heroes"]
+const MODES := ["gemtd", "roguelike", "eeve", "maul", "randgruppen", "youtd", "heroes", "survivors"]
 ## Rekorde, bei denen der kleinere Wert besser ist
 const LOWER_IS_BETTER := ["fastest_win"]
 
@@ -221,6 +221,8 @@ static func record_run(m: String, info: Dictionary, stats: Dictionary) -> Dictio
 		"victory": bool(info.get("victory", false)), "wave": int(info.get("wave", 0)), "waves": int(info.get("waves", 0)),
 		"lives": int(info.get("lives", 0)), "score": int(info.get("score", 0)), "kills": int(info.get("kills", 0)),
 		"damage": roundi(damage), "play_time": int(info.get("play_time", 0)), "debug": bool(info.get("debug", false))}
+	if int(info.get("ascension", 0)) > 0:
+		entry.ascension = int(info.ascension)
 	var top: Array = stats.get("towers", [])
 	if not top.is_empty():
 		entry.top = {"id": top[0].id, "label": top[0].label, "damage": top[0].damage}
@@ -234,6 +236,9 @@ static func record_run(m: String, info: Dictionary, stats: Dictionary) -> Dictio
 	var news := {}
 	if not entry.debug:
 		news = _count(m, entry, info, stats, maxi(waves_done, 0))
+		var up := Ascension.record(m, info, Ascension.difficulty_count(m))
+		if up > 0:
+			news.ascension_unlocked = up
 	save()
 	return news
 
@@ -250,6 +255,8 @@ static func record_abort(m: String, info: Dictionary) -> int:
 		"victory": false, "aborted": true, "saved": saved, "wave": int(info.get("wave", 0)), "waves": int(info.get("waves", 0)),
 		"lives": int(info.get("lives", 0)), "kills": int(info.get("kills", 0)), "play_time": int(info.get("play_time", 0)),
 		"debug": bool(info.get("debug", false))}
+	if int(info.get("ascension", 0)) > 0:
+		entry.ascension = int(info.ascension)
 	_book_time(m, entry, secs, not saved)
 	if not saved:
 		entry.id = "%s_%s_%04d_ab" % [m, Time.get_datetime_string_from_system(false, false).replace(":", "").replace("-", ""), randi() % 10000]

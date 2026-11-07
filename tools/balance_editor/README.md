@@ -23,6 +23,9 @@ läuft ohne Installation in Edge oder Chrome (Doppelklick).
   eigene Formel oder Tabelle, „Faktor auf alle Stufen“ erhöht alle benötigten EP), Vorschau der EP je Level wie im Spiel,
   EP je Kill/Boss/Flieger, Boni je Level, Freischaltungen (Wert oder Fähigkeit ab Level) und Abweichungen je Tower.
   „Modi“ ordnet jedem Modus ein Profil zu (oder keines).
+- Reiter **Aufstieg** (`data/ascension.json`): je Modus welche Schwierigkeiten im Startfenster stehen (die letzte ist die
+  Grundlage für die Aufstiegsstufen), höchste Stufe (0 = ohne Ende), Regeln (Gegner-Leben/-Tempo/-Rüstung um Prozent
+  oder Wert alle N Stufen ab Stufe M, Sonderregeln als Schalter vorbereitet), Vorschau +1 … +20, „In alle Modi kopieren“.
 
 ## Speichern
 Zwei Wege:

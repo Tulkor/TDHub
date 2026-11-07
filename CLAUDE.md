@@ -1,7 +1,7 @@
 # Hinweise für Claude
 
 Diese Datei wird bei jedem Schritt jedes Threads mitgeschickt, deshalb steht hier nur der Kern. Details je Bereich liegen in `docs/claude/` und kommen automatisch dazu: Der Hook `.claude/hooks/thema.py` blendet die passende Notiz einmal pro Thread ein, sobald Dateien des Bereichs angefasst werden. Von Hand lesen nur, wenn man vorher etwas wissen muss:
-`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `heroes.md` (Bollwerk, Hero Defense) · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
+`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `survivors.md` · `heroes.md` (Bollwerk, Hero Defense) · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
 Neues Wissen zu einem Bereich in dessen Notiz eintragen, nicht hier; neue Notiz = Datei plus Eintrag in `THEMEN` in `thema.py`.
 
 ## UI-Stil je Modus (Lukas will das nicht jedes Mal sagen müssen)
@@ -9,6 +9,7 @@ Neues Wissen zu einem Bereich in dessen Notiz eintragen, nicht hier; neue Notiz 
 - eeveTD Druidenhain, Randgruppen TD Plakatwand: gleiche `UiTheme`-Namen über `UiTheme.use_skin(...)`, Details in `eeve.md`/`randgruppen.md`. UiTheme-Farben sind `static var`, nicht in `const`-Ausdrücken.
 - Hub (Startseite), Einzelspieler und Lobby im Warcraft-III-Stil (Lukas 2026-10-30/11-01, Mockups unter /mnt/project-files/mockups/wc3-menu/ und wc3-lobby/): `scripts/ui/wc3_*.gd` (Theme mit Cinzel, Steintafeln `Wc3Pillar`, spitze Knöpfe `Wc3Button`, Map-Karten `Wc3Card`, Messing als 3D-Renders aus `tools/menu/messing_blender.py` mit Glanz-Shader, 3D-Logo aus `tools/menu/td_hub_logo.py`, 3D-Nachtszene), Bild `tools/screenshot.sh --szene=menu [--seite=single|lobby]`.
 - Profil mit Run-History im WC3-Stil wie der Hub (`profile_panel.gd`, Mockups /mnt/project-files/mockups/wc3-profil/).
+- Tower Survivors: Hologramm (`UiTheme.use_skin(UiTheme.HOLO)`, `holo_theme.gd`/`holo_box.gd`, Bausteine `sv_holo.gd`), halbtransparent, Cyan-Linien, Details in `survivors.md`.
 - Übrige Menüs vor dem Spiel (Spiel laden, Maul-Filialwahl) und Shopping Maul: Art déco aus `scripts/ui/deco_theme.gd` (gleiche Namen; Petrol + Messing, doppelte Messingrahmen `DecoTheme.panel`/`DecoBackdrop`, Hauptknopf mit spitzen Enden; ab 28 px Limelight kräftig `DecoTheme.title`/`display`, kleiner Federo). Startfenster im Spiel folgen dem Modus: `setup_panel.gd` Arcade, `eeve_setup_panel.gd` Druidenhain, nur Maul Art déco.
 - Alle sichtbaren Texte auf Deutsch, Übersetzung in `data/i18n/en.json` (`python3 tools/pruefe_ui.py --vorlage`/`--eintragen=`). Ohne gespeicherte Wahl startet das Spiel auf Englisch (`Loc.DEFAULT`, Lukas 2026-10-28), deshalb brauchen auch Daten-Texte über `tr()` einen Eintrag; `run_tests.sh` setzt `GEMTD_SPRACHE=de`.
 

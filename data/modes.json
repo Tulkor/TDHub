@@ -61,6 +61,16 @@
 			"scene": "res://scenes/heroes_game.tscn",
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
 			"needs_map": false
+		},
+		{
+			"id": "survivors",
+			"name": "Tower Survivors",
+			"ready": true,
+			"min_players": 1,
+			"max_players": 1,
+			"scene": "res://scenes/survivors_game.tscn",
+			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
+			"needs_map": false
 		}
 	]
 }

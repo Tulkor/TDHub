@@ -1,12 +1,19 @@
 extends Node
 ## Screenshots aus dem echten Spiel, ohne jedes Mal ein eigenes Aufnahme-Skript zu schreiben.
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
-##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes   Standard spiel
+##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes|survivors   Standard spiel
+##   survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad --auswahl=turm|1..6 --abwahl
 ##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
-##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher
+##     Etappe 3: --welle=N ab Welle N, --boss=N Kriegsherr der Welle N, --zone=arena|hain|schmiede|pruefung [--pruefung=jagd|tanz]
+##     (Held steht in der Zone, mit Ausrüstung), --ereignis=haendler|karawane|blutmond|gefangener|schrein,
+##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher,
+##                           --weit Kamera weit weg (ganze Karte), --shop[=grund|ruest|rezept|holz|tore] Shop offen,
+##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
+##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
+##   --hudbreite=80          Breite der mittigen HUD-Fläche in Prozent (60–100, wird nicht gespeichert)
 ##   --ui=70                 UI-Größe in Prozent (50–100), wird nicht gespeichert
 ##   --lobby=Anna,Ben,Max    (mit --seite=lobby) als Host mit diesen Mitspielern, --felder=0,1,1,2 Feld je Spieler
 ##                           (Host zuerst), --stimme=eevetd Modus vorwählen, --relay=127.0.0.1:24565 über einen Relay
@@ -44,6 +51,7 @@ extends Node
 ##   --rasse=kleingarten     Randgruppen TD (--map=randgruppen): Rasse für das Bild, --bauen=N Bauvorschau Tower N
 ##   --vitrine               eeveTD: viele verschiedene Tower auf den Mauern (Modelle ansehen)
 ##   --einstellungen         Einstellungsfenster vor Runde 1 offen lassen (z. B. eeveTD)
+##   --aufstieg=N            Aufstiegsstufen bis +N frei und gewählt, höchste Schwierigkeit vorausgewählt (Startfenster ansehen)
 ##   --rezepte, --elemente   YouTD: Fenster „Rezepte“ bzw. „Elemente“ in der Mitte öffnen (sonst bleiben beide zu)
 ##   --turmlicht=sockel|kontur|aus  eeveTD: Tower von Lampen im Sockel angeleuchtet, weiße Kontur oder nichts
 ##   --nacht                 Nachtversion des Spielfeld-Stils (FieldStyle.night, z. B. Shopping Maul im Mondlicht,
@@ -122,6 +130,8 @@ func _ready() -> void:
 	Session.skip_setup = not opts.has("einstellungen")
 	if opts.has("rasse"):
 		Session.rg_choice = {"race": str(opts.rasse)}
+	if opts.has("aufstieg"):
+		_ascension(int(opts.aufstieg))
 	Display.quality = int(opts.get("grafik", Display.HIGH))
 	Display.apply_quality()
 	FieldStyle.night = opts.has("nacht")
@@ -152,11 +162,13 @@ func _ready() -> void:
 		"map_editor": node = load(Session.MAP_EDITOR).instantiate()
 		"tower_editor": node = load(Session.TOWER_EDITOR).instantiate()
 		"maul": node = load(Session.MAUL).instantiate()
+		"survivors": node = load("res://scenes/survivors_game.tscn").instantiate()
 		"heroes":
 			Session.skip_setup = not opts.has("setup")
 			Session.difficulty = int(opts.get("stufe", "1"))
 			node = load("res://scenes/heroes_game.tscn").instantiate()
 			node.bot = true
+			node.force_hero = str(opts.get("held", ""))
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
@@ -169,6 +181,8 @@ func _ready() -> void:
 	# Fenster so groß wie der Xvfb-Bildschirm (--groesse), nicht die gespeicherte Auflösung
 	Display.resolution = DisplayServer.screen_get_size()
 	Display.fullscreen = false
+	if opts.has("hudbreite"):
+		Display.hud_width = clampf(float(opts.hudbreite) / 100.0, Display.HUD_WIDTH_MIN, 1.0)
 	if opts.has("ui"):
 		Display.ui_scale = clampf(float(opts.ui) / 100.0, Display.UI_SCALE_MIN, Display.UI_SCALE_MAX)
 	Display._apply()
@@ -188,6 +202,8 @@ func _ready() -> void:
 		await _prepare_maul(node)
 	if scene == "heroes":
 		await _prepare_heroes(node)
+	if scene == "survivors":
+		await _prepare_survivors(node)
 	if scene == "spiel":
 		await _prepare(node)
 		angles = String(opts.get("winkel", "schraeg")).split(",")
@@ -440,21 +456,121 @@ func _prepare(game: Node) -> void:
 
 
 ## Shopping Maul: Filiale eröffnen, im Zentrum bauen, Level im Zeitraffer spielen.
+## Tower Survivors (--szene=survivors): Bot spielt --zeit=S Sekunden Spielzeit (Standard 150) im Zeitraffer,
+## kauft Waffen und Upgrades; --bonus zeigt danach die Bonus-Wahl, --nah holt die Kamera an die Plattform.
+func _prepare_survivors(game: Node) -> void:
+	if game.state == "setup":
+		return
+	game.rng.seed = int(opts.get("seed", "1"))
+	game.gold += float(opts.get("gold", "0"))
+	var left := float(opts.get("zeit", "150"))
+	var dt := 1.0 / 30.0
+	var k := 0
+	while left > 0.0 and game.state != "over":
+		if game.state == "perk":
+			if opts.has("bonus"):
+				break
+			game.bot_turn()
+		game.step(dt)
+		left -= dt
+		k += 1
+		if k % 15 == 0:
+			game.bot_turn()
+		if k % 300 == 0:
+			await get_tree().process_frame
+	if opts.has("klappe"):
+		# --klappe=S: eine neue Waffe auf einen freien Platz, S Sekunden des Klappen-Ablaufs zeigen
+		var slot: int = game.target_slot("__none__")
+		if slot < 0:
+			game.gold += 2000
+			game.buy_upgrade("slot")
+			slot = game.target_slot("__none__")
+		if slot < 0:
+			game.sell(game.slots_open - 1)
+			for i in 40:
+				game.step(1.0 / 30.0)
+			slot = game.slots_open - 1
+		game._equip(str(opts.get("waffe", "schiene")), slot)
+		game.paid[slot] = 100
+		var t := float(opts.klappe)
+		while t > 0.0:
+			game.platform.step(minf(t, 1.0 / 30.0))
+			t -= 1.0 / 30.0
+		game.paused = true
+	if opts.has("neigung"):
+		game.cam_pitch = float(opts.neigung)
+		game._place_camera()
+	if opts.has("nah"):
+		game.cam_dist = 17.0 if opts.has("klappe") else 19.0
+		game._place_camera()
+	# --auswahl=turm|1..6 zeigt den Auswahlkreis, --abwahl dazu den Moment beim Abwählen (Kreis wächst und verblasst)
+	if opts.has("auswahl"):
+		var a := str(opts.auswahl)
+		if a == "turm":
+			game.hud.sel.select("tower")
+		else:
+			game.hud.sel.select("slot", int(a) - 1)
+		game.hud.refresh()
+		await get_tree().create_timer(0.4, true, false, true).timeout
+		if opts.has("abwahl"):
+			game.hud.deselect()
+			await get_tree().create_timer(0.12, true, false, true).timeout
+			await get_tree().process_frame
+			return
+	await _frames(12)
+
+
 ## Bollwerk: Bot spielt im Zeitraffer, danach optional auf halb gefüllte Warnflächen warten und anhalten.
 func _prepare_heroes(game: Node) -> void:
 	if game.state == "setup":
 		return
 	game.set_physics_process(false)
 	game.rng.seed = int(opts.get("seed", "1"))
+	if opts.has("farbe"):
+		HdTelegraph.palette = int(opts.farbe)
+	if opts.has("umriss"):
+		HdTelegraph.outline = int(opts.umriss)
+	if opts.has("gold"):
+		game.shop.add_gold(int(opts.gold))
 	if opts.has("boss"):
 		game.spawn_queue.clear()
 		game.hero.add_xp(4000.0)
-		game.start_wave(10)
+		game.start_wave(int(opts.get("welle", "10")) if opts.boss == "1" else int(opts.boss))
+	elif opts.has("welle"):
+		game.spawn_queue.clear()
+		game.hero.add_xp(400.0 * int(opts.welle))
+		game.start_wave(int(opts.welle))
+	if opts.has("ereignis"):
+		game.events.start(str(opts.ereignis))
+	if opts.has("zone"):
+		var zid := str(opts.zone)
+		if game.wave < 13:
+			game.wave = 13
+		game.hero.position = game.zones.center(zid) + (game.fortress_pos - game.zones.center(zid)).normalized() * 5.0
+		game.shop.gold += 3000
+		for k in 3:
+			game.shop.inv[k] = {"id": ["schmiedesonne", "bollwerkplatte", "windlaeufer"][k], "n": 1, "up": [2, 0, 1][k], "gems": [["rubin"], [], ["topas", "diamant"]][k]}
+		game.shop._changed()
+		match zid:
+			"arena":
+				game.shop.act({"kind": "arena"})
+			"hain":
+				game.shop.act({"kind": "lumberjack"})
+			"pruefung":
+				if opts.has("pruefung"):
+					game.shop.act({"kind": "trial", "id": str(opts.pruefung)})
 	var left := float(opts.get("zeit", "150"))
 	var dt := 1.0 / 30.0
 	var k := 0
+	var hold = game.hero.position if opts.has("zone") else null
 	while left > 0.0 and game.state == "play":
-		if k % 3 == 0:
+		if hold != null:
+			game.hero.move_dir = Vector3.ZERO
+			if game.hero.position.distance_to(hold) > 6.0:
+				game.hero.position = hold
+			if k % 3 == 0 and opts.has("kampf"):
+				game.bot_turn()
+		elif k % 3 == 0:
 			game.bot_turn()
 		game.step(dt)
 		left -= dt
@@ -476,8 +592,22 @@ func _prepare_heroes(game: Node) -> void:
 			k += 1
 			tries += 1
 	game.paused = true
+	if opts.has("shop"):
+		var t := str(opts.shop)
+		game.hud.econ.tab = t if t != "1" else "grund"
+		if game.hud.econ.tab == "rezept":
+			game.hud.econ.picked = "schmiedesonne"
+		game.hud.econ.toggle()
+		game.hud.refresh()
 	if opts.has("nah"):
 		game.cam_dist = 17.0
+	if opts.has("weit"):
+		game.cam_dist = 150.0
+		game.cam_pos = game.fortress_pos
+		game.camera.far = 400.0
+		game._place_camera()
+		await _frames(12)
+		return
 	game.cam_pos = game.hero.position
 	game._place_camera()
 	await _frames(12)
@@ -877,3 +1007,16 @@ func _level_shot(game: Node) -> void:
 	var r: Rect2 = hud.info_kills.get_global_rect()
 	box.position = Vector2(r.position.x, r.position.y - box.size.y - 6)
 
+
+## --aufstieg=N: Aufstiegsstufen bis +N in allen Modi frei (nur im Speicher), N gewählt, höchste Schwierigkeit vorausgewählt.
+func _ascension(n: int) -> void:
+	for m in Profile.MODES:
+		Profile.progress(m).ascension = {"unlocked": n, "best": n - 1}
+		Session.ascension_choice[m] = n
+	Session.difficulty = Ascension.top("gemtd", Session.DIFFICULTIES.size())
+	Session.eeve_choice = {"difficulty": Ascension.top("eeve", Ascension.difficulty_count("eeve"))}
+	var rg: Dictionary = Session.rg_choice.duplicate()
+	rg.difficulty = Ascension.top("randgruppen", Ascension.difficulty_count("randgruppen"))
+	Session.rg_choice = rg
+	Session.set_meta("youtd_choice", {"difficulty": Ascension.top("youtd", Ascension.difficulty_count("youtd"))})
+	Session.maul_choice = {"difficulty": Ascension.top("maul", Ascension.difficulty_count("maul"))}

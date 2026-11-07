@@ -10,6 +10,8 @@ signal round_gem_selected(index: int)
 signal extra_chance_requested
 signal speed_selected(factor: float)
 signal menu_requested
+signal pause_toggled(on: bool)      ## Taste P / Pausenknopf (nur Einzelspiel, game.gd hält die Welt an)
+signal next_gem_requested           ## Tab: nächster neuer Gem der Runde (GemTD)
 ## Rückfrage beim Verlassen: speichern und verlassen / ohne Speichern verlassen (quit: Fenster schließen)
 signal save_and_leave_requested(quit: bool)
 signal leave_requested(quit: bool)
@@ -64,6 +66,15 @@ var debug_option: OptionButton
 var debug_button: Button
 var paths_button: Button = null  ## Mehrspieler: Wege der Mitspieler ein/aus (add_paths_toggle)
 var lights_button: Button = null  ## Lichtpfad ein/aus (add_lights_toggle)
+var auto_button: Button = null    ## Nächste Welle automatisch (add_auto_toggle)
+var pause_button: Button          ## Pause (Taste P), nur im Einzelspiel sichtbar
+var pause_banner: PanelContainer
+var user_paused := false          ## mit P pausiert (die Rückfrage beim Verlassen pausiert zusätzlich)
+var panels_hidden := false        ## Taste H: Seitenleisten links und rechts aus dem Bild geschoben
+var hover_card: PanelContainer    ## Kurzinfo an der Maus über einem Tower (game._update_tower_hover)
+var _hover_label: Label
+var side_tabs: SideTabs           ## Reiter über der rechten Spalte (DPS / Gegner / Tower / Alle)
+var _gem_tags: Array = []         ## GemTD-Auswahlphase: [{tower, panel}] Schilder über den neuen Gems
 var _speed_row: HBoxContainer
 var debug_panel: PanelContainer
 var dps_meter: DpsMeter
@@ -142,6 +153,8 @@ var _gems: Array = []
 var _used_key := []
 var _selection: Dictionary = {}
 var _speed := -1.0
+var full: Control  ## ganze Fensterfläche über root (root ist bei breiten Fenstern schmaler)
+var top_bar: PanelContainer  ## obere Leiste, reicht auch bei schmaler HUD-Fläche über die ganze Breite
 
 
 func _ready() -> void:
@@ -152,27 +165,45 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+	# Vollfläche über dem ganzen Fenster für Abdunklungen, Hover-Karte und Auswahlrahmen
+	full = Control.new()
+	full.theme = root.theme
+	full.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	full.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(full)
 	_build_top_bar()
 	_build_banner()
 	_build_pinned()
 	_build_bottom()
 	_build_help()
+	side_tabs = SideTabs.new()
+	side_tabs.hud = self
+	root.add_child(side_tabs)
 	dps_meter = DpsMeter.new()
 	dps_meter.game = get_parent()
+	dps_meter.tabs = side_tabs
 	root.add_child(dps_meter)
 	# Rechte Spalte unter dem DPS-Meter: Gegner der Welle, dann die Tower-Liste
 	enemy_panel = EnemyPanel.new()
 	enemy_panel.game = get_parent()
 	enemy_panel.above = dps_meter
+	enemy_panel.tabs = side_tabs
 	root.add_child(enemy_panel)
 	tower_list = TowerList.new()
 	tower_list.game = get_parent()
 	tower_list.above = enemy_panel
+	tower_list.tabs = side_tabs
 	tower_list.limits.append(bottom)
 	root.add_child(tower_list)
 	_build_debug()
-	dps_meter.avoid = debug_panel
+	side_tabs.avoid = debug_panel
+	dps_meter.avoid = side_tabs
+	_build_pause_banner()
+	_build_hover_card()
 	root.resized.connect(_recenter)
+	_fit_width()
+	get_viewport().size_changed.connect(_fit_width)
+	Display.hud_width_changed.connect(_fit_width)
 
 	message_label = Label.new()
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -195,6 +226,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	_place_gem_tags()
 	if Engine.time_scale != _speed:
 		_speed = Engine.time_scale
 		for i in SPEEDS.size():
@@ -214,6 +246,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	match event.keycode:
+		KEY_P, KEY_PAUSE:
+			if pause_button == null or not pause_button.visible:
+				return
+			set_user_paused(not user_paused)
+		KEY_F1:
+			help_panel.visible = not help_panel.visible
+		KEY_H:
+			set_panels_hidden(not panels_hidden)
+		KEY_TAB:
+			if _gem_tags.is_empty():
+				return
+			next_gem_requested.emit()
 		KEY_R:
 			if not recipes_button.visible:
 				return
@@ -295,6 +339,20 @@ func _vsep(parent: Node) -> void:
 	separators.append(s)
 
 
+## Bei breiten Fenstern (oder kleinerer HUD-Breite in den Einstellungen) rückt alles in eine mittige Fläche.
+func _fit_width() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var cut := maxf(0.0, (view.x - Display.hud_span(view)) / 2.0)
+	root.offset_left = cut
+	root.offset_right = -cut
+	# Die obere Leiste bleibt als Band über die ganze Breite, nur ihr Inhalt rückt nach innen
+	top_bar.offset_left = -cut
+	top_bar.offset_right = cut
+	var st := top_bar.get_theme_stylebox("panel")
+	st.content_margin_left = 14 + cut
+	st.content_margin_right = 14 + cut
+
+
 func _build_top_bar() -> void:
 	var bar := PanelContainer.new()
 	var bar_style := UiTheme.box(UiTheme.PANEL, Color.TRANSPARENT, 0, 0, 14)
@@ -307,6 +365,7 @@ func _build_top_bar() -> void:
 	bar.anchor_right = 1.0
 	bar.custom_minimum_size.y = 52
 	root.add_child(bar)
+	top_bar = bar
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 5)
 	bar.add_child(h)
@@ -324,6 +383,13 @@ func _build_top_bar() -> void:
 	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(fill)
 
+	pause_button = _button("❚❚", h, func(): set_user_paused(not user_paused))
+	pause_button.toggle_mode = true
+	pause_button.tooltip_text = "Pause (Taste P): Spiel hält an, Tower lassen sich weiter ansehen."
+	pause_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
+	pause_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+	key_badge(pause_button, "P")
+	pause_button.visible = false
 	var speed_row := HBoxContainer.new()
 	speed_row.add_theme_constant_override("separation", 0)
 	h.add_child(speed_row)
@@ -334,7 +400,7 @@ func _build_top_bar() -> void:
 		b.toggle_mode = true
 		b.button_group = group
 		b.tooltip_text = "Tempo (Tasten 1, 2, 3)"
-		b.custom_minimum_size.x = 44
+		key_badge(b, str(SPEEDS.find(f) + 1))
 		b.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 		b.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 		speed_buttons.append(b)
@@ -347,8 +413,9 @@ func _build_top_bar() -> void:
 
 	recipes_button = _button("Rezepte", h, toggle_recipe_book)
 	recipes_button.tooltip_text = "Rezeptbuch (Taste R)"
-	_button("Hilfe", h, func(): help_panel.visible = not help_panel.visible)
-	_button("Menü", h, open_leave_confirm)
+	key_badge(recipes_button, "R")
+	key_badge(_button("Hilfe", h, func(): help_panel.visible = not help_panel.visible), "F1")
+	key_badge(_button("Menü", h, open_leave_confirm), "Esc")
 
 
 ## Mehrspieler: Umschalter links neben dem Tempo, zeigt auch die Gegnerwege der Mitspieler.
@@ -374,6 +441,173 @@ func add_lights_toggle(on: bool, on_toggled: Callable) -> void:
 	lights_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 	lights_button.set_pressed_no_signal(on)
 	lights_button.toggled.connect(on_toggled)
+	key_badge(lights_button, "L")
+
+
+## Schalter „Auto“ links neben dem Tempo: nächste Welle ohne Pause starten (eeveTD, YouTD, Randgruppen).
+func add_auto_toggle(on: bool, on_toggled: Callable) -> void:
+	auto_button = _button("Auto", _speed_row.get_parent(), func(): pass)
+	_speed_row.get_parent().move_child(auto_button, _speed_row.get_index())
+	auto_button.toggle_mode = true
+	auto_button.tooltip_text = "Nächste Welle sofort starten, sobald die alte vorbei ist (sonst Taste N)."
+	auto_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
+	auto_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+	auto_button.set_pressed_no_signal(on)
+	auto_button.toggled.connect(on_toggled)
+
+
+## Kleines Tasten-Kästchen rechts unten im Knopf (z. B. „1“ beim Tempo), damit man die Tasten ohne die Hilfe lernt.
+## Der Knopf wird so breit, dass der mittige Text nicht darunter liegt.
+static func key_badge(b: Button, key: String) -> Label:
+	var l := Label.new()
+	l.text = key
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_color_override("font_color", UiTheme.CYAN)
+	var st := UiTheme.box(UiTheme.BG, UiTheme.CYAN, 0, 1, 0)
+	st.content_margin_left = 3
+	st.content_margin_right = 3
+	st.content_margin_top = 0
+	st.content_margin_bottom = 0
+	l.add_theme_stylebox_override("normal", st)
+	b.add_child(l)
+	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 2)
+	l.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	l.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var w := l.get_combined_minimum_size().x
+	var text_w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			b.get_theme_font_size("font_size")).x
+	b.custom_minimum_size.x = maxf(b.custom_minimum_size.x, text_w + 2.0 * w + 16.0)
+	b.set_meta("key_badge", l)
+	return l
+
+
+# --- Pause (Taste P, nur Einzelspiel) -------------------------------------------------------
+
+func _build_pause_banner() -> void:
+	pause_banner = PanelContainer.new()
+	pause_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pause_banner.add_theme_stylebox_override("panel", UiTheme.panel(16.0, 0.95, UiTheme.GOLD))
+	pause_banner.anchor_left = 0.5
+	pause_banner.anchor_right = 0.5
+	pause_banner.offset_top = BANNER_TOP + 52.0
+	pause_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	root.add_child(pause_banner)
+	var v := VBoxContainer.new()
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_theme_constant_override("separation", 2)
+	pause_banner.add_child(v)
+	var t := UiTheme.title(UiUtil.label("PAUSE", v, 26), 26)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sub := UiUtil.label("P: weiter · Tower lassen sich ansehen", v, 13)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_color_override("font_color", UiTheme.MUTED)
+	pause_banner.hide()
+
+
+## Pause ein/aus (Taste P, Knopf). Die Welt steht (SceneTree.paused), Oberfläche und Kamera laufen weiter.
+func set_user_paused(on: bool) -> void:
+	if pause_button == null or not pause_button.visible:
+		on = false
+	user_paused = on
+	pause_button.set_pressed_no_signal(on)
+	pause_banner.visible = on
+	if pause_banner.visible:
+		var s := pause_banner.get_combined_minimum_size()
+		pause_banner.offset_left = -s.x / 2.0
+		pause_banner.offset_right = s.x / 2.0
+	if not leave_confirm.visible:
+		get_tree().paused = on
+	pause_toggled.emit(on)
+
+
+# --- Seitenleisten ausblenden (Taste H) -----------------------------------------------------
+
+## Linke Spalte (Wellen, Rezepte, Modus-Leiste) und rechte Spalte (DPS, Gegner, Tower) aus dem Bild schieben.
+func set_panels_hidden(on: bool) -> void:
+	panels_hidden = on
+	left_col.offset_left = -2000.0 if on else 16.0
+	for c in [side_tabs, dps_meter, enemy_panel, tower_list]:
+		c.offset_right = 2000.0 if on else -16.0
+	show_message(tr("Seitenleisten aus · H holt sie zurück") if on else "")
+
+
+# --- Kurzinfo an der Maus (Hover über Tower) -------------------------------------------------
+
+func _build_hover_card() -> void:
+	hover_card = PanelContainer.new()
+	hover_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hover_card.add_theme_stylebox_override("panel", UiTheme.panel(8.0, 0.95))
+	full.add_child(hover_card)
+	_hover_label = UiUtil.label("", hover_card, 13)
+	hover_card.hide()
+
+
+## text leer = ausblenden. pos: Mausposition (Bildschirm), die Karte sitzt rechts darüber.
+func show_hover_card(text: String, pos: Vector2) -> void:
+	if hover_card == null:
+		return
+	hover_card.visible = text != ""
+	if text == "":
+		return
+	_hover_label.text = text
+	hover_card.reset_size()
+	var p := full.get_global_transform().affine_inverse() * pos
+	var s := hover_card.get_combined_minimum_size()
+	hover_card.position = Vector2(clampf(p.x + 18.0, 8.0, full.size.x - s.x - 8.0), clampf(p.y - s.y - 12.0, 60.0, full.size.y - s.y - 8.0))
+
+
+# --- GemTD-Auswahlphase: Schilder über den neuen Gems -----------------------------------------
+
+## tags: [{tower: Node3D, text, style}] mit style "combine" (grün), "special" (pink), "pinned" (gold), "keep" (grau).
+## Leeres Array blendet alle aus. Klick auf ein Schild wählt den Gem (signal round_gem_selected mit dem Index).
+func set_gem_tags(tags: Array) -> void:
+	var key := tags.map(func(t): return [t.tower.get_instance_id(), t.text, t.style])
+	if key == get_meta("gem_tag_key", []):
+		return
+	set_meta("gem_tag_key", key)
+	for g in _gem_tags:
+		g.panel.queue_free()
+	_gem_tags.clear()
+	for i in tags.size():
+		var t: Dictionary = tags[i]
+		var col: Color = {"combine": UiTheme.HAVE, "special": UiTheme.GOLD, "pinned": UiTheme.COIN}.get(t.style, UiTheme.MUTED)
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.text = t.text
+		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_color_override("font_color", col)
+		b.add_theme_color_override("font_hover_color", col.lightened(0.3))
+		b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL, col, 0, 2, 5))
+		b.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.PANEL_2, col, 0, 2, 5))
+		b.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.PANEL_2, UiTheme.CYAN, 0, 2, 5))
+		b.tooltip_text = tr("Gem auswählen (Tab: nächster neuer Gem)")
+		var idx := i
+		b.pressed.connect(func(): round_gem_selected.emit(int(tags[idx].get("index", idx))))
+		root.add_child(b)
+		root.move_child(b, 0)  # unter allen Fenstern
+		_gem_tags.append({"tower": t.tower, "panel": b})
+	_place_gem_tags()
+
+
+func _place_gem_tags() -> void:
+	if _gem_tags.is_empty():
+		return
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var inv := root.get_global_transform().affine_inverse()
+	for g in _gem_tags:
+		var b: Button = g.panel
+		if not is_instance_valid(g.tower):
+			b.hide()
+			continue
+		var wp: Vector3 = g.tower.global_position + Vector3(0, 1.6, 0)
+		b.visible = not cam.is_position_behind(wp)
+		var p := inv * cam.unproject_position(wp)
+		var s := b.get_combined_minimum_size()
+		b.size = s
+		b.position = Vector2(p.x - s.x / 2.0, p.y - s.y)
 
 
 ## Wert in der Leiste oben für einen Modus (YouTD: Bücher, Food), rechts neben Gold. Liefert das Wert-Label.
@@ -604,7 +838,7 @@ func _build_help() -> void:
 	help_panel.offset_right = -16
 	help_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	root.add_child(help_panel)
-	UiUtil.wrap_label("Linksklick: Gem setzen / Tower oder Stein auswählen\nLinks ziehen, Strg+Klick: bis zu 5 Steine auswählen\nStrg+Z: zuletzt gesetzten Gem zurücknehmen\nRechtsklick, Esc: Auswahl aufheben\nLeertaste: große Aktion (Behalten / Kombinieren / One-Shot)\nR: Rezeptbuch\nWASD/Pfeile, Fensterrand, rechte Maustaste ziehen: Kamera bewegen\nQ/E oder mittlere Maustaste: drehen, Mausrad: zoomen\n1, 2, 3: Tempo", help_panel, 320)
+	UiUtil.wrap_label("Linksklick: Gem setzen / Tower oder Stein auswählen\nMaus auf einem Tower: Reichweite und Kurzinfo\nLinks ziehen, Strg+Klick: bis zu 5 Steine auswählen\nStrg+Z: zuletzt gesetzten Gem zurücknehmen\nRechtsklick, Esc: Auswahl oder Bauen abbrechen\nLeertaste: große Aktion (Behalten / Kombinieren / One-Shot)\nTab: nächster neuer Gem der Runde\nN: nächste Welle sofort, „Auto“: immer sofort\nUmschalt + Klick: Falle weiter setzen\nP: Pause · 1, 2, 3: Tempo\nR: Rezeptbuch · L: Lichtpfad\nH: Seitenleisten aus/ein · F1: diese Hilfe\nWASD/Pfeile, Fensterrand, rechte Maustaste ziehen: Kamera bewegen\nQ/E oder mittlere Maustaste: drehen, Mausrad: zoomen", help_panel, 340)
 	help_panel.hide()
 
 
@@ -1285,7 +1519,7 @@ func show_drag_box(r: Rect2) -> void:
 		_drag_box = Panel.new()
 		_drag_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_drag_box.add_theme_stylebox_override("panel", UiTheme.box(Color(UiTheme.CYAN, 0.12), UiTheme.CYAN, 0, 2, 0))
-		root.add_child(_drag_box)
+		full.add_child(_drag_box)
 	_drag_box.visible = r.size != Vector2.ZERO
 	_drag_box.position = r.position
 	_drag_box.size = r.size
@@ -1300,6 +1534,12 @@ func set_options_enabled(enabled: bool) -> void:
 ## waves: [{number, type, detail, color, state}] – type: "Boden", "Flieger", "Masse", "Boss" oder "Gemischt",
 ## state: "läuft", "nächste" oder "".
 func set_waves(waves: Array) -> void:
+	var g = get_parent()
+	if g != null and g.has_method("wave_warning"):
+		waves = waves.map(func(w):
+			var c: Dictionary = w.duplicate()
+			c.warn = g.wave_warning(int(w.number), str(w.type))
+			return c)
 	if waves == _waves:
 		return
 	_waves = waves
@@ -1333,6 +1573,9 @@ func set_waves(waves: Array) -> void:
 			st.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		var d := UiUtil.label(w.detail, v, 12)
 		d.add_theme_color_override("font_color", UiTheme.MUTED)
+		if str(w.get("warn", "")) != "":
+			var warn := UiUtil.label(str(w.warn), v, 13)
+			warn.add_theme_color_override("font_color", UiTheme.MISSING)
 	_has_waves = not waves.is_empty()
 	waves_panel.visible = _has_waves and not _waves_yield
 
@@ -1355,11 +1598,16 @@ func show_game_over(victory: bool, wave: int, waves: int, lives: int, kills: int
 	help_panel.hide()
 	game_over_title.text = "Gewonnen!" if victory else "Verloren"
 	game_over_title.add_theme_color_override("font_color", UiTheme.GOLD if victory else UiTheme.MISSING)
-	game_over_stats.text = tr("Schwierigkeit: ") + tr(Session.difficulty_name()) + "\n" + tr("Welle %d von %d\nLeben übrig: %d\nGegner besiegt: %d\nWeglänge am Ende: %d Felder") % [wave, waves, lives, kills, path_cells]
+	# Schwierigkeit des Modus mit Aufstiegsstufe (game.gd → difficulty_label)
+	var g := get_parent()
+	var diff_name: String = g.difficulty_label() if g != null and g.has_method("difficulty_label") else tr(Session.difficulty_name())
+	game_over_stats.text = tr("Schwierigkeit: ") + diff_name + "\n" + tr("Welle %d von %d\nLeben übrig: %d\nGegner besiegt: %d\nWeglänge am Ende: %d Felder") % [wave, waves, lives, kills, path_cells]
 	if score != null:
 		game_over_title.text = "Geschafft!"
-		game_over_stats.text = tr("Punkte: %d") % int(score) + "\n" + tr("Schwierigkeit: ") + tr(Session.difficulty_name()) + "\n" \
+		game_over_stats.text = tr("Punkte: %d") % int(score) + "\n" + tr("Schwierigkeit: ") + diff_name + "\n" \
 			+ tr("Gegner besiegt: %d") % kills + "\n" + tr("Weglänge am Ende: %d Felder") % path_cells
+	if g != null and g.has_method("difficulty_label") and int(g.ascension_unlocked) > 0:
+		game_over_stats.text += "\n" + tr("Aufstieg %s freigeschaltet!") % Ascension.label(int(g.ascension_unlocked))
 	_fill_summary(summary)
 	editor_button.visible = Session.return_scene != Session.MAIN_MENU
 	editor_button.text = "Zurück zum Map-Editor" if Session.return_scene == Session.MAP_EDITOR else "Zurück zum Tower-Editor"
@@ -1429,7 +1677,7 @@ func _build_game_over() -> void:
 	game_over = Control.new()
 	game_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game_over.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(game_over)
+	full.add_child(game_over)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1477,7 +1725,7 @@ func _build_leave_confirm() -> void:
 	leave_confirm = Control.new()
 	leave_confirm.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	leave_confirm.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(leave_confirm)
+	full.add_child(leave_confirm)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1557,7 +1805,7 @@ func set_leave_busy(text: String, error := false) -> void:
 func close_leave_confirm() -> void:
 	settings_panel.hide()
 	leave_confirm.hide()
-	get_tree().paused = false
+	get_tree().paused = user_paused
 
 
 func toggle_recipe_book() -> void:
@@ -1726,9 +1974,12 @@ func _recenter() -> void:
 		if c == bottom:
 			# Nicht unter die rechte Spalte (DPS, Tower-Liste, Mitspieler) schieben: lieber nach links
 			# rücken, solange links noch Platz ist
+			# Mittig bleiben, solange über der Karte noch Platz für ein paar Zeilen der Tower-Liste ist
 			var w := root.size.x
 			var right_edge := w - 16.0 - tower_list.custom_minimum_size.x - 12.0
-			var left := minf(w / 2.0 - s.x / 2.0, maxf(16.0, right_edge - s.x))
+			var left := w / 2.0 - s.x / 2.0
+			if root.size.y - 16.0 - s.y < tower_list.offset_top + 140.0:
+				left = minf(left, maxf(16.0, right_edge - s.x))
 			left = _avoid_left_col(left, right_edge, s)
 			c.offset_left = left - w / 2.0
 			c.offset_right = c.offset_left + s.x

@@ -11,6 +11,7 @@ var foreign := false
 var share := false
 var _race_text: Label
 var _diff_text: Label
+var _asc: AscensionPicker
 var _panel: PanelContainer
 var _title: Label
 
@@ -21,7 +22,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var races: Array = game.rules.get("races", [])
 	race_id = str(Session.rg_choice.get("race", races[0].id if not races.is_empty() else ""))
-	difficulty = game.difficulty
+	difficulty = Ascension.snap("randgruppen", game.difficulty, game.difficulty_count())
 	foreign = Session.foreign_build
 	share = bool(Session.rg_choice.get("share", false))
 	var center := CenterContainer.new()
@@ -71,15 +72,19 @@ func _ready() -> void:
 	v.add_child(h)
 	group = ButtonGroup.new()
 	var diffs: Array = game.rules.get("difficulties", [])
-	for i in diffs.size():
-		var idx := i
+	for i in Ascension.choices("randgruppen", diffs.size()):
+		var idx: int = i
 		var b := _toggle(str(diffs[i].name), h, group, i == difficulty, func():
 			difficulty = idx
+			_asc.set_difficulty(idx)
 			_update_text())
 		b.custom_minimum_size.x = 140
 		b.disabled = game.local_player != 0
 	_diff_text = UiUtil.wrap_label("", v, 770)
 	_diff_text.add_theme_color_override("font_color", UiTheme.DIM)
+	_asc = AscensionPicker.new().setup("randgruppen", diffs.size(), difficulty, int(Session.ascension_choice.get("randgruppen", 0)),
+		game.local_player == 0, false, 770)
+	v.add_child(_asc)
 	_update_text()
 
 	SetupPanel.add_foreign_choice(self, v, game.local_player == 0)
@@ -97,7 +102,11 @@ func _ready() -> void:
 		b.tooltip_text = str(m[2])
 		b.disabled = game.local_player != 0
 
-	var go := UiUtil.button("Los geht's", v, func(): game.submit({"type": "setup", "race": race_id, "difficulty": difficulty, "foreign": foreign, "share": share}))
+	var go := UiUtil.button("Los geht's", SetupPanel.bottom_row(game, v), func():
+		if game.local_player == 0:
+			Session.ascension_choice["randgruppen"] = _asc.level
+		game.submit({"type": "setup", "race": race_id, "difficulty": difficulty, "foreign": foreign, "share": share, "ascension": _asc.chosen()}))
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.custom_minimum_size.y = 50
 	go.add_theme_font_size_override("font_size", 20)
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)

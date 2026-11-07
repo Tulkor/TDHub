@@ -46,12 +46,12 @@ func _ready() -> void:
 	get_tree().quit(1 if failures > 0 else 0)
 
 
-## Alle Modi spielbar, Shopping Maul und YouTD nur solo (das Hauptmenü lädt die Daten neu, danach wieder aufrufen).
+## Alle Modi spielbar, Shopping Maul, YouTD und Tower Survivors nur solo (das Hauptmenü lädt die Daten neu, danach wieder aufrufen).
 func _test_modes() -> void:
 	for m in Database.modes:
 		m.ready = true
 		m.scene = Session.GAME
-		m.max_players = 1 if m.id in ["shoppingmaul", "youtd", "heroes"] else 8
+		m.max_players = 1 if m.id in ["shoppingmaul", "youtd", "heroes", "survivors"] else 8
 
 
 func _wait(cond: Callable, seconds: float) -> bool:

@@ -192,7 +192,7 @@ pick_changed() {
       data/towers/*) t+="smoke towgemtd toweeve towrg " ;;
       data/enemies/*|data/waves/*|data/balance.json|data/maps/*) t+="smoke " ;;
       scripts/map/path_lights.gd) t+="lichtpfad smoke " ;;
-      scripts/ui/*|scripts/game/hud.gd|scripts/game/*panel*|scripts/editor/*) t+="smoke " ;;
+      scripts/ui/*|scripts/game/hud.gd|scripts/game/*panel*|scripts/editor/*) t+="smoke ux " ;;
       *.gd|*.tscn|*.tres|*.gdshader|project.godot|data/*) echo "schnell"; return ;;
     esac
   done

@@ -11,6 +11,8 @@ const ABIL_H := 84.0  ## feste Höhe der Fähigkeiten im Auswahlfenster (mehr sc
 
 var game: MaulGame
 var root: Control
+var full: Control  ## ganze Fensterfläche über root
+var _top_bar: PanelContainer
 
 var _level: Label
 var _next: Label
@@ -60,6 +62,12 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = UiTheme.get_theme()
 	add_child(root)
+	# Vollfläche über dem ganzen Fenster für Abdunklungen und Filialwahl (root ist bei breiten Fenstern schmaler)
+	full = Control.new()
+	full.set_anchors_preset(Control.PRESET_FULL_RECT)
+	full.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	full.theme = root.theme
+	add_child(full)
 	_build_top_bar()
 	_build_shop()
 	_build_selection()
@@ -82,6 +90,23 @@ func _ready() -> void:
 	_banner.add_theme_constant_override("shadow_offset_x", 2)
 	_banner.add_theme_constant_override("shadow_offset_y", 3)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fit_width()
+	get_viewport().size_changed.connect(_fit_width)
+	Display.hud_width_changed.connect(_fit_width)
+
+
+## Bei breiten Fenstern (oder kleinerer HUD-Breite) rückt alles in eine mittige Fläche, die obere Leiste bleibt
+## als Band über die ganze Breite und nur ihr Inhalt rückt nach innen.
+func _fit_width() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var cut := maxf(0.0, (view.x - Display.hud_span(view)) / 2.0)
+	root.offset_left = cut
+	root.offset_right = -cut
+	_top_bar.offset_left = -cut
+	_top_bar.offset_right = cut
+	var st := _top_bar.get_theme_stylebox("panel")
+	st.content_margin_left = 10 + cut
+	st.content_margin_right = 10 + cut
 
 
 # --- Leiste oben ------------------------------------------------------------------
@@ -94,6 +119,7 @@ func _build_top_bar() -> void:
 	bar.add_theme_stylebox_override("panel", style)
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	root.add_child(bar)
+	_top_bar = bar
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 22)
 	bar.add_child(row)
@@ -120,6 +146,20 @@ func _build_top_bar() -> void:
 	row.add_child(spacer)
 	_start_button = UiUtil.button("Jetzt starten", row, func(): game.submit({"type": "start_now"}))
 	UiTheme.accent_button(_start_button, UiTheme.GOLD, UiTheme.BAR)
+	Hud.key_badge(_start_button, "N")
+	if game.solo():
+		var auto := UiUtil.button("Auto", row, func(): pass)
+		auto.toggle_mode = true
+		auto.focus_mode = Control.FOCUS_NONE
+		auto.tooltip_text = "Nächstes Level sofort starten, ohne Countdown (sonst Taste N)."
+		auto.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
+		auto.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+		auto.set_pressed_no_signal(Session.auto_wave_on())
+		auto.toggled.connect(game.set_auto_wave)
+		var pause := UiUtil.button("❚❚", row, func(): game.set_user_paused(true))
+		pause.focus_mode = Control.FOCUS_NONE
+		pause.tooltip_text = "Pause (Taste P)"
+		Hud.key_badge(pause, "P")
 	lights_button = UiUtil.button("Lichtpfad", row, func(): pass)
 	lights_button.toggle_mode = true
 	lights_button.focus_mode = Control.FOCUS_NONE
@@ -128,10 +168,12 @@ func _build_top_bar() -> void:
 	lights_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 	lights_button.set_pressed_no_signal(Display.path_lights)
 	lights_button.toggled.connect(func(on: bool): game.set_path_lights(on))
+	Hud.key_badge(lights_button, "L")
 	for f in [1.0, 2.0, 4.0]:
 		var b := UiUtil.button("%d×" % int(f), row, func(): game.set_speed(f))
 		b.toggle_mode = true
 		b.custom_minimum_size.x = 40
+		Hud.key_badge(b, str([1.0, 2.0, 4.0].find(f) + 1))
 		_speed_buttons.append(b)
 	# Debug-Menü nur, wo gerechnet wird (allein oder Host)
 	if not game.mirror:
@@ -141,8 +183,35 @@ func _build_top_bar() -> void:
 		_debug_button.tooltip_text = "Debug-Menü"
 		_debug_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 		_debug_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
-	UiUtil.button("Menü", row, toggle_menu)
+	Hud.key_badge(UiUtil.button("Menü", row, toggle_menu), "Esc")
 	_build_menu()
+
+
+var _pause_banner: PanelContainer
+
+
+## Schild „PAUSE“ oben in der Mitte (Taste P, maul_game.set_user_paused).
+func show_pause(on: bool) -> void:
+	if _pause_banner == null:
+		_pause_banner = PanelContainer.new()
+		_pause_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_pause_banner.add_theme_stylebox_override("panel", UiTheme.panel(16.0, 0.95))
+		_pause_banner.anchor_left = 0.5
+		_pause_banner.anchor_right = 0.5
+		_pause_banner.offset_top = 110
+		_pause_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		root.add_child(_pause_banner)
+		var v := VBoxContainer.new()
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_pause_banner.add_child(v)
+		UiTheme.title(UiUtil.label("PAUSE", v, 28), 28).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var sub := UiUtil.label("P: weiter", v, 14)
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.add_theme_color_override("font_color", UiTheme.MUTED)
+	_pause_banner.visible = on
+	var s := _pause_banner.get_combined_minimum_size()
+	_pause_banner.offset_left = -s.x / 2.0
+	_pause_banner.offset_right = s.x / 2.0
 
 
 func toggle_debug() -> void:
@@ -200,7 +269,7 @@ func _build_menu() -> void:
 	UiUtil.button("Hauptmenü", box, func(): Session.goto(Session.MAIN_MENU))
 	_menu = panel
 	settings_panel = SettingsPanel.new(false, true)
-	root.add_child(settings_panel)
+	full.add_child(settings_panel)
 
 
 ## Menü-Knopf und Esc: offenes Einstellungsfenster zuerst schließen.
@@ -1133,7 +1202,7 @@ func refresh_message() -> void:
 func show_setup() -> void:
 	_setup = MaulSetup.new()
 	_setup.game = game
-	root.add_child(_setup)
+	full.add_child(_setup)
 
 
 func hide_setup() -> void:
@@ -1158,7 +1227,7 @@ func show_game_over(victory: bool) -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BG, 0.7)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(dim)
+	full.add_child(dim)
 	_game_over = dim
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiTheme.panel(22))
@@ -1174,13 +1243,15 @@ func show_game_over(victory: bool) -> void:
 		title.add_theme_color_override("font_color", UiTheme.MISSING)
 	var d := MaulData.difficulty(game.difficulty)
 	var stats := tr("Schwierigkeit: %s\nLevel %d von %d\nLeben übrig: %d\nGegner besiegt: %d, durchgelassen: %d\nSelbstanpassung: %d–%d %%\nSpielzeit: %d min") % [
-		tr(str(d.get("name", ""))), game.level, game.levels.size(), game.lives, game.enemies_killed, game.enemies_leaked,
+		Ascension.full_name(str(d.get("name", "")), game.ascension), game.level, game.levels.size(), game.lives, game.enemies_killed, game.enemies_leaked,
 		roundi(game.je_min * 100), roundi(game.je_max * 100), roundi(game.play_time / 60.0)]
 	UiUtil.label(stats, box, 15)
 	var me: MaulGame.Player = game.players[game.local_player]
 	if not game.sandbox:
 		var xp := UiUtil.label(tr("Erfahrung: %s XP (+%s)") % [MaulXp.text(me.xp), MaulXp.text(me.xp - game.xp_start)], box, 15)
 		xp.add_theme_color_override("font_color", UiTheme.PURPLE_LIGHT)
+	if game.ascension_unlocked > 0:
+		UiUtil.label(tr("Aufstieg %s freigeschaltet!") % Ascension.label(game.ascension_unlocked), box, 16).add_theme_color_override("font_color", UiTheme.GOLD)
 	var news := _profile_news_text()
 	if news != "":
 		UiUtil.label(news, box, 15).add_theme_color_override("font_color", UiTheme.COIN)

@@ -285,6 +285,7 @@ func _execute(cmd: Dictionary) -> bool:
 			if setup_done or acting != 0:
 				return false
 			_apply_setup(int(cmd.get("difficulty", 2)), int(cmd.get("field", 0)))
+			take_ascension(cmd)
 			return true
 		"build":
 			return build_barricade(cmd.get("cell", NO_CELL))
@@ -635,6 +636,7 @@ func on_enemy_killed(e: Enemy) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	var won := p == Phase.VICTORY
 	record_profile(won)
 	Engine.time_scale = 1.0
@@ -664,6 +666,18 @@ func score_summary(victory: bool) -> Dictionary:
 
 func profile_mode() -> String:
 	return "eeve"
+
+
+func difficulty_index() -> int:
+	return difficulty
+
+
+func difficulty_count() -> int:
+	return (rules.get("difficulties", []) as Array).size()
+
+
+func difficulty_label() -> String:
+	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 ## Zusätzlich fürs Profil: Elemente, Holz und Feld.
@@ -1024,8 +1038,8 @@ func build_trap(id: String, a: Vector2i) -> bool:
 	_register(t)
 	run_stats.built(t, "trap", wave_index + 1)
 	_update_auras()
-	if acting == local_player:
-		placing_trap = ""
+	if acting == local_player and (not Input.is_key_pressed(KEY_SHIFT) or trap_reason(id) != ""):
+		placing_trap = ""  # mit gedrückter Umschalttaste bleibt die Falle gewählt (wie in Shopping Maul)
 		board.hover_cell = NO_CELL
 	_refresh_hud()
 	return true
@@ -1138,7 +1152,25 @@ func _apply_option(t: Tower, o: Dictionary) -> bool:
 
 # --- Eingabe -----------------------------------------------------------------------
 
+func has_auto_wave() -> bool:
+	return true
+
+
+## Auto: nach jeder Welle gleich die nächste, ohne die Pause abzuwarten (wie Taste N).
+func auto_wave_due() -> bool:
+	return phase == Phase.BUILD and wave_index > 0
+
+
+func next_wave_now() -> void:
+	submit({"type": "start_level"})
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
+	var r := Tower.ring_radius(Database.tower_tier(placing_trap, 0), true) if placing_trap != "" else 0.0
+	if r != board.hover_range:
+		board.hover_range = r
+		board.refresh_hover()
 	if placing_trap != "":
 		var a := board.mouse_anchor(camera_rig.camera, Board3D.TRAP_CELLS)
 		if a != board.hover_cell or board.hover_size != Board3D.TRAP_CELLS:
@@ -1195,6 +1227,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			placing_trap = ""
 			_refresh_hud()
 			return
+	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_RIGHT \
+			and placing_trap != "" and not camera_rig.right_dragged:
+		placing_trap = ""
+		_refresh_hud()
+		return
 	super._unhandled_input(event)
 
 
