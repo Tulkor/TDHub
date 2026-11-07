@@ -4,7 +4,12 @@ extends Node
 ##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes|survivors   Standard spiel
 ##   survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad --auswahl=turm|1..6 --abwahl
 ##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
-##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher
+##     Etappe 3: --welle=N ab Welle N, --boss=N Kriegsherr der Welle N, --zone=arena|hain|schmiede|pruefung [--pruefung=jagd|tanz]
+##     (Held steht in der Zone, mit Ausrüstung), --ereignis=haendler|karawane|blutmond|gefangener|schrein,
+##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher,
+##                           --weit Kamera weit weg (ganze Karte), --shop[=grund|ruest|rezept|holz|tore] Shop offen,
+##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
+##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -163,6 +168,7 @@ func _ready() -> void:
 			Session.difficulty = int(opts.get("stufe", "1"))
 			node = load("res://scenes/heroes_game.tscn").instantiate()
 			node.bot = true
+			node.force_hero = str(opts.get("held", ""))
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
@@ -520,15 +526,51 @@ func _prepare_heroes(game: Node) -> void:
 		return
 	game.set_physics_process(false)
 	game.rng.seed = int(opts.get("seed", "1"))
+	if opts.has("farbe"):
+		HdTelegraph.palette = int(opts.farbe)
+	if opts.has("umriss"):
+		HdTelegraph.outline = int(opts.umriss)
+	if opts.has("gold"):
+		game.shop.add_gold(int(opts.gold))
 	if opts.has("boss"):
 		game.spawn_queue.clear()
 		game.hero.add_xp(4000.0)
-		game.start_wave(10)
+		game.start_wave(int(opts.get("welle", "10")) if opts.boss == "1" else int(opts.boss))
+	elif opts.has("welle"):
+		game.spawn_queue.clear()
+		game.hero.add_xp(400.0 * int(opts.welle))
+		game.start_wave(int(opts.welle))
+	if opts.has("ereignis"):
+		game.events.start(str(opts.ereignis))
+	if opts.has("zone"):
+		var zid := str(opts.zone)
+		if game.wave < 13:
+			game.wave = 13
+		game.hero.position = game.zones.center(zid) + (game.fortress_pos - game.zones.center(zid)).normalized() * 5.0
+		game.shop.gold += 3000
+		for k in 3:
+			game.shop.inv[k] = {"id": ["schmiedesonne", "bollwerkplatte", "windlaeufer"][k], "n": 1, "up": [2, 0, 1][k], "gems": [["rubin"], [], ["topas", "diamant"]][k]}
+		game.shop._changed()
+		match zid:
+			"arena":
+				game.shop.act({"kind": "arena"})
+			"hain":
+				game.shop.act({"kind": "lumberjack"})
+			"pruefung":
+				if opts.has("pruefung"):
+					game.shop.act({"kind": "trial", "id": str(opts.pruefung)})
 	var left := float(opts.get("zeit", "150"))
 	var dt := 1.0 / 30.0
 	var k := 0
+	var hold = game.hero.position if opts.has("zone") else null
 	while left > 0.0 and game.state == "play":
-		if k % 3 == 0:
+		if hold != null:
+			game.hero.move_dir = Vector3.ZERO
+			if game.hero.position.distance_to(hold) > 6.0:
+				game.hero.position = hold
+			if k % 3 == 0 and opts.has("kampf"):
+				game.bot_turn()
+		elif k % 3 == 0:
 			game.bot_turn()
 		game.step(dt)
 		left -= dt
@@ -550,8 +592,22 @@ func _prepare_heroes(game: Node) -> void:
 			k += 1
 			tries += 1
 	game.paused = true
+	if opts.has("shop"):
+		var t := str(opts.shop)
+		game.hud.econ.tab = t if t != "1" else "grund"
+		if game.hud.econ.tab == "rezept":
+			game.hud.econ.picked = "schmiedesonne"
+		game.hud.econ.toggle()
+		game.hud.refresh()
 	if opts.has("nah"):
 		game.cam_dist = 17.0
+	if opts.has("weit"):
+		game.cam_dist = 150.0
+		game.cam_pos = game.fortress_pos
+		game.camera.far = 400.0
+		game._place_camera()
+		await _frames(12)
+		return
 	game.cam_pos = game.hero.position
 	game._place_camera()
 	await _frames(12)

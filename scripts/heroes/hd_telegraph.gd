@@ -16,6 +16,22 @@ const RED := Color(1.0, 0.16, 0.12, 1.0)
 const BLUE := Color(0.25, 0.65, 1.0, 1.0)
 const POISON := Color(0.45, 0.9, 0.2, 0.85)
 const SUMMON := Color(0.75, 0.3, 1.0, 1.0)
+## Barrierefreiheit (Einstellung in user://heroes.cfg): Farbe der gegnerischen Warnflächen und Umriss.
+const PALETTES := [
+	{"name": "Rot", "color": Color(1.0, 0.16, 0.12, 1.0)},
+	{"name": "Orange", "color": Color(1.0, 0.55, 0.05, 1.0)},
+	{"name": "Magenta", "color": Color(1.0, 0.2, 0.85, 1.0)},
+	{"name": "Gelb", "color": Color(1.0, 0.92, 0.1, 1.0)},
+	{"name": "Weiß", "color": Color(1.0, 1.0, 1.0, 1.0)},
+]
+const OUTLINES := ["Normal", "Kräftig", "Kräftig + dunkler Rand"]
+static var palette := 0
+static var outline := 0
+
+
+## Farbe gegnerischer Warnflächen nach Einstellung.
+static func enemy_color() -> Color:
+	return PALETTES[clampi(palette, 0, PALETTES.size() - 1)].color
 
 const CODE := """
 shader_type spatial;
@@ -30,6 +46,7 @@ uniform float progress = 0.0;
 uniform float flash = 0.0;
 uniform float base_alpha = 0.18;
 uniform float edge = 0.14;
+uniform float dark_rim = 0.0;
 uniform vec4 color : source_color = vec4(1.0, 0.16, 0.12, 1.0);
 varying vec2 p;
 void vertex() {
@@ -61,7 +78,12 @@ void fragment() {
 	float a = mix(base_alpha, 0.55, fill);
 	a = max(a, rim * 0.95);
 	a = max(a, flash);
-	ALBEDO = mix(color.rgb, vec3(1.0, 0.95, 0.85), flash * 0.6);
+	vec3 col = color.rgb;
+	if (dark_rim > 0.0 && e < dark_rim) {
+		col = vec3(0.02);
+		a = 0.9;
+	}
+	ALBEDO = mix(col, vec3(1.0, 0.95, 0.85), flash * 0.6);
 	ALPHA = clamp(a, 0.0, 1.0) * color.a;
 }
 """
@@ -94,7 +116,7 @@ var _mat: ShaderMaterial
 static func make(kind: int, col: Color = RED) -> HdTelegraph:
 	var t := HdTelegraph.new()
 	t.shape = kind
-	t.color = col
+	t.color = enemy_color() if col == RED else col
 	return t
 
 
@@ -148,6 +170,10 @@ func _ready() -> void:
 	_mat.set_shader_parameter("progress", progress)
 	_mat.set_shader_parameter("flash", flash)
 	_mat.set_shader_parameter("color", color)
+	if outline > 0 and color != BLUE:
+		_mat.set_shader_parameter("edge", 0.3)
+		_mat.set_shader_parameter("base_alpha", 0.26)
+		_mat.set_shader_parameter("dark_rim", 0.09 if outline == 2 else 0.0)
 	material_override = _mat
 
 
