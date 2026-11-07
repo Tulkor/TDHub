@@ -253,6 +253,9 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	countdown = float(rules.first_delay_many if m >= 4 else rules.first_delay)
 	phase = Phase.COUNTDOWN
 	_pick_shop(local_player, shop_id)
+	if solo():
+		Engine.time_scale = Session.speed
+		auto_wave = Session.auto_wave_on()
 	_refresh_hud()
 
 
@@ -308,6 +311,8 @@ func _process(delta: float) -> void:
 	if not mirror:
 		match phase:
 			Phase.COUNTDOWN:
+				if auto_wave and level > 0 and solo():
+					countdown = 0.0
 				countdown -= delta
 				if countdown <= 0.0:
 					_start_level(level + 1)
@@ -381,6 +386,9 @@ func _start_level(n: int) -> void:
 		return
 	if not mirror:
 		level_save = MaulSave.state(self)
+	# Einzelspiel: vor jedem Level still speichern („Weiterspielen“ im Hub, Lukas 2026-11-03)
+	if n > 1 and solo() and not Session.skip_setup and not sandbox:
+		MaulSave.save(self)
 	level = n
 	var lv := level_def(n)
 	level_kind = str(lv.get("kind", "ground"))
@@ -1963,6 +1971,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				set_speed(4.0)
 			KEY_L:
 				set_path_lights(not path_lights.visible)
+			KEY_N:
+				if phase == Phase.COUNTDOWN:
+					submit({"type": "start_now"})
+			KEY_P, KEY_PAUSE:
+				set_user_paused(true)
 			KEY_DELETE:
 				if selected != null:
 					submit({"type": "sell", "cell": selected.cell})
@@ -2028,10 +2041,46 @@ func select_unit(u: MaulUnit) -> void:
 
 
 ## Spieltempo: im Koop bestimmt es der Host, Mitspieler schicken ihren Wunsch als Befehl.
+## Einzelspiel ohne Mitspieler: Pause, Auto-Start und gemerktes Tempo gibt es nur dort.
+func solo() -> bool:
+	return sync == null and not mirror and not Net.is_active() and players.size() <= 1
+
+
+var auto_wave := false  ## Schalter „Auto“: Countdown zwischen den Leveln überspringen
+var user_paused := false
+var _pause_input: PauseInput = null
+
+
+func set_auto_wave(on: bool) -> void:
+	auto_wave = on
+	Session.auto_wave[Session.game_kind] = on
+	Session.save_last()
+
+
+## Pause (Taste P, nur Einzelspiel): Welt steht, Kamera und Oberfläche laufen weiter.
+func set_user_paused(on: bool) -> void:
+	if not solo() or phase == Phase.SETUP or phase >= Phase.GAME_OVER:
+		on = false
+	user_paused = on
+	get_tree().paused = on
+	camera_rig.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.show_pause(on)
+	if _pause_input == null:
+		_pause_input = PauseInput.new()
+		_pause_input.on_event = func(e):
+			if e is InputEventKey and e.pressed and not e.echo and e.keycode in [KEY_P, KEY_PAUSE, KEY_ESCAPE]:
+				set_user_paused(false)
+				get_viewport().set_input_as_handled()
+		add_child(_pause_input)
+
+
 func set_speed(f: float) -> void:
 	if mirror:
 		submit({"type": "speed", "f": f})
 		return
+	if solo():
+		Session.speed = f
 	Engine.time_scale = f
 	hud.refresh_live()
 

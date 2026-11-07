@@ -677,9 +677,18 @@ func set_selected(value: bool) -> void:
 	selected = value
 	if _select_ring:
 		_select_ring.visible = value
-		_range_ring.visible = value and (can_attack() or _aura_radius() > 0.0)
+		_range_ring.visible = (value or hovered) and (can_attack() or _aura_radius() > 0.0)
 	if not value:
 		show_preview_range(0.0)
+
+
+var hovered := false  ## Maus liegt kurz darauf: Reichweitenring wie bei der Auswahl (game._update_tower_hover)
+
+
+func set_hovered(value: bool) -> void:
+	hovered = value
+	if _range_ring != null and is_instance_valid(_range_ring):
+		_range_ring.visible = (selected or value) and (can_attack() or _aura_radius() > 0.0)
 
 
 ## Türkiser Ring mit der Reichweite nach einem Upgrade; 0 blendet ihn aus.

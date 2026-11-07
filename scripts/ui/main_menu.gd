@@ -33,6 +33,7 @@ const SHADE := preload("res://scripts/ui/wc3_shade.gdshader")
 
 
 func _ready() -> void:
+	Session.load_last()
 	UiTheme.use_skin(UiTheme.ARCADE)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = DecoTheme.get_theme()
@@ -153,6 +154,15 @@ func _build_hub() -> void:
 	pillar.offset_left = -66 - 420
 	hub.add_child(pillar)
 	hub_buttons.clear()
+	# Weiterspielen: jüngster Einzelspiel-Stand (Autosave nach jeder Welle, Lukas 2026-11-03), ein Klick
+	var last := continue_save()
+	if not last.is_empty():
+		var meta: Dictionary = last.get("meta", {})
+		var mode_name := str(Database.mode(str(last.get("mode", "gemtd"))).get("name", last.get("mode", "")))
+		var desc := "%s · %s · %s" % [mode_name, tr(str(meta.get("map", ""))), tr("Welle %d") % int(meta.get("wave", 0))]
+		var cont := pillar.button("Weiterspielen", true, desc, func(): _load_save(last))
+		cont.set_meta("continue", true)
+		hub_buttons.append(cont)
 	hub_buttons.append(pillar.button("Einzelspieler", true, "Allein spielen, Modus und Map wählen und den Weg verteidigen.", func(): show_page("single")))
 	net_tile = pillar.button("Mehrspieler", true, "Sitzung hosten oder per IP beitreten. In der Lobby stimmt ihr gemeinsam über den Modus ab.", func(): show_page("lobby"))
 	hub_buttons.append(net_tile)
@@ -590,6 +600,14 @@ func _start_session() -> void:
 	elif m != null or not Net.session.get("map", {}).is_empty():
 		# Eigene Felder, gemischt mit Koop-Gruppen (gleiche Feldnummer in der Lobby)
 		Net.start_session(m.to_dict() if m != null else {}, lobby.field_groups())
+
+
+## Jüngster Einzelspiel-Spielstand (ganze Daten) oder {}.
+static func continue_save() -> Dictionary:
+	for e in SaveGame.list():
+		if str(e.kind) == "single":
+			return SaveGame.read(SaveGame.path_for(str(e.id)))
+	return {}
 
 
 ## Spielstand laden: Einzelspiel geht direkt weiter, eine Mehrspieler-Sitzung wird gehostet.
