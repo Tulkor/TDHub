@@ -13,6 +13,7 @@ const MODES := [
 	["randgruppen", "Randgruppen TD", Color("5d8ff0")],
 	["youtd", "YouTD", Color("e0b56a")],
 	["heroes", "Bollwerk", Color("ff8a3a")],
+	["survivors", "Tower Survivors", Color("22c4ee")],
 ]
 const WIN := Color("9fd27a")
 const LOSS := Color("e07b5f")
@@ -30,7 +31,7 @@ static func mode_name(m: String) -> String:
 
 ## Kurzer Name für Reiter und Filter.
 static func short_name(m: String) -> String:
-	return {"maul": "Maul", "randgruppen": "Randgruppen"}.get(m, mode_name(m))
+	return {"maul": "Maul", "randgruppen": "Randgruppen", "survivors": "Survivors"}.get(m, mode_name(m))
 
 
 static func mode_color(m: String) -> Color:

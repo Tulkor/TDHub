@@ -23,7 +23,7 @@ extends RefCounted
 
 const VERSION := 2
 const MAX_INDEX := 5000  ## Einträge in der Liste; die Run-Dateien selbst bleiben alle
-const MODES := ["gemtd", "roguelike", "eeve", "maul", "randgruppen", "youtd", "heroes"]
+const MODES := ["gemtd", "roguelike", "eeve", "maul", "randgruppen", "youtd", "heroes", "survivors"]
 ## Rekorde, bei denen der kleinere Wert besser ist
 const LOWER_IS_BETTER := ["fastest_win"]
 
