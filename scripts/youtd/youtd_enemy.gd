@@ -12,12 +12,18 @@ var specials: Array = []     ## Eigenschaften, die für ihn gelten
 var base_hp := 0.0           ## Grundleben vor den Eigenschaften (Spielstand)
 var base_armor := 0.0
 var core: YtCreep = null
+var asc_speed := 1.0         ## Tempo-Faktor der Aufstiegsstufe (ascension.gd)
+var asc_speed_add := 0.0
 
 
 ## w: Welle aus YoutdWaves, size: Größe dieses Gegners. hp: eigene Leben (Kinder aus Eigenschaften), sonst aus der Welle.
 func setup_youtd(g, w: Dictionary, size_id: String, p: PackedVector2Array, hp_factor: float, hp_override := -1.0, lane_id := 0) -> void:
 	level = int(w.level)
 	lane = lane_id
+	if g != null and g.has_method("ascension_mods") and int(g.ascension) > 0:
+		var m: Dictionary = g.ascension_mods()
+		asc_speed = float(m.speed)
+		asc_speed_add = float(m.speed_add)
 	creep_size = size_id
 	race = str(w.race)
 	var rules := YoutdData.rules()
@@ -120,7 +126,7 @@ func take_raw_damage(amount: float) -> float:
 ## Tempo und Betäubung kommen jedes Bild aus dem Kern (Verlangsamung, Schnell usw. sind Modifikatoren).
 func _process(delta: float) -> void:
 	if core != null and is_instance_valid(core) and not dead:
-		speed = YoutdData.units(core.get_current_movespeed())
+		speed = YoutdData.units(core.get_current_movespeed()) * asc_speed + asc_speed_add
 		if core.is_stunned():
 			stun_time = maxf(stun_time, delta)
 	super._process(delta)

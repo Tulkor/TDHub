@@ -44,6 +44,7 @@ extends Node
 ##   --rasse=kleingarten     Randgruppen TD (--map=randgruppen): Rasse für das Bild, --bauen=N Bauvorschau Tower N
 ##   --vitrine               eeveTD: viele verschiedene Tower auf den Mauern (Modelle ansehen)
 ##   --einstellungen         Einstellungsfenster vor Runde 1 offen lassen (z. B. eeveTD)
+##   --aufstieg=N            Aufstiegsstufen bis +N frei und gewählt, höchste Schwierigkeit vorausgewählt (Startfenster ansehen)
 ##   --rezepte, --elemente   YouTD: Fenster „Rezepte“ bzw. „Elemente“ in der Mitte öffnen (sonst bleiben beide zu)
 ##   --turmlicht=sockel|kontur|aus  eeveTD: Tower von Lampen im Sockel angeleuchtet, weiße Kontur oder nichts
 ##   --nacht                 Nachtversion des Spielfeld-Stils (FieldStyle.night, z. B. Shopping Maul im Mondlicht,
@@ -122,6 +123,8 @@ func _ready() -> void:
 	Session.skip_setup = not opts.has("einstellungen")
 	if opts.has("rasse"):
 		Session.rg_choice = {"race": str(opts.rasse)}
+	if opts.has("aufstieg"):
+		_ascension(int(opts.aufstieg))
 	Display.quality = int(opts.get("grafik", Display.HIGH))
 	Display.apply_quality()
 	FieldStyle.night = opts.has("nacht")
@@ -877,3 +880,16 @@ func _level_shot(game: Node) -> void:
 	var r: Rect2 = hud.info_kills.get_global_rect()
 	box.position = Vector2(r.position.x, r.position.y - box.size.y - 6)
 
+
+## --aufstieg=N: Aufstiegsstufen bis +N in allen Modi frei (nur im Speicher), N gewählt, höchste Schwierigkeit vorausgewählt.
+func _ascension(n: int) -> void:
+	for m in Profile.MODES:
+		Profile.progress(m).ascension = {"unlocked": n, "best": n - 1}
+		Session.ascension_choice[m] = n
+	Session.difficulty = Ascension.top("gemtd", Session.DIFFICULTIES.size())
+	Session.eeve_choice = {"difficulty": Ascension.top("eeve", Ascension.difficulty_count("eeve"))}
+	var rg: Dictionary = Session.rg_choice.duplicate()
+	rg.difficulty = Ascension.top("randgruppen", Ascension.difficulty_count("randgruppen"))
+	Session.rg_choice = rg
+	Session.set_meta("youtd_choice", {"difficulty": Ascension.top("youtd", Ascension.difficulty_count("youtd"))})
+	Session.maul_choice = {"difficulty": Ascension.top("maul", Ascension.difficulty_count("maul"))}

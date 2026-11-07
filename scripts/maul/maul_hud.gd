@@ -1174,13 +1174,15 @@ func show_game_over(victory: bool) -> void:
 		title.add_theme_color_override("font_color", UiTheme.MISSING)
 	var d := MaulData.difficulty(game.difficulty)
 	var stats := tr("Schwierigkeit: %s\nLevel %d von %d\nLeben übrig: %d\nGegner besiegt: %d, durchgelassen: %d\nSelbstanpassung: %d–%d %%\nSpielzeit: %d min") % [
-		tr(str(d.get("name", ""))), game.level, game.levels.size(), game.lives, game.enemies_killed, game.enemies_leaked,
+		Ascension.full_name(str(d.get("name", "")), game.ascension), game.level, game.levels.size(), game.lives, game.enemies_killed, game.enemies_leaked,
 		roundi(game.je_min * 100), roundi(game.je_max * 100), roundi(game.play_time / 60.0)]
 	UiUtil.label(stats, box, 15)
 	var me: MaulGame.Player = game.players[game.local_player]
 	if not game.sandbox:
 		var xp := UiUtil.label(tr("Erfahrung: %s XP (+%s)") % [MaulXp.text(me.xp), MaulXp.text(me.xp - game.xp_start)], box, 15)
 		xp.add_theme_color_override("font_color", UiTheme.PURPLE_LIGHT)
+	if game.ascension_unlocked > 0:
+		UiUtil.label(tr("Aufstieg %s freigeschaltet!") % Ascension.label(game.ascension_unlocked), box, 16).add_theme_color_override("font_color", UiTheme.GOLD)
 	var news := _profile_news_text()
 	if news != "":
 		UiUtil.label(news, box, 15).add_theme_color_override("font_color", UiTheme.COIN)

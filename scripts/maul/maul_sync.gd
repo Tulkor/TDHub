@@ -116,6 +116,7 @@ func snapshot() -> Dictionary:
 		"lives": g.lives,
 		"max_lives": g.max_lives,
 		"difficulty": g.difficulty,
+		"ascension": g.ascension,
 		"mode": g.mode,
 		"sandbox": g.sandbox,
 		"foreign_build": g.foreign_build,
@@ -251,6 +252,7 @@ func apply_state(s: Dictionary) -> void:
 	g.lives = int(s.get("lives", g.lives))
 	g.max_lives = int(s.get("max_lives", g.max_lives))
 	g.difficulty = int(s.get("difficulty", g.difficulty))
+	g.ascension = int(s.get("ascension", 0))
 	g.mode = str(s.get("mode", g.mode))
 	g.sandbox = bool(s.get("sandbox", false))
 	g.foreign_build = bool(s.get("foreign_build", false))

@@ -314,6 +314,7 @@ func _apply_setup(cmd: Dictionary) -> void:
 	mode_index = clampi(int(cmd.get("mode", 0)), 0, (rules.get("modes", []) as Array).size() - 1)
 	length_index = clampi(int(cmd.get("length", 1)), 0, (rules.get("lengths", []) as Array).size() - 1)
 	difficulty = clampi(int(cmd.get("difficulty", 2)), 0, (rules.get("difficulties", []) as Array).size() - 1)
+	take_ascension(cmd)
 	wave_seed = int(cmd.get("seed", rng.randi()))
 	wave_rng.seed = wave_seed
 	YtGlobals.synced_rng.seed = wave_seed * 17 + 3
@@ -982,7 +983,14 @@ func _spawn_youtd(w: Dictionary, size_id: String, lane := 0) -> void:
 	_next_enemy_id += 1
 	board.add_child(e)
 	var lp: Dictionary = lane_paths[lane_index(lane)]
-	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, 1.0, -1.0, lane)
+	var hp_factor := 1.0
+	if ascension > 0:
+		# Aufstieg: Leben und Rüstung der Welle (Kinder aus Eigenschaften erben die Leben ihrer Eltern)
+		var m := ascension_mods()
+		w = w.duplicate()
+		w.armor = float(w.armor) * float(m.armor) + float(m.armor_add)
+		hp_factor = float(m.hp)
+	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, hp_factor, -1.0, lane)
 	e.final_boss = int(w.level) == max_wave() and size_id.contains("boss")
 	enemies.append(e)
 	if e.boss:
@@ -1166,6 +1174,18 @@ func _finish(p: Phase) -> void:
 
 func profile_mode() -> String:
 	return "youtd"
+
+
+func difficulty_index() -> int:
+	return difficulty
+
+
+func difficulty_count() -> int:
+	return (rules.get("difficulties", []) as Array).size()
+
+
+func difficulty_label() -> String:
+	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 func profile_extra() -> Dictionary:

@@ -1355,11 +1355,16 @@ func show_game_over(victory: bool, wave: int, waves: int, lives: int, kills: int
 	help_panel.hide()
 	game_over_title.text = "Gewonnen!" if victory else "Verloren"
 	game_over_title.add_theme_color_override("font_color", UiTheme.GOLD if victory else UiTheme.MISSING)
-	game_over_stats.text = tr("Schwierigkeit: ") + tr(Session.difficulty_name()) + "\n" + tr("Welle %d von %d\nLeben übrig: %d\nGegner besiegt: %d\nWeglänge am Ende: %d Felder") % [wave, waves, lives, kills, path_cells]
+	# Schwierigkeit des Modus mit Aufstiegsstufe (game.gd → difficulty_label)
+	var g := get_parent()
+	var diff_name: String = g.difficulty_label() if g != null and g.has_method("difficulty_label") else tr(Session.difficulty_name())
+	game_over_stats.text = tr("Schwierigkeit: ") + diff_name + "\n" + tr("Welle %d von %d\nLeben übrig: %d\nGegner besiegt: %d\nWeglänge am Ende: %d Felder") % [wave, waves, lives, kills, path_cells]
 	if score != null:
 		game_over_title.text = "Geschafft!"
-		game_over_stats.text = tr("Punkte: %d") % int(score) + "\n" + tr("Schwierigkeit: ") + tr(Session.difficulty_name()) + "\n" \
+		game_over_stats.text = tr("Punkte: %d") % int(score) + "\n" + tr("Schwierigkeit: ") + diff_name + "\n" \
 			+ tr("Gegner besiegt: %d") % kills + "\n" + tr("Weglänge am Ende: %d Felder") % path_cells
+	if g != null and g.has_method("difficulty_label") and int(g.ascension_unlocked) > 0:
+		game_over_stats.text += "\n" + tr("Aufstieg %s freigeschaltet!") % Ascension.label(int(g.ascension_unlocked))
 	_fill_summary(summary)
 	editor_button.visible = Session.return_scene != Session.MAIN_MENU
 	editor_button.text = "Zurück zum Map-Editor" if Session.return_scene == Session.MAP_EDITOR else "Zurück zum Tower-Editor"
