@@ -558,19 +558,19 @@ func solo() -> bool:
 
 # --- Auto-Start der nächsten Welle (Schalter „Auto“ neben dem Tempo) -------------------------
 
-## Hat der Modus Pausen zwischen den Wellen, die man mit N abkürzen kann? (GemTD startet die Welle selbst.)
+## Hat der Modus Pausen zwischen den Wellen, die man mit N abkürzen kann? (System waves, modes.json)
 func has_auto_wave() -> bool:
-	return false
+	return systems.waves.has_auto()
 
 
 ## Soll die nächste Welle jetzt automatisch starten (Auto an)?
 func auto_wave_due() -> bool:
-	return false
+	return systems.waves.auto_due()
 
 
 ## Nächste Welle sofort (wie Taste N).
 func next_wave_now() -> void:
-	pass
+	systems.waves.next_now()
 
 
 func set_auto_wave(on: bool) -> void:
@@ -1691,18 +1691,8 @@ static func group_queue(g: Dictionary) -> Array:
 
 
 func _process_wave(delta: float) -> void:
-	spawn_timer -= delta
-	while spawn_timer <= 0.0 and not spawn_queue.is_empty():
-		var g: Dictionary = spawn_queue.pop_front()
-		var before := enemies.size()
-		_spawn_enemy(g)
-		# Der Gegner war schon -spawn_timer Sekunden vor Bildende fällig: diese Zeit nachlaufen, sonst
-		# hängen die Abstände der Gegner vom Bildraster ab (bei 4× bis zu ein Bild, mit Schnelllauf ×8).
-		var late := -spawn_timer
-		if late > 0.0:
-			for i in range(before, enemies.size()):
-				enemies[i]._process(late)
-		spawn_timer += float(g.get("interval", 1.0))
+	# Spawn-Warteschlange im System waves (holt verspätete Gegner nach, damit die Abstände nicht vom Bildraster abhängen)
+	spawn_timer = systems.waves.drain(spawn_queue, spawn_timer, delta, _spawn_new, func(g): return float(g.get("interval", 1.0)))
 	if spawn_queue.is_empty() and enemies.is_empty() and phase == Phase.WAVE:
 		run_stats.wave_done(all_towers(), wave_index + 1, int(leaks_per_wave.get(wave_index, 0)), int(wave_live.killed))
 		wave_index += 1
@@ -1715,6 +1705,13 @@ func _process_wave(delta: float) -> void:
 
 
 ## Gegner der Gruppe g erscheinen an jeder aktiven Bahn (lane < 0) oder nur an Bahn lane.
+## Gruppe g spawnen und die neuen Gegner zurückgeben (für waves.drain).
+func _spawn_new(g: Dictionary) -> Array:
+	var before := enemies.size()
+	_spawn_enemy(g)
+	return enemies.slice(before)
+
+
 func _spawn_enemy(g: Dictionary, lane := -1) -> void:
 	var def: Dictionary = enemy_def(str(g.get("enemy", "")))
 	if def.is_empty():

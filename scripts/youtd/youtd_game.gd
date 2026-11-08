@@ -1341,17 +1341,10 @@ func pick_item(i: int) -> void:
 	_refresh_hud()
 
 
-func has_auto_wave() -> bool:
-	return true
-
-
 ## Auto: sobald die letzte Welle weg ist (Timer läuft), sofort die nächste.
-func auto_wave_due() -> bool:
+## Haken für das System waves (auto.due leer): Auto startet, wenn das Feld leer ist und die Pause läuft.
+func auto_wave_rule() -> bool:
 	return next_wave > 1 and next_wave <= max_wave() and alive.is_empty() and next_wave_in > 0.0
-
-
-func next_wave_now() -> void:
-	submit({"type": "next_wave"})
 
 
 func _update_hover() -> void:

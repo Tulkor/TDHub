@@ -1135,18 +1135,6 @@ func _apply_option(t: Tower, o: Dictionary) -> bool:
 
 # --- Eingabe -----------------------------------------------------------------------
 
-func has_auto_wave() -> bool:
-	return true
-
-
-## Auto: nach jeder Welle gleich die nächste, ohne die Pause abzuwarten (wie Taste N).
-func auto_wave_due() -> bool:
-	return phase == Phase.BUILD and wave_index > 0
-
-
-func next_wave_now() -> void:
-	submit({"type": "start_level"})
-
 
 func _update_hover() -> void:
 	_update_tower_hover(get_process_delta_time())

@@ -23,7 +23,7 @@
 			"hint": "Barrikaden bauen, zu Element-Towern aufwerten, 57 Level, Koop oder eigene Felder bis 4 Spieler",
 			"needs_map": true,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
-			"system_cfg": {"difficulty": {"source": "rules"}}
+			"system_cfg": {"difficulty": {"source": "rules"}, "waves": {"auto": {"enabled": true, "command": "start_level", "due": "build_after_first"}}}
 		},
 		{
 			"id": "shoppingmaul",
@@ -47,7 +47,7 @@
 			"hint": "Rasse wählen, Tower frei in die eigene Zone bauen, 35 Level gegen die Spießer, Koop bis 9 Spieler",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"],
-			"system_cfg": {"difficulty": {"source": "rules"}}
+			"system_cfg": {"difficulty": {"source": "rules"}, "waves": {"auto": {"enabled": true, "command": "start_level", "due": "build_after_first"}}}
 		},
 		{
 			"id": "youtd",
@@ -60,7 +60,7 @@
 			"needs_map": true,
 			"coop_only": true,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
-			"system_cfg": {"difficulty": {"source": "rules"}, "economy": {"income_from_balance": true}}
+			"system_cfg": {"difficulty": {"source": "rules"}, "economy": {"income_from_balance": true}, "waves": {"auto": {"enabled": true, "command": "next_wave"}}}
 		},
 		{
 			"id": "heroes",

@@ -62,9 +62,10 @@
 			"haken": ["save_extra", "load_extra", "save_mode"]
 		},
 		"waves": {
-			"titel": "Wellenablauf, Spawn-Warteschlange, Auto-Welle",
+			"titel": "Spawn-Warteschlange, Auto-Welle",
 			"etappe": 5,
-			"eigen": ["_start_wave", "start_wave", "_start_level", "_process_wave", "_spawn_enemy", "_spawn", "group_queue", "is_wave_running", "current_wave", "has_auto_wave", "auto_wave_due", "next_wave_now", "set_auto_wave", "queued_hp", "call_early", "_make_waves"]
+			"eigen": ["_process_wave", "has_auto_wave", "auto_wave_due", "next_wave_now"],
+			"haken": ["_start_wave", "start_wave", "_start_level", "_spawn_enemy", "_spawn", "group_queue", "is_wave_running", "current_wave", "queued_hp", "call_early", "_make_waves", "auto_wave_rule", "set_auto_wave"]
 		},
 		"coop": {
 			"titel": "Koop-Abgleich: Snapshot und Befehle",
