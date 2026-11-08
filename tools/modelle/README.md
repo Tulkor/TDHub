@@ -40,3 +40,9 @@ Modelle aus `assets/models/towers/` drehen sich nicht.
 
 Eigene Modelle für Tower ohne freies Modell: `python3 -I tools/modelle/eigenbau.py [--nur=waage]` baut sie aus
 einfachen Formen nach `assets/models/pakete/eigen/` (eine Funktion je Modell, braucht trimesh und scipy).
+
+Heldenmodelle für Bollwerk (Torvik, Unrat, Vesna, Zix): eigene Low-Poly-Figuren, `tools/modelle/helden_bau.py` baut sie
+aus einfachen Formen mit Skelett (jedes Teil starr an einem Knochen) und Animationen `idle`, `run`, `attack`, `cast`,
+`death`: `<python mit bpy> -I tools/modelle/helden_bau.py -- assets/models/heroes [--nur=torvik] [--bild=linie.png]
+[--posen=posen.png]` (Vorschau mit Cycles: Aufstellung bzw. je Held eine Reihe Ruhe/Laufen/Angriff/Zauber/Tod).
+Ein neuer Held = eine Funktion in `BAU` plus Eintrag in `STIL`/`animieren`. Im Spiel: `"model"` in `data/heroes_helden.json`.

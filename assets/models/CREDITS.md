@@ -172,3 +172,6 @@ CC0: `waage` (YouTD Scales), `it` (YouTD It), `rakete` (YouTD Pocket Rocket), `p
 `blitzfalle` (eeveTD Blitzfalle), `zapfsaeule` und `bohrturm` (Shopping Maul Arol Tankstelle), `trapez`
 und `steinschleuder` (Randgruppen TD), `buehne` (Randgruppen Bühnennebel, darauf ein Nebeleffekt: `fog` in
 `data/tower_models.json`, `scripts/game/fog_fx.gd`).
+
+## Heldenmodelle `heroes/` (eigene, CC0, 2026-11-07)
+Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/helden_bau.py` (Blender), keine fremden Vorlagen.
