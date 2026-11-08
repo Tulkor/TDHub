@@ -43,6 +43,8 @@ class Player:
 	var emma_timer := 0.0
 	var away := false
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
 var rules: Dictionary
 var levels: Array
 var map: MaulMap
@@ -143,6 +145,10 @@ var _detect_towers: Array = []
 var _range_preview: MeshInstance3D
 var _range_preview_r := -1.0
 var _hud_timer := 0.0
+
+
+func _init() -> void:
+	SystemHost.attach(self, "shoppingmaul")
 
 
 func _ready() -> void:
@@ -659,10 +665,8 @@ func _record_run(won: bool) -> void:
 	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension, "victory": won,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "max_lives": max_lives, "kills": enemies_killed,
 		"play_time": roundi(play_time), "coop": players.size() > 1, "players": players.size(),
-		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox,
-		"debug": debug_run(), "time_counted": profile_time}
-	profile_time = roundi(play_time)
-	ascension_unlocked = int(Profile.record_run("maul", info, run_stats.result(_my_towers())).get("ascension_unlocked", 0))
+		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox}
+	systems.run_record.finish(info, run_stats.result(_my_towers()))
 
 
 ## Debug-Menü, Sandbox oder Unsterblich in diesem Run: keine XP, zählt nicht für Siege und Rekorde (nur die Zeit).
@@ -672,12 +676,10 @@ func debug_run() -> bool:
 
 ## Spiel verlassen, bevor die Partie zu Ende ist: Zeit ins Profil, ohne Speichern auch als abgebrochen.
 func _record_abort() -> void:
-	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0 or roundi(play_time) - profile_time < 10:
+	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0:
 		return
-	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension,
-		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time),
-		"debug": debug_run(), "time_counted": profile_time, "saved": SaveGame.writes > _saves_at_start})
-	profile_time = roundi(play_time)
+	systems.run_record.abort({"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension,
+		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time)})
 
 
 func _my_towers() -> Array:

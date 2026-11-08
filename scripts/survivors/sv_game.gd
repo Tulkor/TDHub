@@ -15,6 +15,8 @@ signal ended(victory: bool)
 
 const DATA := "res://data/survivors.json"
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
 var cfg: Dictionary = {}
 var weapon_defs: Dictionary = {}
 var enemy_defs: Dictionary = {}
@@ -60,6 +62,10 @@ var cam_dist := 27.0
 var cam_pitch := 52.0  ## Grad über dem Boden
 var rng := RandomNumberGenerator.new()
 var fixed_seed := -1  ## Tests: fester Zufall ab _ready (vor add_child setzen), sonst zufällig
+
+
+func _init() -> void:
+	SystemHost.attach(self, "survivors")
 
 
 func _ready() -> void:
@@ -810,7 +816,7 @@ func _record(victory: bool) -> Dictionary:
 		"waves": int(cfg.waves.count), "lives": roundi(hp), "max_lives": roundi(max_hp()), "score": score(),
 		"kills": kills, "play_time": roundi(play_time), "debug": debug, "perks": perks.duplicate(),
 		"upgrades": upgrades.duplicate()}
-	return Profile.record_run("survivors", info, {"types": types, "towers": towers, "wave_log": wave_log})
+	return systems.run_record.finish(info, {"types": types, "towers": towers, "wave_log": wave_log})
 
 
 func leave() -> void:

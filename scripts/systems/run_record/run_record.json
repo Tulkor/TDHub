@@ -1,3 +1,5 @@
 {
-	"_info": "Basiswerte des Systems run_record (Run-Ende, Profil, Debug-Run, Abbruch). Ein Modus überschreibt sie in data/modes.json unter system_cfg.run_record; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+	"_info": "Basiswerte für Run-Ende und Profil. profile: Profil-Schlüssel, wenn der Modus keinen Haken profile_mode hat. abort_min_seconds: Abbrüche, die kürzer als so viele Sekunden seit der letzten Buchung sind, zählen nicht. Ein Modus überschreibt sie in data/modes.json unter system_cfg.run_record; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"profile": "",
+	"abort_min_seconds": 10
 }

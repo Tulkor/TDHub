@@ -8,6 +8,9 @@ extends Node3D
 
 enum Phase { BUILD, CHOOSE, WAVE, GAME_OVER, VICTORY }
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
+
 const NO_CELL := Vector2i(-1, -1)
 
 var map: MapData
@@ -137,6 +140,10 @@ var _cover_frame := -1
 var _cover_sig := 0        ## ändert sich, wenn Tower dazukommen, wegfallen oder ihre Reichweite ändern
 var _free_cache := {}      ## free_stretch: Bahn/Flieger → {path, sig, list}
 var _probe: Enemy = null   ## Messpunkt für free_stretch
+
+
+func _init() -> void:
+	SystemHost.attach(self, Session.game_kind)
 
 
 func _ready() -> void:
@@ -2102,15 +2109,8 @@ func record_profile(victory: bool) -> Dictionary:
 	info.erase("top")
 	info.coop = coop != null
 	info.players = players.size()
-	info.debug = debug_run()
-	info.time_counted = profile_time
-	info.merge(profile_extra(), true)
-	info.difficulty = difficulty_index()
-	info.ascension = ascension
-	profile_time = roundi(play_time)
-	var news := Profile.record_run(profile_mode(), info, run_stats.result(all_towers().filter(func(t): return not t.is_new)))
-	ascension_unlocked = int(news.get("ascension_unlocked", 0))
-	return news
+	return systems.run_record.finish(info, run_stats.result(all_towers().filter(func(t): return not t.is_new)),
+		{"difficulty": difficulty_index(), "ascension": ascension})
 
 
 ## Hilft hier eine Debug-Hilfe? Dann gibt der Run keine EP und zählt nicht für Siege und Rekorde (nur die
@@ -2121,18 +2121,11 @@ func debug_run() -> bool:
 
 ## Spiel verlassen, bevor der Run zu Ende ist: Zeit ins Profil, ohne Speichern auch als abgebrochen.
 func record_profile_abort() -> void:
-	if phase >= Phase.GAME_OVER or roundi(play_time) - profile_time < 10:
+	if phase >= Phase.GAME_OVER:
 		return
 	var info := RunHistory.entry_from(self, false)
 	info.erase("top")
-	info.debug = debug_run()
-	info.time_counted = profile_time
-	info.saved = SaveGame.writes > _saves_at_start
-	info.merge(profile_extra(), true)
-	info.difficulty = difficulty_index()
-	info.ascension = ascension
-	Profile.record_abort(profile_mode(), info)
-	profile_time = roundi(play_time)
+	systems.run_record.abort(info, {"difficulty": difficulty_index(), "ascension": ascension})
 
 
 ## Modus im Profil (eeve_game.gd überschreibt das, die Variante Roguelike zählt eigen).
