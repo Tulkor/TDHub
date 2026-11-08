@@ -78,6 +78,18 @@ func _needs(t: Node, abilities: Array) -> Array:
 	return out
 
 
+## Life: ein Kill dieses Towers (Chance schon auf 100 %) muss Leben zurückbringen.
+func _life(t: Node, seen: Dictionary) -> void:
+	var keep: int = game.lives
+	game.lives = game.max_lives - 10
+	game.players[0].aok_lives = 0
+	var e := _spawn(false, t.pos)
+	t._killed(e)
+	if game.lives > game.max_lives - 10:
+		seen.life = true
+	game.lives = keep
+
+
 func _spawn(flying: bool, p: Vector2) -> Node:
 	var e := MaulEnemy.new()
 	e.net_id = game._next_enemy_id

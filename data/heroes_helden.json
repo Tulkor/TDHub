@@ -3,6 +3,7 @@
 	"heroes": [
 		{
 			"id": "torvik",
+			"model": "res://assets/models/heroes/torvik.glb",
 			"name": "Torvik Sturmruf",
 			"title": "Elementarkrieger",
 			"role": "Klinge",
@@ -28,6 +29,7 @@
 		},
 		{
 			"id": "unrat",
+			"model": "res://assets/models/heroes/unrat.glb",
 			"name": "König Unrat",
 			"title": "Rattenkönig",
 			"role": "Wall",
@@ -51,6 +53,7 @@
 		},
 		{
 			"id": "vesna",
+			"model": "res://assets/models/heroes/vesna.glb",
 			"name": "Oberschwester Vesna",
 			"title": "Feldärztin",
 			"role": "Hüter",
@@ -75,6 +78,7 @@
 		},
 		{
 			"id": "zix",
+			"model": "res://assets/models/heroes/zix.glb",
 			"name": "Zix Funkenkurbel",
 			"title": "Mechagoblin",
 			"role": "Spezialist",

@@ -23,6 +23,7 @@ const NEEDS := {
 	"hp_cut": ["hp_cut"], "pulse": ["cast"], "area_debuff": [],
 	# Shopping Maul
 	"detect": ["detect"], "nova_spell": ["cast", "cast_hits"], "chain_spell": ["cast", "chain_hits"], "wave_spell": ["cast", "cast_hits"],
+	"stun_spell": ["cast", "stun"], "flirt_spell": ["cast", "stun"], "life": ["life"],
 }
 
 const PROBE_BODY := """
@@ -405,12 +406,14 @@ func _probe(id: String, tier: int) -> void:
 			for e in game.enemies.duplicate():
 				if not e.flying:
 					game._remove_enemy(e)
-		if time >= MIN_TIME and needs.all(func(k): return seen.has(k) or k in ["wave_damage", "explosion"]):
+		if time >= MIN_TIME and needs.all(func(k): return seen.has(k) or k in ["wave_damage", "explosion", "life"]):
 			break
 	Engine.time_scale = 1.0
 	_collect(t, seen, gold0)
 	if needs.has("explosion"):
 		_explode(t, seen)
+	if needs.has("life"):
+		_life(t, seen)
 	if needs.has("wave_damage"):
 		_set_wave(1)
 		var low := 0.0
@@ -558,6 +561,11 @@ func _explode(t: Node, seen: Dictionary) -> void:
 		seen.erase("explosion")
 
 
+## Kill-Effekt "life" (Maul): je Modus, setzt seen.life, wenn ein Kill Leben zurückbringt.
+func _life(_t: Node, _seen: Dictionary) -> void:
+	pass
+
+
 func _why(k: String) -> String:
 	const TEXT := {
 		"primary": "trifft sein Ziel nicht", "damage": "macht keinen Schaden", "secondary": "keine Nebenziele (Fläche/Kette)",
@@ -568,7 +576,7 @@ func _why(k: String) -> String:
 		"wave_damage": "Schaden steigt nicht mit der Welle", "cone": "Kegel trifft niemanden", "amplify": "Ertränken wirkt nicht",
 		"burn_mark": "Flammenrost markiert nicht", "explosion": "keine Explosion beim Tod", "chain": "Kettenblitz springt nicht",
 		"hp_cut": "Wolke nimmt keine Leben", "cast": "Zauber wird nie gewirkt", "cast_hits": "Zauber trifft niemanden",
-		"chain_hits": "Kettenblitz springt nicht", "detect": "enttarnt nicht",
+		"chain_hits": "Kettenblitz springt nicht", "detect": "enttarnt nicht", "life": "Kill bringt kein Leben",
 	}
 	return "%s (%s)" % [k, TEXT.get(k, "?")]
 
