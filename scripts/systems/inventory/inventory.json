@@ -1,3 +1,5 @@
 {
-	"_info": "Basiswerte des Systems inventory (Item-Plätze, Items auf Tower ziehen). Ein Modus überschreibt sie in data/modes.json unter system_cfg.inventory; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+	"_info": "Basiswerte des Inventars (Item-Plätze wie in WC3, Items auf Tower in der Welt ziehen). command: Befehl beim Ablegen auf einen Tower. tower_ref: wie der Ziel-Tower im Befehl steht, \"ref\" (game.tower_ref) oder \"cell\" (Ankerfeld). Ein Modus überschreibt sie in data/modes.json unter system_cfg.inventory; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"command": "item_move",
+	"tower_ref": "ref"
 }

@@ -192,20 +192,16 @@ func save_mode() -> String:
 
 # --- Koop (coop_sync.gd, youtd_coop.gd) ------------------------------------------------
 
-func coop_commands() -> Array:
-	return ["research", "roll", "build", "item_put", "item_take", "item_move", "item_use", "item_lock", "transmute", "oil_merge", "tower_merge",
-			"next_wave", "player_setup"]
-
-
 func new_tower() -> Tower:
 	return YoutdTower.new()
 
 
-func coop_snapshot() -> Dictionary:
+## Stand für Mitspieler (Haken des Systems coop, Befehle in modes.json → system_cfg.coop).
+func coop_extra() -> Dictionary:
 	return YoutdCoop.snapshot(self)
 
 
-func apply_coop_snapshot(d: Dictionary) -> void:
+func coop_applied(d: Dictionary, _changed: Array) -> void:
 	var prev = YtWorld.use(self)
 	YoutdCoop.apply(self, d)
 	YtWorld.use(prev)
@@ -536,26 +532,16 @@ func can_place_for(a: Vector2i, pid: int) -> bool:
 	return ok
 
 
-func can_place(a: Vector2i, any_zone := false) -> bool:
+## Haken des Systems build: nur nach dem Setup und vor Spielende.
+func build_rule(a: Vector2i) -> bool:
 	if not setup_done or phase >= Phase.GAME_OVER:
 		return false
-	for c in Board3D.footprint(a):
-		if not map.is_buildable(c) or occupied.has(c) or not (any_zone or may_build_for(c)):
-			return false
 	# Maverick: Tower dürfen nicht direkt nebeneinander stehen
 	if not yp().get_builder().get_allow_adjacent_towers():
 		for c in Board3D.footprint(a - Vector2i.ONE, 4):
 			if occupied.has(c):
 				return false
 	return true
-
-
-func _occupy(a: Vector2i, on: bool, _solid: bool) -> void:
-	for c in Board3D.footprint(a):
-		if on:
-			occupied[c] = a
-		else:
-			occupied.erase(c)
 
 
 func build_tower(id: String, a: Vector2i) -> bool:
@@ -1030,10 +1016,6 @@ func queued_hp() -> float:
 	return total
 
 
-func idle_speed_factor() -> float:
-	return 1.0
-
-
 ## Punkte für einen Gegner (Creep.get_score): Schadensanteil × (Welle/8 + 1) × Schwierigkeit × Modus × Länge × Größe.
 func creep_score(e: YoutdEnemy) -> float:
 	if e.core == null:
@@ -1341,17 +1323,10 @@ func pick_item(i: int) -> void:
 	_refresh_hud()
 
 
-func has_auto_wave() -> bool:
-	return true
-
-
 ## Auto: sobald die letzte Welle weg ist (Timer läuft), sofort die nächste.
-func auto_wave_due() -> bool:
+## Haken für das System waves (auto.due leer): Auto startet, wenn das Feld leer ist und die Pause läuft.
+func auto_wave_rule() -> bool:
 	return next_wave > 1 and next_wave <= max_wave() and alive.is_empty() and next_wave_in > 0.0
-
-
-func next_wave_now() -> void:
-	submit({"type": "next_wave"})
 
 
 func _update_hover() -> void:
@@ -1410,9 +1385,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 # --- Anzeige -----------------------------------------------------------------------
@@ -1551,12 +1523,7 @@ func inv_drop_hint(t: Tower, data: Dictionary) -> String:
 	var it := _drag_item(data)
 	if it != null and it.is_oil():
 		return "+ " + tr("Öl anwenden (wird verbraucht)")
-	var yt := t as YoutdTower
-	return "+ " + tr("Einlegen · %d frei") % (yt.slots() - yt.items.size())
-
-
-func inv_drop_on_tower(t: Tower, data: Dictionary) -> void:
-	submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": tower_ref(t), "slot": -1}})
+	return systems.inventory.free_hint(t)
 
 
 func _option_view(_t: Tower, o: Dictionary) -> Dictionary:

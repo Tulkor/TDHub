@@ -204,7 +204,7 @@ func _ready() -> void:
 	hud = MaulHud.new()
 	hud.game = self
 	add_child(hud)
-	_setup_inv_drop()
+	inv_drop = systems.inventory.setup_drop()
 	_refresh_paths()
 	camera_rig.look_at_point(map.zone_center(players[local_player].zone), 42.0)
 	hud.show_setup()
@@ -784,10 +784,13 @@ func has_other_paths() -> bool:
 	return not _other_path_pts.is_empty()
 
 
+## Weiterleitung → System  build
 func set_show_all_paths(on: bool) -> void:
-	show_all_paths = on
-	if hud.paths_button != null:
-		hud.paths_button.set_pressed_no_signal(on)
+	systems.build.set_show_all_paths(on)
+
+
+## Haken des Systems build: „alle Wege“ umgeschaltet.
+func show_paths() -> void:
 	_show_paths()
 
 
@@ -807,13 +810,9 @@ func _path_light_color(p: Vector2) -> Color:
 	return Board3D.PLAYER_COLORS[z % Board3D.PLAYER_COLORS.size()]
 
 
-## Lichtpfad ein/aus (Knopf im HUD, Taste L); bleibt gespeichert. Solange er läuft, ohne Wegpunkte am Boden.
+## Weiterleitung → System  build
 func set_path_lights(on: bool) -> void:
-	Display.set_path_lights(on)
-	path_lights.visible = on
-	board.set_path_dots(not on)
-	if hud.lights_button != null:
-		hud.lights_button.set_pressed_no_signal(on)
+	systems.build.set_path_lights(on)
 
 
 ## Würde ein Tower auf diesen Feldern einen der Wege versperren?
@@ -995,19 +994,27 @@ func _remove_enemy(e) -> void:
 var selected_enemy = null
 
 
-## Leere Gebiete (ohne Tower) laufen die Gegner dreimal so schnell durch.
+## Weiterleitung → System  build
 func is_covered(e) -> bool:
+	return systems.build.is_covered(e)
+
+
+## Haken des Systems build (cover "rule"): leere Gebiete (ohne Tower) laufen die Gegner schneller durch
+## (system_cfg.build.idle_speed aus rules.empty_zone_speed).
+func cover_rule(e) -> bool:
 	var c := Vector2i(floori(e.pos.x / Board3D.CELL), floori(e.pos.y / Board3D.CELL))
 	var z := map.zone_at(c)
 	return z < 0 or _zone_towers[z] > 0
 
 
+## Weiterleitung → System  build
 func idle_speed_factor() -> float:
-	return float(rules.get("empty_zone_speed", 3.0))
+	return systems.build.idle_speed_factor()
 
 
-func free_stretch(_e) -> Array:
-	return [-1.0, -1.0]
+## Weiterleitung → System  build
+func free_stretch(e) -> Array:
+	return systems.build.free_stretch(e)
 
 
 func is_detected(e) -> bool:
@@ -1042,40 +1049,19 @@ func frost_factor(t) -> float:
 	return 1.0
 
 
+## Weiterleitung → System  targeting
 func find_targets(t, count: int) -> Array:
-	if count == 1:
-		# häufigster Fall ohne Lambda und Sortieren (wie game.gd)
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets(t, count)
 
 
+## Weiterleitung → System  targeting
 func find_targets_in(t, r: float, count: int) -> Array:
-	var r2 := r * r
-	if count == 1:
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and e.pos.distance_squared_to(t.pos) <= r2 \
-					and t.can_target(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and e.pos.distance_squared_to(t.pos) <= r2)
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets_in(t, r, count)
 
 
+## Weiterleitung → System  targeting
 func enemies_in_radius(p: Vector2, radius: float) -> Array:
-	var out := []
-	var r2 := radius * radius
-	for e in enemies:
-		if not e.dead and e.pos.distance_squared_to(p) <= r2:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(p, radius)
 
 
 ## fx wie bei game.gd ("t:<tower>:<stufe>"); FxData wählt den Effekt nach Filialfarbe und Fähigkeit.
@@ -1094,9 +1080,9 @@ func add_ring(p: Vector2, r: float, col: Color) -> void:
 		add_beam(Board3D.to_3d(p + Vector2(cos(a), sin(a)) * r, 0.15), Board3D.to_3d(p + Vector2(cos(b), sin(b)) * r, 0.15), col)
 
 
+## Weiterleitung → System  economy
 func add_gold(amount: int, p := -1) -> void:
-	players[acting if p < 0 else p].gold += amount
-	_refresh_hud()
+	systems.economy.add(amount, p)
 
 
 # --- Bauen -------------------------------------------------------------------------
@@ -1316,8 +1302,7 @@ func _execute(cmd: Dictionary) -> bool:
 				return true
 			return false
 		"speed":
-			Engine.time_scale = clampf(float(cmd.get("f", 1.0)), 1.0, 4.0)
-			return true
+			return systems.controls.set_speed(float(cmd.get("f", 1.0)))
 		"reveal":
 			var me: Player = players[p]
 			if me.reveal_ready > game_time or MaulData.rules().detect_shops.has(me.shop):
@@ -1561,13 +1546,7 @@ func move_item(p: int, from: Dictionary, to: Dictionary) -> bool:
 	var b := _tower(p, to.get("tower"))
 	var k := int(from.get("slot", -1))
 	var j := int(to.get("slot", -1))
-	var id: String = a.items[k]
-	if j >= 0 and j < b.items.size():
-		a.items[k] = b.items[j]
-		b.items[j] = id
-	else:
-		a.items.remove_at(k)
-		b.items.append(id)
+	systems.inventory.move(a.items, k, b.items, j)
 	a._item_cd.clear()
 	b._item_cd.clear()
 	_combine(a)
@@ -1836,9 +1815,7 @@ func _announce_unlocks(before: int, now: int) -> void:
 func _register(t: MaulTower) -> void:
 	towers[t.cell] = t
 	var cells := Board3D.footprint(t.cell)
-	for c in cells:
-		occupied[c] = t.cell
-		pathfinder.set_solid(c, true)
+	systems.build.occupy(t.cell, true)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] += 1
@@ -1849,9 +1826,7 @@ func _register(t: MaulTower) -> void:
 
 func _unregister(t: MaulTower) -> void:
 	towers.erase(t.cell)
-	for c in Board3D.footprint(t.cell):
-		occupied.erase(c)
-		pathfinder.set_solid(c, false)
+	systems.build.occupy(t.cell, false)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] -= 1
@@ -1891,27 +1866,13 @@ func choose_build(id: String) -> void:
 	hud.refresh_shop()
 
 
-# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (InvWorldDrop) ---
+# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (System inventory) ---
 
 var inv_drop: InvWorldDrop
 
 
-func _setup_inv_drop() -> void:
-	inv_drop = InvWorldDrop.new()
-	inv_drop.tower_at = func():
-		return towers.get(occupied.get(board.mouse_cell(camera_rig.camera), NO_CELL))
-	inv_drop.reason = func(t: MaulTower, data: Dictionary) -> String:
-		return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
-	inv_drop.hint = func(t: MaulTower, _data: Dictionary) -> String:
-		return "+ " + tr("Einlegen · %d frei") % (t.slots() - t.items.size())
-	inv_drop.drop = func(t: MaulTower, data: Dictionary) -> void:
-		submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": t.cell, "slot": -1}})
-	inv_drop.mark = func(t, ok: bool) -> void:
-		board.hover_cell = t.cell if t != null else NO_CELL
-		board.hover_ok = ok
-		board.refresh_hover()
-	inv_drop.tell = func(text: String) -> void: show_message(text)
-	add_child(inv_drop)
+func inv_drop_reason(t: MaulTower, data: Dictionary) -> String:
+	return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
 
 
 func _update_hover() -> void:
@@ -2081,9 +2042,7 @@ func set_speed(f: float) -> void:
 	if mirror:
 		submit({"type": "speed", "f": f})
 		return
-	if solo():
-		Session.speed = f
-	Engine.time_scale = f
+	systems.controls.set_speed(f)
 	hud.refresh_live()
 
 

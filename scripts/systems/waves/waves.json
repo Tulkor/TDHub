@@ -1,3 +1,4 @@
 {
-	"_info": "Basiswerte des Systems waves (Wellenablauf, Spawn-Warteschlange, Auto-Welle). Ein Modus überschreibt sie in data/modes.json unter system_cfg.waves; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+	"_info": "Basiswerte für den Wellenablauf. auto.enabled: Pausen zwischen Wellen abkürzbar (Auto, N). auto.command: Befehl für die nächste Welle. auto.due: build_after_first (Bauphase auto.build_phase ab Welle 2) oder leer (Haken auto_wave_rule des Modus). Ein Modus überschreibt sie in data/modes.json unter system_cfg.waves; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"auto": {"enabled": false, "command": "", "due": "", "build_phase": 0}
 }

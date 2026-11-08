@@ -381,7 +381,7 @@ func _inventory(t: YoutdTower) -> void:
 	game.stash_add(oil)
 	var data := {"inv": true, "from": {"stash": oil.get_uid()}}
 	check(game.inv_drop_reason(t, data) == "", "Öl auf Tower in der Welt erlaubt")
-	game.inv_drop_on_tower(t, data)
+	game.systems.inventory.drop(t, data)
 	check(t.oils.has(oil) and not game.item_stash.has(oil), "Öl verbraucht: nicht mehr im Lager, wirkt im Tower")
 	game._select(t)
 	await get_tree().process_frame

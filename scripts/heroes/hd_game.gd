@@ -1210,17 +1210,9 @@ func _resolve(u: Node3D) -> void:
 
 # ---------------------------------------------------------------- Abfragen
 
+## Weiterleitung → System  targeting
 func nearest_enemy(at: Vector3, r: float, skip: Array = []) -> HdEnemy:
-	var best: HdEnemy = null
-	var best_d := r
-	for e in enemies:
-		if e.dead or skip.has(e):
-			continue
-		var d: float = Vector2(e.position.x - at.x, e.position.z - at.z).length() - e.radius
-		if d <= best_d:
-			best_d = d
-			best = e
-	return best
+	return systems.targeting.nearest(Vector2(at.x, at.z), r, skip)
 
 
 func enemy_at(at: Vector3) -> HdEnemy:

@@ -148,9 +148,9 @@ func _ready() -> void:
 	t.kills = 0
 	var potion := {"inv": true, "from": {"stash": 2}}
 	check(game.inv_drop_reason(t, potion) == "", "Trank auf Tower in der Welt ziehbar")
-	game.inv_drop_on_tower(t, potion)
+	game.systems.inventory.drop(t, potion)
 	check(t.kills == 10 and game.ep().items == ["orb_fire", "razorblades"], "Trank verbraucht: +10 Kills")
-	game.inv_drop_on_tower(t, {"inv": true, "from": {"stash": 1}})
+	game.systems.inventory.drop(t, {"inv": true, "from": {"stash": 1}})
 	check(t.items == ["razorblades"] and is_equal_approx(t.flat_damage, 50.0), "Item auf Tower in der Welt gezogen wirkt")
 	check(t.items.size() == 1, "Item wieder einsetzen")
 	for k in 3:

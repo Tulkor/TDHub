@@ -1,3 +1,7 @@
 {
-	"_info": "Basiswerte des Systems economy (Gold, Einkommen, Leben, Leak-Strafe). Ein Modus überschreibt sie in data/modes.json unter system_cfg.economy; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+	"_info": "Basiswerte für Gold. income_from_balance: Faktor und Anstieg aus data/balance.json (gold_income_factor, gold_income_ramp). income: fester Faktor sonst. ramp: {from_wave, to_wave, to_factor}, leer = fest. split_unowned: Gold ohne Spieler auf alle verteilen. Ein Modus überschreibt sie in data/modes.json unter system_cfg.economy; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"income_from_balance": false,
+	"income": 1.0,
+	"ramp": {},
+	"split_unowned": true
 }

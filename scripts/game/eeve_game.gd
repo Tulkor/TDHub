@@ -590,10 +590,6 @@ func _entangle(e: Enemy, towers: Array, duration: float) -> bool:
 	return true
 
 
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
-
-
 func _note(text: String, p := -1) -> void:
 	var lines: Array = ep(p).log
 	lines.append(text)
@@ -675,7 +671,12 @@ func profile_extra() -> Dictionary:
 # --- Koop (coop_sync.gd) -------------------------------------------------------------
 
 ## Befehle, die Mitspieler zusätzlich zu denen von GemTD schicken dürfen.
-# --- Inventar: Items auf Tower in der Welt ziehen (InvWorldDrop in game.gd) ---
+# --- Inventar: Items auf Tower in der Welt ziehen (System inventory) ---
+
+func item_slots(t: Tower) -> int:
+	return EeveItems.slots(t)
+
+
 
 func inv_drop_reason(t: Tower, data: Dictionary) -> String:
 	return eitems.move_reason(data.get("from", {}), {"tower": tower_ref(t), "slot": -1})
@@ -687,15 +688,7 @@ func inv_drop_hint(t: Tower, data: Dictionary) -> String:
 	var i := int(from.get("stash", -1))
 	if i >= 0 and i < inv.size() and EeveItems.is_consumable(inv[i]):
 		return "+ " + tr("%s benutzen (wird verbraucht)") % EeveItems.item_name(inv[i])
-	return "+ " + tr("Einlegen · %d frei") % (EeveItems.slots(t) - t.items.size())
-
-
-func inv_drop_on_tower(t: Tower, data: Dictionary) -> void:
-	submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": tower_ref(t), "slot": -1}})
-
-
-func coop_commands() -> Array:
-	return ["build", "trap", "element", "start_level", "item_use", "item_move", "item_sell", "market_buy", "market_upgrade"]
+	return systems.inventory.free_hint(t)
 
 
 ## Mitspieler legen Tower vom Host als EeveTower an.
@@ -703,41 +696,21 @@ func new_tower() -> Tower:
 	return EeveTower.new()
 
 
-## Was eeveTD über den Stand von GemTD hinaus an die Mitspieler schickt. Die Pause in ganzen Sekunden,
-## damit sich der Stand nicht jedes Bild ändert.
-func coop_snapshot() -> Dictionary:
-	var spent := {}
+## Was eeveTD über GemTD und system_cfg.coop (modes.json) hinaus an die Mitspieler schickt.
+func coop_extra() -> Dictionary:
 	var titems := {}
 	for t in all_towers():
-		var key := "%d,%d,%s" % [t.cell.x, t.cell.y, t.is_trap()]
-		spent[key] = int(t.get_meta("spent", 0))
 		if t is EeveTower and (not t.items.is_empty() or t.extra_slots > 0):
-			titems[key] = _tower_items(t)
-	return {"difficulty": difficulty, "field": field_type, "seed": wave_seed, "pause": ceili(maxf(level_pause, 0.0)),
-		"ready": ready_players.keys(), "players": eeve_players.duplicate(true), "spent": spent,
-		"tiles": _tiles_to_list(bonus_tiles), "score": eeve_score.duplicate(), "items": titems}
+			titems[systems.coop.tower_key(t)] = _tower_items(t)
+	return {"tiles": _tiles_to_list(bonus_tiles), "score": eeve_score.duplicate(), "items": titems}
 
 
-func apply_coop_snapshot(d: Dictionary) -> void:
-	var regen := int(d.get("seed", wave_seed)) != wave_seed or int(d.get("difficulty", difficulty)) != difficulty
-	difficulty = int(d.get("difficulty", difficulty))
-	field_type = int(d.get("field", field_type))
-	wave_seed = int(d.get("seed", wave_seed))
-	if regen:
+func coop_applied(d: Dictionary, changed: Array) -> void:
+	if changed.has("seed") or changed.has("difficulty"):
 		waves = _waves_from_seed()
-	level_pause = float(d.get("pause", level_pause))
-	ready_players = {}
-	for p in d.get("ready", []):
-		ready_players[int(p)] = true
-	var ps: Array = d.get("players", [])
-	if not ps.is_empty():
-		eeve_players = ps
-	var spent: Dictionary = d.get("spent", {})
 	var titems: Dictionary = d.get("items", {})
 	for t in all_towers():
-		var key := "%d,%d,%s" % [t.cell.x, t.cell.y, t.is_trap()]
-		t.set_meta("spent", int(spent.get(key, 0)))
-		_set_tower_items(t, titems.get(key, {}))
+		_set_tower_items(t, titems.get(systems.coop.tower_key(t), {}))
 	if d.has("score"):
 		eeve_score = {"creeps": float(d.score.get("creeps", 0.0)), "challenges": float(d.score.get("challenges", 0.0))}
 	var tiles := _tiles_from_list(d.get("tiles", []))
@@ -1139,18 +1112,6 @@ func _apply_option(t: Tower, o: Dictionary) -> bool:
 
 # --- Eingabe -----------------------------------------------------------------------
 
-func has_auto_wave() -> bool:
-	return true
-
-
-## Auto: nach jeder Welle gleich die nächste, ohne die Pause abzuwarten (wie Taste N).
-func auto_wave_due() -> bool:
-	return phase == Phase.BUILD and wave_index > 0
-
-
-func next_wave_now() -> void:
-	submit({"type": "start_level"})
-
 
 func _update_hover() -> void:
 	_update_tower_hover(get_process_delta_time())
@@ -1221,9 +1182,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 func _on_option_chosen(index: int) -> void:

@@ -272,8 +272,8 @@ func _all_players(f: Callable) -> bool:
 	return true
 
 
-func set_player_away(p: int, away: bool) -> void:
-	super.set_player_away(p, away)
+func on_player_away(p: int, away: bool) -> void:
+	super.on_player_away(p, away)
 	if not mirror:
 		_check_setup()
 
@@ -372,10 +372,6 @@ func _apply_enemy_difficulty(_e: Enemy, _g: Dictionary) -> void:
 
 func is_final_boss_wave() -> bool:
 	return false
-
-
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
 
 
 ## Geldteilen: das Kopfgeld geht an alle zu gleichen Teilen (earn_gold ohne Spieler teilt mit Bruchteilen).
@@ -498,18 +494,6 @@ func _select_rocks(list: Array, t: Tower = null) -> void:
 
 # --- Eingabe -------------------------------------------------------------------------------
 
-func has_auto_wave() -> bool:
-	return true
-
-
-## Auto: nach jeder Welle gleich die nächste, ohne die Pause abzuwarten (wie Taste N).
-func auto_wave_due() -> bool:
-	return phase == Phase.BUILD and wave_index > 0
-
-
-func next_wave_now() -> void:
-	submit({"type": "start_level"})
-
 
 func _update_hover() -> void:
 	_update_tower_hover(get_process_delta_time())
@@ -562,9 +546,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_refresh_hud()
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 func _on_option_chosen(index: int) -> void:
@@ -661,30 +642,7 @@ func load_extra(d: Dictionary, made: Array) -> void:
 
 # --- Koop (coop_sync.gd): alle auf der einen Karte, jeder in seiner Zone, der Host rechnet ----------------------
 
-## Befehle, die Mitspieler zusätzlich zu denen von GemTD schicken dürfen.
-func coop_commands() -> Array:
-	return ["setup", "build", "start_level"]
-
-
-## Was Randgruppen TD über den Stand von GemTD hinaus schickt. Die Pause in ganzen Sekunden, damit sich der Stand
-## nicht jedes Bild ändert.
-func coop_snapshot() -> Dictionary:
-	var spent := {}
-	for t in all_towers():
-		spent["%d,%d" % [t.cell.x, t.cell.y]] = int(t.get_meta("spent", 0))
-	return {"difficulty": difficulty, "pause": ceili(maxf(level_pause, 0.0)), "players": rg_players.duplicate(true),
-		"spent": spent, "share": share_gold}
-
-
-func apply_coop_snapshot(d: Dictionary) -> void:
-	difficulty = int(d.get("difficulty", difficulty))
-	share_gold = bool(d.get("share", share_gold))
-	level_pause = float(d.get("pause", level_pause))
-	var ps: Array = d.get("players", [])
-	if not ps.is_empty():
-		rg_players = ps
-	var spent: Dictionary = d.get("spent", {})
-	for t in all_towers():
-		t.set_meta("spent", int(spent.get("%d,%d" % [t.cell.x, t.cell.y], 0)))
+## Stand für Mitspieler: modes.json → system_cfg.coop (System coop). Danach die Anzeige nachziehen.
+func coop_applied(_d: Dictionary, _changed: Array) -> void:
 	if rg_panel != null:
 		rg_panel.refresh()

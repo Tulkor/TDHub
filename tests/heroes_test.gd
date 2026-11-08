@@ -1012,10 +1012,12 @@ func _events() -> void:
 	c.leg = c.route.size() - 1
 	_run(g, 1.0)
 	check(ev.active.is_empty() and g.shop.gold > gold0, "Karawane am Ziel bringt Gold")
-	# Gefangener
+	# Gefangener (vorher alle Gegner weg: ein zufälliges Ereignis beim Wellenstart oben kann schon Wachen gesetzt haben)
 	g.spawn_queue.clear()
+	for x in g.enemies.duplicate():
+		g._remove(x)
 	ev.start("gefangener")
-	check(ev.guards_left() == 3, "Gefangener mit 3 Wachen")
+	check(ev.guards_left() == 3, "Gefangener mit 3 Wachen (%d)" % ev.guards_left())
 	for x in g.enemies:
 		if x.zone == "kerker":
 			g.hero_hit(x, 999999.0, "test")

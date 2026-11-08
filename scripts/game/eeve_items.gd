@@ -309,17 +309,7 @@ func move(from: Dictionary, to: Dictionary) -> bool:
 	var b := _place(to)
 	if b.tower != null and is_consumable(a.id):
 		return use(a.index, b.tower)
-	var la: Array = a.list
-	var lb: Array = b.list
-	if b.id != "":
-		la[a.index] = b.id
-		lb[b.index] = a.id
-	elif la == lb:
-		la.remove_at(a.index)
-		la.append(a.id)
-	else:
-		la.remove_at(a.index)
-		lb.append(a.id)
+	game.systems.inventory.move(a.list, a.index, b.list, b.index if b.id != "" else -1)
 	game._update_auras()
 	return true
 
