@@ -80,6 +80,7 @@ var _glass_mat: StandardMaterial3D
 var _fireflies: CPUParticles3D
 var _mist_mats: Array[ShaderMaterial] = []
 var _rng := RandomNumberGenerator.new()
+var bezirk: BezirkUeberwuchert  ## Hof „Überwuchert“ statt Friedhof, wenn die Map district = "ueberwuchert" hat
 
 
 ## Wald und Laternen neben das Spielfeld von game setzen und Tag oder Nacht einstellen.
@@ -106,8 +107,11 @@ func _ready() -> void:
 	_ground_day = [tint if tint is Vector3 else Vector3.ONE, float(bright) if bright != null else 0.72,
 		float(contrast) if contrast != null else 1.0, float(macro) if macro != null else 0.12]
 	_add_forest_floor()
+	if map.district == BezirkUeberwuchert.ID:
+		_add_district()
 	_add_forest()
-	_add_graveyard()
+	if bezirk == null:
+		_add_graveyard()
 	_add_mine()
 	_add_mist()
 	_add_lanterns()
@@ -179,7 +183,10 @@ func _apply(on: bool) -> void:
 	_fireflies.emitting = on
 	_fireflies.visible = on
 	for m in _mist_mats:
-		m.set_shader_parameter("mist_color", MIST_NIGHT if on else MIST_DAY)
+		if bezirk != null:
+			m.set_shader_parameter("mist_color", BezirkUeberwuchert.NEBEL_NACHT if on else BezirkUeberwuchert.NEBEL_TAG)
+		else:
+			m.set_shader_parameter("mist_color", MIST_NIGHT if on else MIST_DAY)
 
 
 func _size() -> Vector2:
@@ -286,6 +293,8 @@ func _add_forest() -> void:
 			x += step
 			if d < 0.25 or d > 4.0 or _rng.randf() > lerpf(0.75, 0.15, d / 4.0):
 				continue
+			if bezirk != null and bezirk.enthaelt(p, 0.3):
+				continue
 			var i := _pick(UNDERGROWTH)
 			var key := "%s|1" % UNDERGROWTH[i][0]
 			trees.get_or_add(key, []).append(_place(p, _rng.randf_range(UNDERGROWTH[i][1], UNDERGROWTH[i][2])))
@@ -307,7 +316,10 @@ func _my(u: float, v: float) -> Vector2:
 
 func _in_clearing(p: Vector2) -> bool:
 	var c := _gy(0.0, 0.0)
-	if absf(p.y - c.y) < CLEARING.x and p.x > c.x and p.x < c.x + CLEARING.y * 1.9:
+	if bezirk != null:
+		if bezirk.enthaelt(p):
+			return true
+	elif absf(p.y - c.y) < CLEARING.x and p.x > c.x and p.x < c.x + CLEARING.y * 1.9:
 		return true
 	var m := _my(0.0, 0.0)
 	return absf(p.y - m.y) < 4.5 and p.x > m.x and p.x < m.x + 6.0
@@ -339,6 +351,15 @@ func _add_graveyard() -> void:
 		var at := _gy(side * 0.9, fv)
 		_prop(S % "lightpost_single", at, 1.6, face, IRON)
 		_lights.append(_lamp_light(Vector3(at.x, 1.35, at.y)))
+
+
+## Bezirk „Überwuchert“ auf der Friedhofslichtung: Backsteinhof mit Pilzkolonien, offene Seite zur Karte.
+func _add_district() -> void:
+	var at := _gy(0.0, 0.6)
+	bezirk = BezirkUeberwuchert.bauen(self, Vector3(at.x, 0.0, at.y), Vector3.LEFT)
+	# Backstein heller als der Wald: der Hof soll nachts noch als rote Mauern lesbar sein
+	_darken(bezirk, BezirkUeberwuchert.AUFHELLEN)
+	_lights.append_array(bezirk.lichter)
 
 
 func _add_mine() -> void:
@@ -405,6 +426,12 @@ func _prop(path: String, at: Vector2, size: float, rot: float, tint := Color.WHI
 		return
 	model.position = Vector3(at.x, y, at.y)
 	model.rotation.y = rot
+	_darken(model, tint)
+	add_child(model)
+
+
+## Materialien unter model wie den Wald abdunkeln (nachts über _forest_mats); Leuchten bleibt unverändert.
+func _darken(model: Node, tint: Color) -> void:
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		for i in mi.mesh.get_surface_count():
 			var mat = mi.mesh.surface_get_material(i)
@@ -416,7 +443,6 @@ func _prop(path: String, at: Vector2, size: float, rot: float, tint := Color.WHI
 					_forest_mats.append([dark, dark.albedo_color])
 					_prop_mats[key] = dark
 				mi.set_surface_override_material(i, _prop_mats[key])
-	add_child(model)
 
 
 ## Lage eines Modells mit Höhe (bzw. größter Kante) h: gedreht, leicht schief.

@@ -3260,5 +3260,8 @@
 	"Südstraße": "South Road",
 	"Weststraße": "West Road",
 	"Innentor": "Inner gate",
-	"Gut": "Uncommon"
+	"Gut": "Uncommon",
+	"Bezirk": "District",
+	"Standard": "Default",
+	"Überwuchert (Pilzhof)": "Overgrown (mushroom yard)"
 }

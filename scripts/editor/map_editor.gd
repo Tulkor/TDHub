@@ -26,6 +26,8 @@ var name_edit: LineEdit
 var w_spin: SpinBox
 var h_spin: SpinBox
 var wave_option: OptionButton
+var district_option: OptionButton
+const DISTRICT_NAMES := {"": "Standard", "ueberwuchert": "Überwuchert (Pilzhof)"}
 var wave_ids: Array = []
 var lives_spin: SpinBox
 var gold_spin: SpinBox
@@ -264,6 +266,14 @@ func _build_ui() -> void:
 		map.wave_set = wave_ids[i]
 		_touch())
 	_field(map_tab, "Wellen", wave_option)
+	# Bezirk: Umgebungs-Baukasten neben der Karte (eeveTD, YouTD), leer = Standard des Modus
+	district_option = OptionButton.new()
+	for did in MapData.DISTRICTS:
+		district_option.add_item(tr(DISTRICT_NAMES.get(did, did)))
+	district_option.item_selected.connect(func(i):
+		map.district = MapData.DISTRICTS[i]
+		_touch())
+	_field(map_tab, "Bezirk", district_option)
 	var lg := HBoxContainer.new()
 	lg.add_theme_constant_override("separation", 8)
 	map_tab.add_child(lg)
@@ -333,6 +343,7 @@ func _sync_fields() -> void:
 	w_spin.set_value_no_signal(map.width)
 	h_spin.set_value_no_signal(map.height)
 	wave_option.select(maxi(wave_ids.find(map.wave_set), 0))
+	district_option.select(maxi(MapData.DISTRICTS.find(map.district), 0))
 	lives_spin.set_value_no_signal(map.lives)
 	gold_spin.set_value_no_signal(map.start_gold)
 	radius_spin.set_value_no_signal(map.marker_radius)

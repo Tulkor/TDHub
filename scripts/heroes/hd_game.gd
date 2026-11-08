@@ -22,6 +22,7 @@ const KEYS := {"wasd": [KEY_Q, KEY_E, KEY_F, KEY_R], "maus": [KEY_Q, KEY_W, KEY_
 ## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
 var systems := {}
 var cfg: Dictionary = {}
+var district := ""  ## Bezirk am Rand, leer = arena.district aus data/heroes.json (Screenshots setzen ihn direkt)
 var hero_defs: Dictionary = {}  ## id → Held (data/heroes_helden.json)
 var hero_list: Array = []       ## ids in Anzeige-Reihenfolge
 var gadget_defs: Dictionary = {}  ## Zix' Baukasten
@@ -399,6 +400,7 @@ func _build_world() -> void:
 	for k in 6:
 		var a := k * TAU / 6.0
 		add_child(HdDev.box(Vector3(1.2, 1.4, 1.2), wall, fortress_pos + Vector3(cos(a) * fr * 0.92, 3.5, sin(a) * fr * 0.92)))
+	_build_district()
 	fx = HdFx.new()
 	add_child(fx)
 	set_hero(hero_id)
@@ -407,6 +409,17 @@ func _build_world() -> void:
 	add_child(camera)
 	cam_pos = hero.position
 	_place_camera()
+
+
+## Bezirks-Baukasten außerhalb der Arena (rein optisch, außerhalb von bounds, also ohne Kollision).
+func _build_district() -> void:
+	var d := district if district != "" else str(cfg.arena.get("district", ""))
+	if d != BezirkUeberwuchert.ID:
+		return
+	for lot in cfg.arena.get("district_lots", []):
+		var a := deg_to_rad(float(lot[2]))
+		BezirkUeberwuchert.bauen(self, Vector3(float(lot[0]), 0.0, float(lot[1])), Vector3(sin(a), 0.0, cos(a)),
+				float(lot[3]) if lot.size() > 3 else 1.6)
 
 
 func _place_camera() -> void:
