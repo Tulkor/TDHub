@@ -14,6 +14,7 @@ argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 ZIEL = argv[0] if argv else '/tmp/bollwerk'
 NUR = next((a.split('=', 1)[1].split(',') for a in argv if a.startswith('--nur=')), None)
 BOGEN = next((a.split('=', 1)[1] for a in argv if a.startswith('--bogen=')), '')
+GRUPPE = next((a.split('=', 1)[1] for a in argv if a.startswith('--gruppe=')), '')
 
 FARBEN = {
     # Held
@@ -26,7 +27,7 @@ FARBEN = {
     'kroete': (0.42, 0.62, 0.18), 'kroete_bauch': (0.78, 0.76, 0.42), 'gift': (0.55, 1.00, 0.20),
     'robe': (0.30, 0.18, 0.42), 'robe_dunkel': (0.17, 0.10, 0.25), 'rost': (0.42, 0.25, 0.14), 'eisen': (0.30, 0.31, 0.33),
     'stein': (0.38, 0.38, 0.36), 'auge': (1.00, 0.82, 0.25), 'auge_rot': (1.00, 0.30, 0.15), 'zahn': (0.92, 0.88, 0.72),
-    'lila_glut': (0.75, 0.35, 1.00), 'wurzel': (0.30, 0.20, 0.12), 'krone': (0.70, 0.55, 0.20),
+    'lila_glut': (0.75, 0.35, 1.00), 'schwarz': (0.02, 0.02, 0.02), 'wurzel': (0.30, 0.20, 0.12), 'krone': (0.70, 0.55, 0.20),
 }
 GLUT = {'blitz': 3.0, 'auge': 4.0, 'auge_rot': 4.0, 'gift': 1.5, 'lila_glut': 3.0}
 
@@ -315,7 +316,7 @@ def moorhauptmann():
 
 
 def grolm():
-    """Boss: riesiger Moortroll mit Wurzelgeweih-Krone, Moosmantel und glühenden Augen (3,4)."""
+    """Boss: riesiger Moortroll mit Wurzelgeweih-Krone, Moosmantel und einem glühenden Zyklopenauge (4,2)."""
     f = Figur('grolm', 19)
     f.paar(f.zyl, 'sumpf_dunkel', (0.48, 0.04, 0.42), 0.28, 0.84, knochen='leg.X', r2=0.32, beule=0.02)
     f.paar(f.kugel, 'stein', (0.48, -0.08, 0.1), (0.3, 0.38, 0.14), knochen='leg.X', beule=0.03)
@@ -334,7 +335,14 @@ def grolm():
     # Kopf weit vorn unten, mit Hauern, glühenden Augen und Krone
     f.kugel('sumpf', (0, -0.62, 2.18), (0.42, 0.38, 0.36), knochen='head', beule=0.04)
     f.kugel('sumpf_dunkel', (0, -0.9, 2.04), (0.3, 0.16, 0.14), knochen='head', beule=0.02)
-    f.paar(f.kugel, 'auge_rot', (0.15, -0.95, 2.28), (0.07, 0.05, 0.05), knochen='head')
+    # ein großes Zyklopenauge mit Wulst darüber
+    f.kugel('knochen', (0, -0.92, 2.3), (0.24, 0.1, 0.2), knochen='head', stufe=2)
+    f.kugel('auge_rot', (0, -0.99, 2.3), (0.16, 0.06, 0.14), knochen='head', stufe=2)
+    f.quader('schwarz', (0, -1.05, 2.3), (0.04, 0.02, 0.13), knochen='head')
+    f.quader('sumpf_dunkel', (0, -0.9, 2.52), (0.56, 0.14, 0.1), dreh=(-15, 0, 0), knochen='head', beule=0.02)
+    # Moosbart unter dem Maul
+    for x in (-0.18, 0.0, 0.18):
+        f.kegel('moos', (x, -0.88, 1.86), 0.09, 0.4, dreh=(180, 0, 0), knochen='head', beule=0.02)
     f.paar(f.kegel, 'zahn', (0.22, -0.98, 2.06), 0.06, 0.32, dreh=(-20, 0, -10), knochen='head')
     f.zyl('krone', (0, -0.58, 2.5), 0.32, 0.12, seg=8, beule=0.01)
     for i in range(6):
@@ -352,7 +360,7 @@ def grolm():
 FIGUREN = {'torvik': (torvik, 2.1), 'sumpfling': (sumpfling, 0.9), 'moorklauer': (moorklauer, 1.0),
            'schlammwerfer': (schlammwerfer, 1.2), 'speerjaeger': (speerjaeger, 1.4), 'giftkroete': (giftkroete, 0.7),
            'moorbrute': (moorbrute, 1.6), 'sumpfhexer': (sumpfhexer, 1.5), 'moorhauptmann': (moorhauptmann, 1.9),
-           'grolm': (grolm, 3.4)}
+           'grolm': (grolm, 4.2)}
 
 
 def leeren():
@@ -425,8 +433,46 @@ def rendern(ob, pfad, groesse=420):
     bpy.ops.render.render(write_still=True)
 
 
+def gruppenbild(namen, pfad):
+    """Alle Figuren nebeneinander in einer Szene, damit die Größen vergleichbar sind."""
+    leeren()
+    obs, x = [], 0.0
+    for n in namen:
+        fn, hoehe = FIGUREN[n]
+        ob = fn().zusammen()
+        zs = [v.co.z for v in ob.data.vertices]
+        k = hoehe / (max(zs) - min(zs))
+        for v in ob.data.vertices:
+            v.co.z -= min(zs)
+            v.co *= k
+        b = max(abs(v.co.x) for v in ob.data.vertices)
+        x += b
+        ob.location.x = x
+        x += b + 0.35
+        obs.append(ob)
+    for ob in obs:
+        ob.location.x -= x / 2
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.context.view_layer.objects.active = obs[0]
+    bpy.ops.object.join()
+    bpy.ops.object.transform_apply(location=True)
+    ob = bpy.context.object
+    sc = bpy.context.scene
+    rendern(ob, pfad, 420)
+    sc.render.resolution_x, sc.render.resolution_y = 2000, 700
+    cam = sc.camera
+    cam.data.ortho_scale = x * 1.02
+    cam.location = (0, -12, 6.5)
+    cam.rotation_euler = (Vector((0, 0, 1.6)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    bpy.ops.render.render(write_still=True)
+    print('GRUPPE', pfad)
+
+
 def main():
     os.makedirs(ZIEL, exist_ok=True)
+    if GRUPPE:
+        gruppenbild(NUR or list(FIGUREN), GRUPPE)
+        return
     namen = NUR or list(FIGUREN)
     bilder = []
     for n in namen:
