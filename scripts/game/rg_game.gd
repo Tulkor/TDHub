@@ -30,6 +30,10 @@ var _outline_timer := 0.0
 var _vandal_race := ""   ## Rasse, für die die Verschmierungen zuletzt gezeichnet wurden
 
 
+func system_mode() -> String:
+	return "randgruppen"
+
+
 func _ready() -> void:
 	# Stil „Plakatwand“ für die ganze Oberfläche, vor dem Bau des HUD in game.gd
 	UiTheme.use_skin(UiTheme.POSTER)
@@ -134,11 +138,6 @@ func _load_map() -> MapData:
 
 func start_gold() -> int:
 	return int(rules.get("start_gold", 550)) - int(rules.get("builder_cost", 500))
-
-
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
 
 
 func _apply_lives() -> void:
@@ -405,18 +404,6 @@ func _finish(p: Phase) -> void:
 
 func profile_mode() -> String:
 	return "randgruppen"
-
-
-func difficulty_index() -> int:
-	return difficulty
-
-
-func difficulty_count() -> int:
-	return (rules.get("difficulties", []) as Array).size()
-
-
-func difficulty_label() -> String:
-	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 func profile_extra() -> Dictionary:

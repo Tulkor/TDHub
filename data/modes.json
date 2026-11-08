@@ -21,7 +21,8 @@
 			"scene": "res://scenes/eeve_game.tscn",
 			"hint": "Barrikaden bauen, zu Element-Towern aufwerten, 57 Level, Koop oder eigene Felder bis 4 Spieler",
 			"needs_map": true,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"]
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
+			"system_cfg": {"difficulty": {"source": "rules"}}
 		},
 		{
 			"id": "shoppingmaul",
@@ -33,7 +34,7 @@
 			"hint": "Filiale eröffnen, Tower kaufen und aufwerten, Profi-Filialen ab 25 XP, Koop bis 8 Spieler",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "inventory", "build", "controls"],
-			"system_cfg": {"run_record": {"profile": "maul"}}
+			"system_cfg": {"run_record": {"profile": "maul"}, "difficulty": {"source": "rules", "key": "maul"}}
 		},
 		{
 			"id": "randgruppen",
@@ -44,7 +45,8 @@
 			"scene": "res://scenes/rg_game.tscn",
 			"hint": "Rasse wählen, Tower frei in die eigene Zone bauen, 35 Level gegen die Spießer, Koop bis 9 Spieler",
 			"needs_map": false,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"]
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"],
+			"system_cfg": {"difficulty": {"source": "rules"}}
 		},
 		{
 			"id": "youtd",
@@ -56,7 +58,8 @@
 			"hint": "Elemente erforschen, Tower würfeln oder kaufen, Items sammeln, feste Wege. Koop bis 4 Spieler, jeder mit eigenem Weg. Spieler-XP bleibt über Partien.",
 			"needs_map": true,
 			"coop_only": true,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"]
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
+			"system_cfg": {"difficulty": {"source": "rules"}}
 		},
 		{
 			"id": "heroes",
@@ -68,7 +71,7 @@
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory"],
-			"system_cfg": {"run_record": {"profile": "heroes"}}
+			"system_cfg": {"run_record": {"profile": "heroes"}, "difficulty": {"source": "cfg", "key": "heroes"}}
 		},
 		{
 			"id": "survivors",

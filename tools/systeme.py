@@ -83,10 +83,13 @@ FUNC_RE = re.compile(r"^(?:static\s+)?func\s+(\w+)\s*\(", re.M)
 
 
 def defined_funcs(files):
-    names = set()
+    """{Funktionsname: Rumpf} aller Top-Level-Funktionen der Dateien."""
+    out = {}
     for f in files:
-        names |= set(FUNC_RE.findall(read(f)))
-    return names
+        spans, lines = split_funcs(read(f))
+        for n, (a, b) in spans.items():
+            out[n] = out.get(n, "") + "\n".join(lines[a:b])
+    return out
 
 
 def strip_strings_comments(src):
@@ -121,16 +124,19 @@ def matrix_rows():
     for sname, s in kat["systeme"].items():
         cells = {}
         for m in modi:
-            own = sorted(set(s.get("eigen", [])) & funcs[m])
+            # Funktionen, die nur ans System weitergeben (systems.<name>.…), zählen nicht als eigen
+            own = sorted(n for n in set(s.get("eigen", [])) & set(funcs[m])
+                         if ("systems.%s." % sname) not in funcs[m][n])
             parent = modi[m].get("erbt")
             klasse = s.get("klasse")
             uses = bool(klasse) and re.search(r"\b%s\b" % re.escape(klasse), code[m]) is not None
             shared = os.path.exists(system_script(sname)) and bool(FUNC_RE.search(read(system_script(sname))))
             if own:
                 cells[m] = ("eigen", own)
-            elif uses or (shared and sname in modes.get(m, {}).get("systems", [])):
+            elif uses or (shared and sname in modes.get(m, {}).get("systems", [])) \
+                    or ("systems.%s." % sname) in code[m]:
                 cells[m] = ("gemeinsam", [])
-            elif parent and set(s.get("eigen", [])) & funcs[parent]:
+            elif parent and set(s.get("eigen", [])) & set(funcs[parent]) and not shared:
                 cells[m] = ("geerbt", [])
             else:
                 cells[m] = ("–", [])

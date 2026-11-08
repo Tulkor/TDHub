@@ -234,7 +234,7 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	if phase != Phase.SETUP:
 		return
 	difficulty = clampi(diff, 0, rules.get("difficulties", []).size() - 1)
-	if difficulty != Ascension.top("maul", rules.get("difficulties", []).size()):
+	if difficulty != systems.difficulty.top():
 		ascension = 0
 	mode = play_mode
 	sandbox = sandbox_on
@@ -480,7 +480,7 @@ func _spawn(index: int) -> void:
 	var route: Dictionary = map.maul.routes[s.route]
 	var lv := level_def(level)
 	var e := MaulEnemy.new()
-	var asc := Ascension.mods("maul", ascension)
+	var asc: Dictionary = systems.difficulty.ascension_mods()
 	e.net_id = _next_enemy_id
 	_next_enemy_id += 1
 	e.route = str(s.route)

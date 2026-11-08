@@ -70,6 +70,10 @@ var items_panel: EeveItemsPanel
 var market_panel: EeveMarketPanel
 
 
+func system_mode() -> String:
+	return "eevetd"
+
+
 func _ready() -> void:
 	# Stil „Druidenhain“ für die ganze Oberfläche von eeveTD, vor dem Bau des HUD in game.gd
 	UiTheme.use_skin(UiTheme.DRUID)
@@ -249,11 +253,6 @@ func _make_setup_panel() -> Control:
 ## Felsen kommen erst mit den Einstellungen (Feldtyp), siehe _apply_setup.
 func _apply_variance() -> void:
 	pass
-
-
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
 
 
 func _make_waves() -> Array:
@@ -666,18 +665,6 @@ func score_summary(victory: bool) -> Dictionary:
 
 func profile_mode() -> String:
 	return "eeve"
-
-
-func difficulty_index() -> int:
-	return difficulty
-
-
-func difficulty_count() -> int:
-	return (rules.get("difficulties", []) as Array).size()
-
-
-func difficulty_label() -> String:
-	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 ## Zusätzlich fürs Profil: Elemente, Holz und Feld.

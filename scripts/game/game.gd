@@ -143,7 +143,12 @@ var _probe: Enemy = null   ## Messpunkt für free_stretch
 
 
 func _init() -> void:
-	SystemHost.attach(self, Session.game_kind)
+	SystemHost.attach(self, system_mode())
+
+
+## Modus-ID in data/modes.json, deren Systeme dieses Spiel bekommt (eeveTD, Randgruppen, YouTD überschreiben).
+func system_mode() -> String:
+	return "gemtd"
 
 
 func _ready() -> void:
@@ -1755,43 +1760,39 @@ func _apply_enemy_difficulty(e: Enemy, _g: Dictionary) -> void:
 	e.apply_difficulty(Session.difficulty_factor())
 
 
-## Aufstiegsstufe auf einen neuen Gegner anwenden (nach der Schwierigkeit).
+## Aufstiegsstufe auf einen neuen Gegner anwenden (nach der Schwierigkeit), System difficulty.
 func _apply_ascension(e: Enemy) -> void:
-	if ascension > 0:
-		Ascension.apply(e, ascension_mods())
+	systems.difficulty.apply_ascension(e)
 
 
 ## Was die gewählte Aufstiegsstufe ändert (ascension.gd), einmal je Run ausgerechnet.
-var _asc_cache := {}
 func ascension_mods() -> Dictionary:
-	if int(_asc_cache.get("level", -1)) != ascension:
-		_asc_cache = Ascension.mods(profile_mode(), ascension)
-		_asc_cache.level = ascension
-	return _asc_cache
+	return systems.difficulty.ascension_mods()
 
 
-## Index der gewählten Schwierigkeit in der Liste des Modus (eeveTD, Randgruppen, YouTD haben eigene).
+## Index der gewählten Schwierigkeit in der Liste des Modus (System difficulty, Quelle je Modus in modes.json).
 func difficulty_index() -> int:
-	return Session.difficulty
+	return systems.difficulty.index()
 
 
-## Name der gewählten Schwierigkeit mit Aufstiegsstufe, z. B. „Schwer +3“ (übersetzt).
+## Name der gewählten Schwierigkeit mit Aufstiegsstufe, z. B. „Schwer +3“.
 func difficulty_label() -> String:
-	return Ascension.full_name(Session.difficulty_name(), ascension)
+	return systems.difficulty.label()
 
 
 ## Anzahl der Schwierigkeiten des Modus.
 func difficulty_count() -> int:
-	return Session.DIFFICULTIES.size()
+	return systems.difficulty.count()
 
 
-## Aufstiegsstufe aus dem Setup-Befehl übernehmen: nur auf der höchsten angebotenen Schwierigkeit.
+## Aufstiegsstufe aus dem Setup-Befehl übernehmen: nur auf der höchsten Schwierigkeit, höchstens max_level.
 func take_ascension(cmd: Dictionary) -> void:
-	var on_top := difficulty_index() == Ascension.top(profile_mode(), difficulty_count())
-	ascension = maxi(int(cmd.get("ascension", 0)), 0) if on_top else 0
-	var cap := Ascension.max_level(profile_mode())
-	if cap > 0:
-		ascension = mini(ascension, cap)
+	systems.difficulty.take_ascension(int(cmd.get("ascension", 0)))
+
+
+## Die gewählte Schwierigkeit als Daten (eeveTD, Randgruppen, YouTD: Eintrag aus rules.difficulties).
+func diff_rules() -> Dictionary:
+	return systems.difficulty.current()
 
 
 ## Ist der Gegner in Reichweite eines Towers, der ihn angreifen oder mit einer Aura treffen kann?

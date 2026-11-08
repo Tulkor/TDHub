@@ -4,8 +4,8 @@ Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. eige
 
 | System | Etappe | gemtd | eevetd | randgruppen | youtd | shoppingmaul | heroes | survivors |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| run_record – Run-Ende, Profil, Debug-Run, Abbruch | 2 | eigen (5) ✓ | eigen (2) ✓ | eigen (2) ✓ | eigen (2) ✓ | eigen (4) ✓ | eigen (1) ✓ | eigen (1) ✓ |
-| difficulty – Schwierigkeit und Aufstieg | 2 | eigen (7) ✓ | eigen (5) ✓ | eigen (5) ✓ | eigen (4) ✓ | gemeinsam ✓ | eigen (2) ✓ | – |
+| run_record – Run-Ende, Profil, Debug-Run, Abbruch | 2 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
+| difficulty – Schwierigkeit und Aufstieg | 2 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – |
 | targeting – Ziele, Reichweite, Deckung, Leerlauf-Tempo | 3 | eigen (6) ✓ | geerbt ✓ | geerbt ✓ | eigen (1) ✓ | eigen (6) ✓ | eigen (2) ✓ | eigen (2) ✓ |
 | economy – Gold, Einkommen, Leben, Leak-Strafe | 4 | eigen (4) ✓ | eigen (1) ✓ | eigen (1) ✓ | eigen (1) ✓ | eigen (5) ✓ | eigen (1) ✓ | eigen (1) ✓ |
 | save – Spielstand, Autosave | 4 | eigen (5) ✓ | eigen (2) ✓ | eigen (2) ✓ | eigen (3) ✓ | eigen (1) ✓ | – | – |

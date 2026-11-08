@@ -1,3 +1,5 @@
 {
-	"_info": "Basiswerte des Systems difficulty (Schwierigkeit und Aufstieg). Ein Modus überschreibt sie in data/modes.json unter system_cfg.difficulty; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+	"_info": "Basiswerte für Schwierigkeit und Aufstieg. source: session (Session.DIFFICULTIES), rules (game.rules.difficulties) oder cfg (game.cfg.difficulties). key: Aufstiegs-/Profil-Schlüssel, wenn der Modus keinen Haken profile_mode hat. Ein Modus überschreibt sie in data/modes.json unter system_cfg.difficulty; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"source": "session",
+	"key": ""
 }

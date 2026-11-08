@@ -1,5 +1,5 @@
 {
-	"_info": "Katalog der modusunabhängigen Spielsysteme (tools/systeme.py). titel: Anzeige. etappe: in welcher Umbau-Etappe das System aus den Modi herausgezogen wird. eigen: Funktionsnamen, an denen man erkennt, dass ein Modus das System noch selbst baut. klasse: class_name des gemeinsamen Skripts (sobald es eines gibt); wer sie benutzt, nutzt das System. Modus-Dateien und Muster, die ein System nicht enthalten darf, stehen unter _modi und _verboten.",
+	"_info": "Katalog der modusunabhängigen Spielsysteme (tools/systeme.py). titel: Anzeige. etappe: in welcher Umbau-Etappe das System aus den Modi herausgezogen wird. eigen: Funktionsnamen, an denen man erkennt, dass ein Modus das System noch selbst baut. klasse: class_name des gemeinsamen Skripts (sobald es eines gibt); wer sie benutzt, nutzt das System. Modus-Dateien und Muster, die ein System nicht enthalten darf, stehen unter _modi und _verboten. haken: Funktionen, die ein Modus für das System bereitstellt (GameSystem.hook), zählen nicht als eigen.",
 	"_modi": {
 		"gemtd": {
 			"dateien": ["scripts/game/game.gd", "scripts/game/rogue*.gd", "scripts/game/setup_panel.gd"]
@@ -31,13 +31,16 @@
 		"run_record": {
 			"titel": "Run-Ende, Profil, Debug-Run, Abbruch",
 			"etappe": 2,
-			"eigen": ["record_profile", "record_profile_abort", "_record", "_record_profile", "_record_run", "_record_abort", "debug_run", "profile_mode", "profile_extra"]
+			"eigen": ["record_profile", "record_profile_abort", "_record", "_record_run", "_record_abort"],
+			"haken": ["profile_mode", "profile_extra", "debug_run"],
+			"klasse": "Profile"
 		},
 		"difficulty": {
 			"titel": "Schwierigkeit und Aufstieg",
 			"etappe": 2,
-			"eigen": ["difficulty_index", "difficulty_label", "difficulty_count", "take_ascension", "ascension_mods", "_apply_ascension", "_apply_enemy_difficulty", "diff_rules", "diff", "scaling"],
-			"klasse": "Ascension"
+			"eigen": ["difficulty_index", "difficulty_label", "difficulty_count", "take_ascension", "ascension_mods", "_apply_ascension", "diff_rules", "diff"],
+			"klasse": "Ascension",
+			"haken": ["profile_mode", "_apply_enemy_difficulty", "scaling"]
 		},
 		"targeting": {
 			"titel": "Ziele, Reichweite, Deckung, Leerlauf-Tempo",

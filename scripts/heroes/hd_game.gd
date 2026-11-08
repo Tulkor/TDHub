@@ -212,7 +212,7 @@ func can_change_kit() -> bool:
 
 
 func diff() -> Dictionary:
-	return cfg.difficulties[clampi(difficulty, 0, cfg.difficulties.size() - 1)]
+	return systems.difficulty.current()
 
 
 ## Zeile der Spielerzahl-Tabelle (Design Abschnitt 12): Straßen, Gegnerleben, Gold je Kill.

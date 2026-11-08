@@ -82,6 +82,10 @@ var _coop_count := 0         ## Spieler im Koop (0 = solo)
 var _player_cfg := {}        ## Host: Baumeister und Weisheit der Mitspieler (Befehl player_setup)
 
 
+func system_mode() -> String:
+	return "youtd"
+
+
 func _ready() -> void:
 	UiTheme.use_skin(UiTheme.DRUID)
 	FieldStyle.night = true
@@ -158,11 +162,6 @@ func is_build_mode() -> bool:
 
 func wave_count() -> int:
 	return int((rules.get("lengths", []) as Array)[length_index].get("waves", 120))
-
-
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
 
 
 # --- Einstellungen ---------------------------------------------------------------
@@ -1178,18 +1177,6 @@ func _finish(p: Phase) -> void:
 
 func profile_mode() -> String:
 	return "youtd"
-
-
-func difficulty_index() -> int:
-	return difficulty
-
-
-func difficulty_count() -> int:
-	return (rules.get("difficulties", []) as Array).size()
-
-
-func difficulty_label() -> String:
-	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 func profile_extra() -> Dictionary:
