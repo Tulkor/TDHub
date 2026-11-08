@@ -59,6 +59,7 @@ var _width := 0
 var _cornices: MultiMeshInstance3D
 var _lamps: MultiMeshInstance3D
 var _flags: MultiMeshInstance3D
+var _pyramids: MultiMeshInstance3D
 var fountain: MaulFountain
 ## Feld in der Mitte des Brunnenplatzes (-1, -1 = kein Platz gefunden)
 var plaza_center := Vector2i(-1, -1)
@@ -78,6 +79,9 @@ func build(map: MaulMap) -> void:
 	var cornices: Array = []  # Transform3D
 	var lamps: Array = []     # Transform3D (Leuchtkörper)
 	var flags: Array = []     # Transform3D (Tuch)
+	var pyramids: Array = []  # [Transform3D, Color] (Dächer, Spitzen)
+	var beacons: Array = []   # Transform3D (rotes Leuchtfeuer)
+	var sky := {"walls": walls, "cornices": cornices, "lamps": lamps, "pyramids": pyramids, "beacons": beacons}
 	var used := PackedByteArray()
 	used.resize(w * h)
 	var free := func(x0: int, y0: int, sx: int, sy: int) -> bool:
@@ -106,7 +110,7 @@ func build(map: MaulMap) -> void:
 			var block := Rect2i(bx + STREET, by + STREET, BLOCK - STREET, BLOCK - STREET)
 			var bd := dist[mini(block.get_center().y, h - 1) * w + mini(block.get_center().x, w - 1)]
 			if bd >= SKY_DIST and rng.randf() < SKY_CHANCE and free.call(block.position.x, block.position.y, block.size.x, block.size.y):
-				_skyscraper(block, bd, rng, walls, cornices)
+				_skyscraper(block, bd, rng, sky)
 				take.call(block)
 				continue
 			if bd < STATUE_NEAR + 6.0 and rng.randf() < PLAZA_CHANCE and free.call(block.position.x, block.position.y, block.size.x, block.size.y):
@@ -181,6 +185,32 @@ func build(map: MaulMap) -> void:
 	_lamps.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for i in lamps.size():
 		_lamps.multimesh.set_instance_transform(i, lamps[i])
+	var pyr_mesh := CylinderMesh.new()
+	pyr_mesh.top_radius = 0.0
+	pyr_mesh.bottom_radius = sqrt(0.5)
+	pyr_mesh.height = 1.0
+	pyr_mesh.radial_segments = 4
+	pyr_mesh.rings = 1
+	_pyramids = _multimesh(pyramids.size(), true, pyr_mesh)
+	var pm := StandardMaterial3D.new()
+	pm.vertex_color_use_as_albedo = true
+	pm.metallic = 0.7
+	pm.roughness = 0.35
+	_pyramids.material_override = pm
+	for i in pyramids.size():
+		_pyramids.multimesh.set_instance_transform(i, pyramids[i][0])
+		_pyramids.multimesh.set_instance_color(i, pyramids[i][1])
+	var beacon_mesh := SphereMesh.new()
+	beacon_mesh.radius = 0.5
+	beacon_mesh.height = 1.0
+	var beacon_mm := _multimesh(beacons.size(), false, beacon_mesh)
+	var bm := StandardMaterial3D.new()
+	bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	bm.albedo_color = Color(2.6, 0.25, 0.15)
+	beacon_mm.material_override = bm
+	beacon_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for i in beacons.size():
+		beacon_mm.multimesh.set_instance_transform(i, beacons[i])
 	_flags = MultiMeshInstance3D.new()
 	var fm := MultiMesh.new()
 	fm.transform_format = MultiMesh.TRANSFORM_3D
@@ -317,63 +347,220 @@ func _lantern(c: Vector2i, cornices: Array, lamps: Array) -> void:
 	cornices.append(Transform3D(Basis.from_scale(Vector3(0.09, 0.02, 0.09)), Vector3(p.x, POLE + 0.095, p.y)))
 
 
-## Art-déco-Hochhaus auf Block r: breiter Sockel, Schaft mit senkrechten Lisenen, mehrere Rücksprünge
-## mit Messingbändern, oben eine gestufte Messingkrone mit Spitze (New York) oder vier Ecktürmchen (Chicago).
-func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, walls: Array, cornices: Array) -> void:
+## Art-déco-Hochhaus auf Block r, einer von neun Typen nach echten Vorbildern (Lukas, 2026-11-08), alle
+## aus Quadern, Pyramiden und Leuchtstreifen; nachts leuchten Kronen und Spitzen:
+## New York: Chrysler (gestufte Krone mit Lichtschlitzen, Nadel), Empire State (viele Rücksprünge, Mast),
+##   Rockefeller (schmale Scheibe mit seitlichen Stufen); Chicago: Carbide & Carbon (dunkelgrün mit goldener
+##   Krone), Board of Trade (Pyramidendach mit Figur); Detroit: Fisher (steiles goldenes Dach), Guardian
+##   (Ziegelrot, zwei achteckige Kronen), Penobscot (H-Stufen, rotes Leuchtfeuer); Europa: Boerentoren
+##   Antwerpen (schlanker Stufenturm mit Laterne und Eckpfeilern).
+func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, o: Dictionary) -> void:
 	var foot := Vector2(r.size) * Board3D.CELL - Vector2(0.1, 0.1)
 	var c := (Vector2(r.position) + Vector2(r.size) / 2.0) * Board3D.CELL
-	var col: Color = WALLS[rng.randi() % WALLS.size()]
-	var box := func(size: Vector3, y0: float, list: Array, color = null) -> void:
-		var xf := Transform3D(Basis.from_scale(size), Vector3(c.x, y0 + size.y / 2.0, c.y))
-		list.append([xf, color] if color != null else xf)
-	var band := func(wx: float, wz: float, y: float) -> void:
-		cornices.append(Transform3D(Basis.from_scale(Vector3(wx + 0.05, 0.05, wz + 0.05)), Vector3(c.x, y - 0.06, c.y)))
 	var total := rng.randf_range(SKY_HEIGHT.x, SKY_HEIGHT.y) * clampf(d / 40.0, 0.6, 1.0)
-	# Sockel
-	var podium := rng.randf_range(0.7, 1.1)
-	box.call(Vector3(foot.x, podium, foot.y), 0.0, walls, col)
-	band.call(foot.x, foot.y, podium)
-	# Schaft
-	var sx := minf(foot.x, foot.y) * rng.randf_range(0.4, 0.5)
-	var sz := sx * rng.randf_range(0.85, 1.15)
-	var shaft := total * 0.62
-	var y := podium
-	box.call(Vector3(sx, shaft, sz), y, walls, col)
-	# Lisenen: schmale Messingstreifen über die ganze Schafthöhe, je Seite gleichmäßig verteilt
-	var n := rng.randi_range(5, 7)
+	var col: Color = WALLS[rng.randi() % WALLS.size()]
+	var m := minf(foot.x, foot.y)
+	var kind := rng.randi() % 9
+	# Sockel (Kaufhaus-Geschoss) bei allen außer der Scheibe
+	var y := 0.0
+	if kind != 2:
+		var podium := rng.randf_range(0.6, 0.9)
+		_wall(o, c, Vector3(foot.x, podium, foot.y), 0.0, col)
+		_band(o, c, foot.x, foot.y, podium)
+		y = podium
+	match kind:
+		0:  # Chrysler
+			var s := m * 0.5
+			_wall(o, c, Vector3(s * 1.35, total * 0.18, s * 1.35), y, col)
+			y += total * 0.18
+			_band(o, c, s * 1.35, s * 1.35, y)
+			var shaft := total * 0.45
+			_wall(o, c, Vector3(s, shaft, s), y, col)
+			_piers(c, Vector2(s, s), y, shaft, o.cornices)
+			# Eckadler: Messingkragen an den Ecken oben am Schaft
+			for dx in [-1.0, 1.0]:
+				for dz in [-1.0, 1.0]:
+					_brass(o, c + Vector2(dx, dz) * s * 0.5, Vector3(0.14, 0.08, 0.14), y + shaft * 0.7)
+			y += shaft
+			_band(o, c, s, s, y)
+			# Krone: fünf Stufen aus Metall mit Lichtschlitzen (die dreieckigen Fenster des Originals)
+			var k := s * 0.85
+			for i in 5:
+				var hk := 0.5 - i * 0.05
+				_brass(o, c, Vector3(k, hk, k), y)
+				_lamp_slits(o, c, k, k, y + hk * 0.25, hk * 0.5, 3)
+				y += hk
+				k *= 0.78
+			_pyr(o, c, Vector3(k * 1.2, total * 0.08, k * 1.2), y, CORNICE)
+			y += total * 0.08
+			_pyr(o, c, Vector3(0.07, total * 0.14, 0.07), y, CORNICE)
+		1:  # Empire State
+			var s := m * 0.8
+			for i in 3:
+				var hk := total * (0.12 - i * 0.025)
+				_wall(o, c, Vector3(s, hk, s * 0.85), y, col)
+				y += hk
+				_band(o, c, s, s * 0.85, y)
+				s *= 0.82
+			var shaft := total * 0.4
+			_wall(o, c, Vector3(s, shaft, s * 0.85), y, col)
+			_piers(c, Vector2(s, s * 0.85), y, shaft, o.cornices)
+			y += shaft
+			for i in 3:
+				s *= 0.8
+				_wall(o, c, Vector3(s, 0.35, s * 0.85), y, col)
+				y += 0.35
+				_band(o, c, s, s * 0.85, y)
+			# angestrahlte Spitze und Mast
+			_lamp_slits(o, c, s * 0.8, s * 0.8 * 0.85, y - 0.9, 0.8, 4)
+			_brass(o, c, Vector3(0.45, 0.9, 0.45), y)
+			_lamp_slits(o, c, 0.45, 0.45, y + 0.15, 0.6, 2)
+			y += 0.9
+			_brass(o, c, Vector3(0.25, 0.5, 0.25), y)
+			y += 0.5
+			_pyr(o, c, Vector3(0.06, total * 0.12, 0.06), y, CORNICE)
+		2:  # Rockefeller: schmale Scheibe, seitlich gestufte Flügel
+			var long := foot.x * 0.9
+			var thin := foot.y * 0.32
+			var along_x := rng.randf() < 0.5
+			var v := func(a: float, b: float) -> Vector3:
+				return Vector3(a, 0, b) if along_x else Vector3(b, 0, a)
+			for i in 4:
+				var h := total * (0.3 + i * 0.22)
+				var wdt := long * (1.0 - i * 0.2)
+				var dep := thin * (1.6 - i * 0.2)
+				var sz: Vector3 = v.call(wdt, dep)
+				_wall(o, c, Vector3(sz.x, h, sz.z), 0.0, col)
+				_band(o, c, sz.x, sz.z, h)
+				if i == 3:
+					_piers(c, Vector2(sz.x, sz.z), 0.0, h, o.cornices)
+					_lamp_slits(o, c, sz.x, sz.z, h - 0.5, 0.35, 5)
+		3:  # Carbide & Carbon: dunkelgrün mit goldener Krone
+			var green := Color("1e4536")
+			_wall(o, c, Vector3(foot.x * 0.92, 0.05, foot.y * 0.92), y, Color("101a16", 0.0))
+			var s := m * 0.48
+			var shaft := total * 0.6
+			_wall(o, c, Vector3(s, shaft, s), y, green)
+			_piers(c, Vector2(s, s), y, shaft, o.cornices)
+			y += shaft
+			_band(o, c, s, s, y)
+			for i in 2:
+				s *= 0.82
+				_wall(o, c, Vector3(s, 0.6, s), y, green)
+				y += 0.6
+				_band(o, c, s, s, y)
+			var t := s * 0.55
+			_brass(o, c, Vector3(t, 1.2, t), y)
+			_lamp_slits(o, c, t, t, y + 0.2, 0.8, 2)
+			for dx in [-1.0, 1.0]:
+				for dz in [-1.0, 1.0]:
+					_pyr(o, c + Vector2(dx, dz) * t * 0.5, Vector3(0.12, 0.6, 0.12), y + 1.2, CORNICE)
+			y += 1.2
+			_pyr(o, c, Vector3(t * 0.8, total * 0.12, t * 0.8), y, CORNICE)
+		4:  # Board of Trade: breiter Turm, Pyramidendach in Kupfergrün, Figur obenauf
+			var s := m * 0.55
+			var shaft := total * 0.65
+			for dx in [-1.0, 1.0]:
+				_wall(o, c + Vector2(dx * s * 0.75, 0), Vector3(s * 0.4, shaft * 0.55, s * 1.1), y, col)
+			_wall(o, c, Vector3(s, shaft, s * 0.9), y, col)
+			_piers(c, Vector2(s, s * 0.9), y, shaft, o.cornices)
+			y += shaft
+			_band(o, c, s, s * 0.9, y)
+			_lamp_slits(o, c, s, s * 0.9, y - 0.45, 0.3, 4)
+			_pyr(o, c, Vector3(s * 0.95, total * 0.13, s * 0.85), y, Color("4f8a76"))
+			y += total * 0.13
+			_brass(o, c, Vector3(0.12, 0.45, 0.1), y - 0.05)
+			_brass(o, c, Vector3(0.09, 0.09, 0.09), y + 0.42)
+		5:  # Fisher Building: schlanker Turm mit steilem goldenem Dach
+			for dx in [-1.0, 1.0]:
+				_wall(o, c + Vector2(dx * m * 0.3, 0), Vector3(m * 0.3, total * 0.22, m * 0.8), y, col)
+			var s := m * 0.42
+			var shaft := total * 0.55
+			_wall(o, c, Vector3(s, shaft, s), y, col)
+			_piers(c, Vector2(s, s), y, shaft, o.cornices)
+			y += shaft
+			_band(o, c, s, s, y)
+			s *= 0.85
+			_wall(o, c, Vector3(s, 0.5, s), y, col)
+			_lamp_slits(o, c, s, s, y + 0.1, 0.3, 4)
+			y += 0.5
+			_pyr(o, c, Vector3(s, total * 0.22, s), y, Color("d8b04a"))
+		6:  # Guardian Building: Ziegelrot, zwei achteckige Kronen
+			var brick := Color("a8573a")
+			var s := m * 0.4
+			var shaft := total * 0.5
+			_wall(o, c, Vector3(m * 0.85, total * 0.2, m * 0.6), y, brick)
+			for dx in [-1.0, 1.0]:
+				var p := c + Vector2(dx * s * 0.55, 0)
+				var h := shaft * (1.0 if dx < 0 else 0.82)
+				_wall(o, p, Vector3(s, h, s), y, brick)
+				_piers(p, Vector2(s, s), y, h, o.cornices)
+				# Achteck aus zwei Quadern (gerade und um 45° gedreht)
+				var k := s * 0.75
+				_wall(o, p, Vector3(k, 0.7, k), y + h, brick)
+				_wall(o, p, Vector3(k, 0.7, k), y + h, brick, PI / 4.0)
+				_band(o, p, k, k, y + h + 0.7)
+				_lamp_slits(o, p, k, k, y + h + 0.2, 0.35, 2)
+				_pyr(o, p, Vector3(k * 0.8, 0.9, k * 0.8), y + h + 0.7, Color("c97a3a"))
+		7:  # Penobscot: H-förmige Stufen, rotes Leuchtfeuer auf der Spitze
+			var s := m * 0.6
+			for i in 4:
+				var h := total * (0.32 - i * 0.06)
+				_wall(o, c, Vector3(s, h, s * 0.5), y, col)
+				_wall(o, c, Vector3(s * 0.5, h, s), y, col)
+				_piers(c, Vector2(s * 0.5, s * 0.5), y, h, o.cornices)
+				y += h
+				_band(o, c, s, s * 0.5, y)
+				_band(o, c, s * 0.5, s, y)
+				s *= 0.75
+			_brass(o, c, Vector3(0.3, 0.4, 0.3), y)
+			y += 0.4
+			_pyr(o, c, Vector3(0.05, 0.6, 0.05), y, CORNICE)
+			o.beacons.append(Transform3D(Basis.from_scale(Vector3(0.28, 0.28, 0.28)), Vector3(c.x, y + 0.15, c.y)))
+		_:  # Boerentoren Antwerpen: schlanker Stufenturm mit Eckpfeilern und Laterne
+			var s := m * 0.55
+			for i in 4:
+				var h := total * (0.3 - i * 0.05)
+				_wall(o, c, Vector3(s, h, s), y, col)
+				for dx in [-1.0, 1.0]:
+					for dz in [-1.0, 1.0]:
+						_wall(o, c + Vector2(dx, dz) * s * 0.48, Vector3(s * 0.1, h + 0.3, s * 0.1), y, col)
+				y += h
+				_band(o, c, s, s, y)
+				s *= 0.72
+			_wall(o, c, Vector3(s, 0.8, s), y, col)
+			_lamp_slits(o, c, s, s, y + 0.15, 0.55, 3)
+			y += 0.8
+			_band(o, c, s, s, y)
+			_brass(o, c, Vector3(s * 0.4, 0.5, s * 0.4), y)
+			_pyr(o, c, Vector3(0.08, 0.9, 0.08), y + 0.5, CORNICE)
+
+
+func _wall(o: Dictionary, p: Vector2, size: Vector3, y0: float, col: Color, yaw := 0.0) -> void:
+	o.walls.append([Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(size), Vector3(p.x, y0 + size.y / 2.0, p.y)), col])
+
+
+func _brass(o: Dictionary, p: Vector2, size: Vector3, y0: float) -> void:
+	o.cornices.append(Transform3D(Basis.from_scale(size), Vector3(p.x, y0 + size.y / 2.0, p.y)))
+
+
+## Messingband knapp unter der Kante bei Höhe y.
+func _band(o: Dictionary, p: Vector2, wx: float, wz: float, y: float) -> void:
+	o.cornices.append(Transform3D(Basis.from_scale(Vector3(wx + 0.05, 0.05, wz + 0.05)), Vector3(p.x, y - 0.06, p.y)))
+
+
+## Vierseitige Pyramide (Dach, Spitze) mit Grundfläche size.x × size.z.
+func _pyr(o: Dictionary, p: Vector2, size: Vector3, y0: float, col: Color) -> void:
+	o.pyramids.append([Transform3D(Basis.from_scale(size) * Basis(Vector3.UP, PI / 4.0), Vector3(p.x, y0 + size.y / 2.0, p.y)), col])
+
+
+## Leuchtende senkrechte Schlitze an allen vier Seiten eines Quaders (sx × sz), n je Seite.
+func _lamp_slits(o: Dictionary, p: Vector2, sx: float, sz: float, y0: float, h: float, n: int) -> void:
 	for i in n:
 		var t := (float(i) + 0.5) / n - 0.5
 		for side in [-1.0, 1.0]:
-			cornices.append(Transform3D(Basis.from_scale(Vector3(0.05, shaft, 0.06)), Vector3(c.x + t * sx, y + shaft / 2.0, c.y + side * sz / 2.0)))
-			cornices.append(Transform3D(Basis.from_scale(Vector3(0.06, shaft, 0.05)), Vector3(c.x + side * sx / 2.0, y + shaft / 2.0, c.y + t * sz)))
-	y += shaft
-	band.call(sx, sz, y)
-	# Rücksprünge
-	var rest := total - shaft - podium
-	for k in 3:
-		sx *= 0.78
-		sz *= 0.78
-		var part: float = rest * [0.4, 0.3, 0.3][k] * 0.7
-		box.call(Vector3(sx, part, sz), y, walls, col)
-		y += part
-		band.call(sx, sz, y)
-	if rng.randf() < 0.6:
-		# New York: gestufte Krone aus Messing und eine hohe Spitze
-		var kx := sx
-		for k in 4:
-			kx *= 0.72
-			box.call(Vector3(kx, 0.22, kx), y, cornices)
-			y += 0.22
-		box.call(Vector3(0.05, total * 0.22, 0.05), y, cornices)
-	else:
-		# Chicago: flaches Dach mit vier Ecktürmchen und einer Laterne in der Mitte
-		for dx in [-1.0, 1.0]:
-			for dz in [-1.0, 1.0]:
-				var tx := Transform3D(Basis.from_scale(Vector3(sx * 0.2, 0.55, sz * 0.2)), Vector3(c.x + dx * sx * 0.38, y + 0.275, c.y + dz * sz * 0.38))
-				walls.append([tx, col])
-				cornices.append(Transform3D(Basis.from_scale(Vector3(sx * 0.12, 0.25, sz * 0.12)), tx.origin + Vector3(0, 0.4, 0)))
-		box.call(Vector3(sx * 0.4, 0.8, sz * 0.4), y, walls, col)
-		box.call(Vector3(sx * 0.25, 0.35, sz * 0.25), y + 0.8, cornices)
+			o.lamps.append(Transform3D(Basis.from_scale(Vector3(0.04, h, 0.02)), Vector3(p.x + t * sx, y0 + h / 2.0, p.y + side * (sz / 2.0 + 0.012))))
+			o.lamps.append(Transform3D(Basis.from_scale(Vector3(0.02, h, 0.04)), Vector3(p.x + side * (sx / 2.0 + 0.012), y0 + h / 2.0, p.y + t * sz)))
 
 
 ## Senkrechte Messing-Lisenen an allen vier Seiten eines Quaders (Grundfläche foot, ab Höhe y0, Höhe hgt).
@@ -510,8 +697,8 @@ func _distance_to_reachable(map: MaulMap) -> PackedFloat32Array:
 	return dist
 
 
-func _multimesh(count: int, colors: bool) -> MultiMeshInstance3D:
-	var box := BoxMesh.new()
+func _multimesh(count: int, colors: bool, mesh: Mesh = null) -> MultiMeshInstance3D:
+	var box: Mesh = mesh if mesh != null else BoxMesh.new()
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = colors
