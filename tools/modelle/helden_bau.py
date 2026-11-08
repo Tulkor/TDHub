@@ -308,9 +308,9 @@ def unrat():
     mensch(f, hip=1.0, neck=1.82, head_top=2.3, sh=(0.5, 0.08, 1.74), elbow=(0.68, 0.16, 1.32),
            hand=(0.72, 0.42, 1.08), knee=(0.26, 0.22, 0.56), foot=(0.26, -0.04, 0.1), hip_x=0.24)
     f.bone('tail', (0, -0.3, 0.95), (0, -0.9, 0.55), 'hips')
-    fur, fur2, belly = M('#6e6258', 0.95), M('#4e463f', 0.95), M('#a8988a', 0.95)
-    pink, claw, eye = M('#d99a9a', 0.8), M('#e8dcc0', 0.5), M('#ff3828', 0.3, 0.0, 5.0)
-    cape, cape2 = M('#7a1c2a', 0.85), M('#521420', 0.9)
+    fur, fur2, belly = M('#4a5262', 0.95), M('#353b48', 0.95), M('#9a9a9e', 0.95)
+    pink, claw, eye = M('#d99a9a', 0.8), M('#e0c060', 0.5), M('#ffaa20', 0.3, 0.0, 5.0)
+    cape, cape2 = M('#5a3a2c', 0.9), M('#3e2a22', 0.95)
     ermine, spot = M('#ece6d8', 0.9), M('#1a1a1a', 0.9)
     tin, rust, gold = M('#a8a8b0', 0.4, 0.75), M('#8a4a2a', 0.8, 0.5), M('#c9a040', 0.35, 0.85)
     wood, ruby, strap = M('#5a4028', 0.9), M('#d0203a', 0.2, 0.0, 1.5), M('#3a2a20', 0.9)
@@ -330,18 +330,26 @@ def unrat():
         a = math.radians(30 + k * 24)
         f.cyl(0.04, 0.04, 0.03, (math.cos(a) * 0.46, 0.08 + math.sin(a) * 0.4, 1.0), gold, 'hips', rot=(90, 0, -90 + math.degrees(a)), seg=8)
     # Königsumhang hinten mit Hermelinkragen
-    v = f.cyl(0.78, 0.42, 1.6, (0, -0.28, 1.05), cape, 'chest', seg=12, scale=(1.0, 0.55, 1.0))
-    f.jag(v, 0.25, seed=4)
+    v = f.cyl(0.85, 0.42, 1.6, (0, -0.3, 1.02), cape, 'chest', seg=14, scale=(1.0, 0.55, 1.0))
+    f.jag(v, 0.45, seed=4)
+    v = f.cyl(0.72, 0.44, 0.9, (0, -0.26, 1.45), cape2, 'chest', seg=12, scale=(1.0, 0.6, 1.0))
+    f.jag(v, 0.3, seed=11)
+    # Rattenbanner auf dem Rücken: Stange mit Querholz und zerrissener Fahne
+    f.stab((0.1, -0.45, 1.2), (0.16, -0.5, 3.3), 0.035, 0.03, M('#5a4028', 0.9), 'chest', seg=6)
+    f.stab((-0.25, -0.5, 3.12), (0.6, -0.52, 3.15), 0.025, 0.025, M('#5a4028', 0.9), 'chest', seg=5)
+    flag = M('#7a1c2a', 0.85)
+    f.platte([(0.16, -0.51, 3.12), (1.1, -0.53, 3.1), (1.0, -0.53, 2.75), (1.12, -0.53, 2.5), (0.75, -0.53, 2.62),
+              (0.5, -0.53, 2.42), (0.16, -0.51, 2.58)], Vector((0, 1, 0)), 0.02, flag, 'chest')
+    f.ball(0.09, (0.6, -0.56, 2.82), M('#d8d0c0', 0.8), 'chest', scale=(1.2, 0.3, 1.0), seg=8, rings=5)
+    f.cyl(0.06, 0.0, 0.18, (0.16, -0.5, 3.4), M('#a8a8b0', 0.4, 0.75), 'chest', seg=4)
     f.cyl(0.52, 0.5, 0.06, (0, -0.1, 1.84), cape2, 'chest', seg=10)
     for k in range(11):
         a = math.radians(-20 + k * 220 / 10 + 160)
         p = (math.cos(a) * 0.5, 0.06 + math.sin(a) * 0.42, 1.88)
-        f.ball(0.11, p, ermine, 'chest', seg=6, rings=4)
-        if k % 2 == 0:
-            f.ball(0.03, (p[0] * 1.15, p[1] * 1.15 - 0.01, 1.92), spot, 'chest', seg=4, rings=3)
+        f.ball(0.13 + 0.03 * (k % 2), p, ermine, 'chest', seg=6, rings=4)
     f.box((0.1, 0.06, 0.1), (0, 0.5, 1.82), gold, 'chest', rot=(0, 45, 0))
     # Rattenkopf: Schädel, lange Schnauze, große Ohren, Schnurrhaare, Nagezähne, Krone
-    hz = 2.0
+    hz = 1.96
     f.ball(0.27, (0, 0.18, hz), fur, 'head', scale=(1.0, 1.1, 0.95), seg=10)
     f.cyl(0.2, 0.07, 0.48, (0, 0.52, hz - 0.08), fur, 'head', rot=(-80, 0, 0), seg=8, scale=(1.0, 0.85, 1.0))
     f.ball(0.07, (0, 0.77, hz - 0.13), pink, 'head', seg=6, rings=4)
@@ -354,13 +362,15 @@ def unrat():
         f.ball(0.12, (0.25 * e, 0.1, hz + 0.24), pink, 'head', scale=(1.0, 0.25, 1.0), rot=(0, 0, -25 * e), seg=8, rings=5)
         for k in (-1, 0, 1):
             f.stab((0.07 * e, 0.68, hz - 0.1), (0.36 * e, 0.66 + 0.04 * k, hz - 0.08 + 0.07 * k), 0.008, 0.004, claw, 'head', seg=3)
-    f.cyl(0.19, 0.22, 0.14, (0, 0.12, hz + 0.27), gold, 'head', rot=(-10, 8, 0), seg=8)
+    stick, rope = M('#7a5434', 0.9), M('#b89a6a', 0.95)
+    f.cyl(0.2, 0.22, 0.06, (0, 0.12, hz + 0.25), rope, 'head', rot=(-10, 6, 0), seg=8)
     rnd = random.Random(7)
-    for k in range(5):
-        a = k * math.tau / 5 + 0.3
-        h = 0.12 + rnd.random() * 0.1
-        f.cyl(0.06, 0.0, h, (math.cos(a) * 0.19, 0.12 + math.sin(a) * 0.19, hz + 0.34 + h / 2), gold, 'head',
-              rot=(rnd.uniform(-12, 12), rnd.uniform(-12, 12), 0), seg=4)
+    for k in range(7):
+        a = k * math.tau / 7 + 0.2
+        h = 0.22 + rnd.random() * 0.2
+        f.cyl(0.03, 0.012, h, (math.cos(a) * 0.19, 0.12 + math.sin(a) * 0.19, hz + 0.28 + h / 2), stick, 'head',
+              rot=(math.sin(a) * -14 + rnd.uniform(-6, 6), math.cos(a) * 14 + rnd.uniform(-6, 6), 0), seg=4)
+    f.cyl(0.21, 0.21, 0.04, (0, 0.12, hz + 0.36), rope, 'head', rot=(-10, 6, 0), seg=8)
     f.ball(0.045, (0, 0.33, hz + 0.27), ruby, 'head', scale=(1, 0.6, 1), seg=6, rings=4)
     # Arme mit Krallen; rechts das Szepter (Kanaldeckel auf krummem Rohr), Beine mit Rattenfüßen
     def glieder(s, side):
@@ -402,78 +412,101 @@ def unrat():
 
 # --- Oberschwester Vesna: hagere Feldärztin mit Pestmaske -----------------
 def vesna():
+    # Strenge Oberschwester (Anregung: Deadlock Nurse Harrow): hochgestecktes Haar mit Haube, Zwicker,
+    # steifer Stehkragen und Schulterumhang, langes Kleid mit Rüschen und Schürze, Arzttasche, Blutegel,
+    # Spritzengewehr. Hagere, aufrechte Haltung.
     f = Figur('vesna')
     f.bone('root', (0, 0, 0), (0, 0, 0.3))
     f.bone('hips', (0, 0, 1.05), (0, 0, 1.17), 'root')
-    f.bone('chest', (0, 0, 1.17), (0, 0, 1.66), 'hips')
-    f.bone('head', (0, 0, 1.66), (0, 0, 2.1), 'chest')
+    f.bone('chest', (0, 0, 1.17), (0, 0, 1.68), 'hips')
+    f.bone('head', (0, 0, 1.68), (0, 0, 2.1), 'chest')
     # Gewehr im Anschlag: rechte Hand am Abzug, linke stützt den Lauf
-    f.bone('arm.L', (0.3, 0, 1.58), (0.32, 0.2, 1.24), 'chest')
-    f.bone('fore.L', (0.32, 0.2, 1.24), (0.1, 0.6, 1.24), 'arm.L')
-    f.bone('arm.R', (-0.3, 0, 1.58), (-0.36, 0.06, 1.22), 'chest')
-    f.bone('fore.R', (-0.36, 0.06, 1.22), (-0.18, 0.36, 1.2), 'arm.R')
+    f.bone('arm.L', (0.27, 0, 1.6), (0.3, 0.2, 1.26), 'chest')
+    f.bone('fore.L', (0.3, 0.2, 1.26), (0.1, 0.6, 1.24), 'arm.L')
+    f.bone('arm.R', (-0.27, 0, 1.6), (-0.33, 0.06, 1.24), 'chest')
+    f.bone('fore.R', (-0.33, 0.06, 1.24), (-0.18, 0.36, 1.2), 'arm.R')
     for s, side in ((1, 'L'), (-1, 'R')):
-        f.bone('thigh.' + side, (0.13 * s, 0, 1.05), (0.14 * s, 0.03, 0.56), 'hips')
-        f.bone('shin.' + side, (0.14 * s, 0.03, 0.56), (0.14 * s, 0, 0.1), 'thigh.' + side)
-    coat, coat2 = M('#363a44', 0.85), M('#2a2d35', 0.9)
-    white, red = M('#e8e2d4', 0.7), M('#c8202a', 0.6)
-    mask, brass = M('#ece4d0', 0.45), M('#c9a040', 0.35, 0.85)
-    lens, glove = M('#7dff9a', 0.1, 0.0, 5.0), M('#1e1e22', 0.6)
+        f.bone('thigh.' + side, (0.12 * s, 0, 1.05), (0.13 * s, 0.03, 0.56), 'hips')
+        f.bone('shin.' + side, (0.13 * s, 0.03, 0.56), (0.13 * s, 0, 0.1), 'thigh.' + side)
+    dress, dress2 = M('#2e3c44', 0.85), M('#222c33', 0.9)
+    cape, white = M('#d8d4cc', 0.75), M('#efeae0', 0.7)
+    red, skin = M('#b82030', 0.6), M('#e6c8b4', 0.7)
+    hair, lips = M('#7a2e1c', 0.8), M('#7a1828', 0.5)
+    brass, glove = M('#c9a040', 0.35, 0.85), M('#1e1e22', 0.6)
     steel, wood = M('#8a9aa8', 0.35, 0.8), M('#5a3a22', 0.8)
-    fluid = M('#57ff8a', 0.15, 0.0, 3.5)
-    # Mantel: Oberteil, Schoß an der Hüfte, lange Schöße an den Beinen
-    f.cyl(0.24, 0.3, 0.52, (0, 0, 1.4), coat, 'chest', seg=10)
-    f.cyl(0.3, 0.33, 0.2, (0, 0, 1.6), coat, 'chest', seg=10)
-    f.cyl(0.36, 0.26, 0.3, (0, 0, 1.0), coat, 'hips', seg=10)
-    def schoss(s, side):
-        v = f.cyl(0.26, 0.2, 0.76, (0.15 * s, -0.02, 0.6), coat, 'thigh.' + side, seg=8, scale=(1.0, 1.25, 1.0))
-        f.jag(v, 0.06, seed=2 + s)
-    f.spiegel(schoss)
-    f.box((0.03, 0.03, 0.9), (0, -0.33, 0.62), coat2, 'hips')
-    # Schürze mit rotem Kreuz, Gürtel mit Ampullen
-    f.box((0.34, 0.04, 0.9), (0, 0.3, 1.02), white, 'hips', rot=(-6, 0, 0), bevel=0.01)
-    f.box((0.36, 0.04, 0.36), (0, 0.27, 1.45), white, 'chest', bevel=0.01)
-    f.box((0.06, 0.02, 0.2), (0, 0.3, 1.47), red, 'chest')
-    f.box((0.2, 0.02, 0.06), (0, 0.3, 1.47), red, 'chest')
-    f.cyl(0.32, 0.32, 0.07, (0, 0, 1.17), M('#4a3020', 0.8), 'hips', seg=10)
-    # Blutegel-Gläser am Gürtel (Glas, dunkle Egel, Korken) und Arzttasche an der linken Hüfte
-    glass, leech, cork = M('#9ad8c0', 0.1, 0.0, 0.6), M('#2a1418', 0.6), M('#a07848', 0.9)
-    for x in (-0.24, -0.1, 0.06):
-        y = math.sqrt(max(0.0, 0.34 ** 2 - x * x))
-        f.cyl(0.055, 0.055, 0.16, (x, y, 1.08), glass, 'hips', seg=8)
-        f.ball(0.03, (x + 0.01, y + 0.02, 1.06), leech, 'hips', scale=(0.7, 0.7, 1.6), seg=5, rings=3)
-        f.cyl(0.045, 0.045, 0.04, (x, y, 1.18), cork, 'hips', seg=6)
-    bag, bag2 = M('#5a3420', 0.75), M('#3a2014', 0.8)
-    f.box((0.18, 0.4, 0.3), (0.38, 0.02, 0.92), bag, 'hips', bevel=0.05)
-    f.box((0.2, 0.42, 0.06), (0.38, 0.02, 1.06), bag2, 'hips', bevel=0.02)
-    f.box((0.03, 0.14, 0.04), (0.48, 0.02, 1.0), brass, 'hips')
-    f.box((0.02, 0.12, 0.12), (0.475, 0.02, 0.9), white, 'hips')
-    f.box((0.025, 0.04, 0.1), (0.485, 0.02, 0.9), red, 'hips')
-    f.box((0.025, 0.1, 0.035), (0.485, 0.02, 0.9), red, 'hips')
-    f.stab((0.3, 0.02, 1.08), (-0.2, 0.0, 1.62), 0.025, 0.025, bag2, 'chest', seg=4)
-    # Kopf: Kapuze, Pestmaske mit Schnabel, Schutzbrille, Schwesternhaube
-    f.cyl(0.11, 0.12, 0.1, (0, 0, 1.7), coat2, 'head', seg=8)
-    f.ball(0.25, (0, -0.02, 1.88), coat2, 'head', scale=(1.0, 1.05, 1.08), seg=10)
-    f.ball(0.2, (0, 0.08, 1.86), mask, 'head', scale=(0.95, 0.9, 1.0), seg=10)
-    f.cyl(0.11, 0.0, 0.46, (0, 0.38, 1.76), mask, 'head', rot=(-75, 0, 0), seg=8, scale=(0.8, 1, 1))
-    f.cyl(0.115, 0.115, 0.03, (0, 0.24, 1.8), brass, 'head', rot=(-75, 0, 0), seg=8)
-    for s in (1, -1):
-        f.cyl(0.07, 0.07, 0.06, (0.08 * s, 0.24, 1.92), brass, 'head', rot=(-90, 0, 0), seg=8)
-        f.cyl(0.055, 0.055, 0.02, (0.08 * s, 0.275, 1.92), lens, 'head', rot=(-90, 0, 0), seg=8)
-    f.box((0.3, 0.2, 0.12), (0, 0.02, 2.1), white, 'head', rot=(-12, 0, 0), bevel=0.02)
-    f.box((0.04, 0.01, 0.08), (0, 0.13, 2.11), red, 'head', rot=(-12, 0, 0))
-    f.box((0.08, 0.01, 0.03), (0, 0.13, 2.11), red, 'head', rot=(-12, 0, 0))
-    # Arme (Ärmel, Handschuhe)
+    fluid, lens = M('#57ff8a', 0.15, 0.0, 3.5), M('#9ab8c8', 0.05, 0.6)
+    # Kleid: schmales Mieder, Rock in zwei Hälften (an den Beinen) mit Rüschensaum
+    f.cyl(0.2, 0.25, 0.5, (0, 0, 1.4), dress, 'chest', seg=10)
+    f.cyl(0.3, 0.2, 0.22, (0, 0, 1.06), dress, 'hips', seg=10)
+    def rock(s, side):
+        v = f.cyl(0.27, 0.19, 0.78, (0.13 * s, 0.0, 0.58), dress, 'thigh.' + side, seg=8, scale=(1.0, 1.3, 1.0))
+        f.jag(v, 0.04, seed=2 + s)
+        r = f.cyl(0.3, 0.27, 0.08, (0.13 * s, 0.0, 0.2), white, 'thigh.' + side, seg=8, scale=(1.0, 1.3, 1.0))
+        f.jag(r, 0.04, seed=5 + s)
+    f.spiegel(rock)
+    f.box((0.03, 0.03, 0.9), (0, -0.3, 0.62), dress2, 'hips')
+    # Schürze, Gürtel
+    f.box((0.32, 0.04, 0.82), (0, 0.27, 0.86), white, 'hips', rot=(-8, 0, 0), bevel=0.01)
+    f.box((0.3, 0.04, 0.3), (0, 0.22, 1.4), white, 'chest', bevel=0.01)
+    f.cyl(0.26, 0.26, 0.06, (0, 0, 1.17), M('#4a3020', 0.8), 'hips', seg=10)
+    # Schulterumhang mit steifem, hohem Stehkragen und Kreuzabzeichen
+    v = f.cyl(0.44, 0.22, 0.42, (0, -0.03, 1.47), cape, 'chest', seg=10, scale=(1.0, 0.85, 1.0))
+    f.jag(v, 0.08, seed=9)
+    # Stehkragen: hinten hoch, vorn offen, die Spitzen stehen seitlich ab
+    f.box((0.3, 0.04, 0.3), (0, -0.14, 1.84), cape, 'chest', rot=(-12, 0, 0), bevel=0.01)
+    for e in (1, -1):
+        f.platte([(0.08 * e, -0.1, 1.68), (0.14 * e, 0.06, 1.7), (0.28 * e, 0.0, 1.98), (0.16 * e, -0.14, 1.98)],
+                 Vector((1, 0, 0)), 0.03, cape, 'chest')
+    f.box((0.07, 0.02, 0.07), (0.12, 0.16, 1.68), white, 'chest')
+    f.box((0.025, 0.025, 0.06), (0.12, 0.175, 1.68), red, 'chest')
+    f.box((0.06, 0.025, 0.025), (0.12, 0.175, 1.68), red, 'chest')
+    f.box((0.08, 0.03, 0.14), (0, 0.15, 1.58), dress2, 'chest', rot=(0, 0, 45))   # Schleife
+    # Kopf: blasses Gesicht, Zwicker, rote Lippen, hochgestecktes Haar mit Knoten, gefaltete Haube
+    f.cyl(0.07, 0.08, 0.12, (0, 0.0, 1.73), skin, 'head', seg=8)
+    f.ball(0.17, (0, 0.03, 1.88), skin, 'head', scale=(0.88, 0.95, 1.12), seg=10)
+    f.cyl(0.06, 0.0, 0.06, (0, 0.2, 1.87), skin, 'head', rot=(-80, 0, 0), seg=5)
+    f.box((0.07, 0.02, 0.025), (0, 0.17, 1.8), lips, 'head')
+    for e in (1, -1):
+        f.cyl(0.042, 0.042, 0.012, (0.06 * e, 0.17, 1.9), brass, 'head', rot=(-90, 0, 0), seg=8)
+        f.cyl(0.034, 0.034, 0.014, (0.06 * e, 0.172, 1.9), lens, 'head', rot=(-90, 0, 0), seg=8)
+        f.box((0.06, 0.012, 0.016), (0.07 * e, 0.155, 1.96), hair, 'head', rot=(0, -12 * e, 0))   # Brauen
+    f.ball(0.19, (0, -0.01, 1.96), hair, 'head', scale=(0.98, 0.98, 0.75), seg=10, rings=6)
+    f.ball(0.11, (0, -0.07, 2.12), hair, 'head', seg=8, rings=6)
+    f.ball(0.08, (0.11, -0.05, 2.06), hair, 'head', seg=6, rings=5)
+    f.ball(0.08, (-0.11, -0.05, 2.06), hair, 'head', seg=6, rings=5)
+    f.box((0.26, 0.16, 0.08), (0, 0.0, 2.2), white, 'head', rot=(-15, 0, 0), bevel=0.02)
+    for e in (1, -1):
+        f.box((0.12, 0.14, 0.06), (0.15 * e, 0.0, 2.24), white, 'head', rot=(-15, 0, 28 * e), bevel=0.015)
+    f.box((0.035, 0.01, 0.07), (0, 0.09, 2.22), red, 'head', rot=(-15, 0, 0))
+    f.box((0.07, 0.01, 0.025), (0, 0.09, 2.22), red, 'head', rot=(-15, 0, 0))
+    # Arme (lange Ärmel, Handschuhe), Stiefel mit Absatz
     def arm(s, side):
-        f.ball(0.13, f.J['arm.' + side][0], coat, 'chest', seg=8, rings=5)
-        f.glied('arm.' + side, 0.1, 0.09, coat)
-        f.glied('fore.' + side, 0.09, 0.075, coat, ext=(0.03, 0))
-        f.ball(0.07, f.J['fore.' + side][1], glove, 'fore.' + side, seg=8, rings=5)
-        f.glied('thigh.' + side, 0.1, 0.085, coat2)
-        f.glied('shin.' + side, 0.085, 0.08, glove)
+        f.ball(0.1, f.J['arm.' + side][0], dress, 'chest', seg=8, rings=5)
+        f.glied('arm.' + side, 0.085, 0.075, dress)
+        f.glied('fore.' + side, 0.075, 0.09, dress, ext=(0.03, 0))
+        f.ball(0.06, f.J['fore.' + side][1], glove, 'fore.' + side, seg=8, rings=5)
+        f.glied('thigh.' + side, 0.09, 0.075, dress2)
+        f.glied('shin.' + side, 0.07, 0.065, glove)
         ft = f.J['shin.' + side][1]
-        f.box((0.16, 0.32, 0.16), (ft.x, ft.y + 0.05, 0.08), glove, 'shin.' + side, bevel=0.03)
+        f.box((0.12, 0.26, 0.1), (ft.x, ft.y + 0.06, 0.1), glove, 'shin.' + side, bevel=0.025)
+        f.box((0.06, 0.06, 0.1), (ft.x, ft.y - 0.04, 0.05), glove, 'shin.' + side)
     f.spiegel(arm)
+    # Blutegel-Gläser am Gürtel und große Arzttasche an der linken Hüfte
+    glass, leech, cork = M('#9ad8c0', 0.1, 0.0, 0.6), M('#2a1418', 0.6), M('#a07848', 0.9)
+    for x in (-0.2, -0.08):
+        y = math.sqrt(max(0.0, 0.28 ** 2 - x * x))
+        f.cyl(0.05, 0.05, 0.14, (x, y, 1.1), glass, 'hips', seg=8)
+        f.ball(0.028, (x + 0.01, y + 0.02, 1.08), leech, 'hips', scale=(0.7, 0.7, 1.6), seg=5, rings=3)
+        f.cyl(0.04, 0.04, 0.035, (x, y, 1.19), cork, 'hips', seg=6)
+    bag, bag2 = M('#5a3420', 0.75), M('#3a2014', 0.8)
+    f.box((0.2, 0.46, 0.32), (0.36, 0.02, 0.9), bag, 'hips', bevel=0.06)
+    f.box((0.22, 0.48, 0.06), (0.36, 0.02, 1.05), bag2, 'hips', bevel=0.02)
+    f.stab((0.36, -0.14, 1.06), (0.36, -0.06, 1.18), 0.02, 0.02, bag2, 'hips', seg=4)
+    f.stab((0.36, 0.1, 1.06), (0.36, 0.02, 1.18), 0.02, 0.02, bag2, 'hips', seg=4)
+    f.box((0.03, 0.14, 0.04), (0.47, 0.02, 0.98), brass, 'hips')
+    f.box((0.02, 0.12, 0.12), (0.465, 0.02, 0.88), white, 'hips')
+    f.box((0.025, 0.04, 0.1), (0.475, 0.02, 0.88), red, 'hips')
+    f.box((0.025, 0.1, 0.035), (0.475, 0.02, 0.88), red, 'hips')
     # Spritzengewehr (an der rechten Hand): Kolben, Gehäuse, Glaskolben, Lauf, Nadel
     g = Vector(f.J['fore.R'][1])
     gy = lambda dy, dz=0.0, dx=0.12: (g.x + dx, g.y + dy, g.z + dz)
