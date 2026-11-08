@@ -11,6 +11,9 @@ on:
         description: "geaendert (gegen main) oder schnell"
         default: schnell
 
+permissions:
+  contents: read
+
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
