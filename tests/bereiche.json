@@ -7,9 +7,9 @@
     "Gemeinsame Systeme unter scripts/systems/<system>/: getestet werden die Modi, die das System in data/modes.json",
     "unter 'systems' führen, dazu die Tests mit '## Modi: system:<system>'. Führt kein Modus das Feld, laufen alle.",
     "Datei passt auf keine Regel: Code (.gd .tscn .tres .gdshader, project.godot, data/) = alle, sonst keine Tests.",
-    "Die Prüfskripte (tabelle ui maps marken werkzeuge auswahl) und 'skripte' laufen immer mit."
+    "Die Prüfskripte (tabelle ui maps marken werkzeuge auswahl systeme_pruefen) und 'skripte' laufen immer mit."
   ],
-  "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "skripte"],
+  "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "systeme_pruefen", "skripte"],
   "regeln": [
     ["tests/bereiche.json", []],
     ["tests/lib/tower_probe.gd", ["towgemtd", "toweeve", "towrg", "towmaul"]],

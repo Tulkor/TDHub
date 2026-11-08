@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems save (Spielstand, Autosave). Ein Modus überschreibt sie in data/modes.json unter system_cfg.save; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

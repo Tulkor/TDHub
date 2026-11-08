@@ -148,6 +148,7 @@ do_test() {
     marken)  run_check marken python3 tools/wc3/maul_namen.py --pruefe ;;
     werkzeuge) run_check werkzeuge check_tools ;;
     auswahl) run_check auswahl python3 tools/test_auswahl.py --pruefen ;;
+    systeme_pruefen) run_check systeme_pruefen python3 tools/systeme.py pruefen ;;
     balanceeditor) run_check balanceeditor node tools/balance_editor/pruefen.mjs ;;
     htmleditor) run_check htmleditor node tools/html_editor/pruefen.mjs ;;
     *)
@@ -177,9 +178,9 @@ if [ "$MODE" = geaendert ]; then
 fi
 case $MODE in
   # shellcheck disable=SC2046
-  schnell) set -- tabelle ui maps marken werkzeuge auswahl $(all_tests ohne_fest) ;;
+  schnell) set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen $(all_tests ohne_fest) ;;
   # shellcheck disable=SC2046
-  alle)    set -- tabelle ui maps marken werkzeuge auswahl $(all_tests) ;;
+  alle)    set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen $(all_tests) ;;
 esac
 # Prüfskripte, Smoke und die Host/Client-Paare (eigene Ports) laufen parallel, Balance-Läufe danach einzeln.
 PAR=(); SEQ=(); declare -A WEIGHT

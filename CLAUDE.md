@@ -1,7 +1,7 @@
 # Hinweise für Claude
 
 Diese Datei wird bei jedem Schritt jedes Threads mitgeschickt, deshalb steht hier nur der Kern. Details je Bereich liegen in `docs/claude/` und kommen automatisch dazu: Der Hook `.claude/hooks/thema.py` blendet die passende Notiz einmal pro Thread ein, sobald Dateien des Bereichs angefasst werden. Von Hand lesen nur, wenn man vorher etwas wissen muss:
-`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `survivors.md` · `heroes.md` (Bollwerk, Hero Defense) · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
+`gemtd.md` (game.gd, Tower, Effekte, HUD, Debug, Roguelike, Spielstand, Profil, Spielfeld-Stil, Karte) · `netz.md` · `maul.md` · `eeve.md` · `randgruppen.md` · `youtd.md` · `survivors.md` · `heroes.md` (Bollwerk, Hero Defense) · `systeme.md` (gemeinsame Spielsysteme, Modus-Baukasten) · `werkzeuge.md` (Build/Release, Screenshots, Balance-/HTML-Editor, Texte, Effekte, Modelle, WC3, Tests schreiben).
 Neues Wissen zu einem Bereich in dessen Notiz eintragen, nicht hier; neue Notiz = Datei plus Eintrag in `THEMEN` in `thema.py`.
 
 ## UI-Stil je Modus (Lukas will das nicht jedes Mal sagen müssen)
@@ -33,4 +33,5 @@ Ins Repo nur, was in einem öffentlichen Repo liegen und mit dem Spiel verkauft 
 ## Code-Landkarte (Kern)
 - `scripts/autoload/`: `database.gd` (alle JSON-Daten: `Database.towers`, `.enemies`, `.wave_sets`, `.balance`, `.modes`, `list_maps()`), `session.gd` (Werte zwischen Szenen), `loc.gd`, `display.gd`, `net.gd` (ENet, Lobby, Sitzungen).
 - `scripts/game/game.gd`: Spielablauf, alle Spieleraktionen als Befehle `submit(cmd)` → `execute`, im Koop rechnet der Host. Die anderen Modi erweitern game.gd (`eeve_game.gd`, `rg_game.gd`, `youtd_game.gd`), Maul hat `scripts/maul/maul_game.gd`. Modi in `data/modes.json`, Maps über ihr Feld `game`.
+- Gemeinsame Spielsysteme: `scripts/systems/<name>/` (GameSystem, SystemHost), Modus kreuzt sie in `data/modes.json` → `systems` an, Werte kaskadieren Basis → `system_cfg` (Modus gewinnt). Neue gemeinsame Mechanik dort, nicht in einen Modus kopieren; Werkzeug `tools/systeme.py`.
 - Oberfläche: `hud.gd` und Bausteine in `scripts/ui/`. Karte/Feld: `scripts/map/`. Netz: `scripts/net/`. Daten: `data/`. Tests: `tests/`.

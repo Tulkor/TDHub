@@ -19,6 +19,8 @@ const SETTINGS := "user://heroes.cfg"
 ## Tasten der Fähigkeiten 1–4 je Steuerung (WASD belegt W, deshalb dort Q E F R).
 const KEYS := {"wasd": [KEY_Q, KEY_E, KEY_F, KEY_R], "maus": [KEY_Q, KEY_W, KEY_E, KEY_R]}
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
 var cfg: Dictionary = {}
 var hero_defs: Dictionary = {}  ## id → Held (data/heroes_helden.json)
 var hero_list: Array = []       ## ids in Anzeige-Reihenfolge
@@ -93,6 +95,10 @@ var blessing: Dictionary = {}   ## Schrein-Segen {stats, until}
 var blood_wave := 0             ## Blutmond liegt auf dieser Welle
 var _fly_roads: Dictionary = {} ## Straße → gerade Fluglinie
 var _boss_marker: Node3D
+
+
+func _init() -> void:
+	SystemHost.attach(self, "heroes")
 
 
 func _ready() -> void:
@@ -206,7 +212,7 @@ func can_change_kit() -> bool:
 
 
 func diff() -> Dictionary:
-	return cfg.difficulties[clampi(difficulty, 0, cfg.difficulties.size() - 1)]
+	return systems.difficulty.current()
 
 
 ## Zeile der Spielerzahl-Tabelle (Design Abschnitt 12): Straßen, Gegnerleben, Gold je Kill.
@@ -1551,7 +1557,7 @@ func _record(victory: bool) -> Dictionary:
 	var info := {"map": "Morgenwacht", "difficulty": difficulty, "victory": victory, "wave": wave,
 		"waves": wave_count(), "lives": lives, "max_lives": max_lives, "score": score(),
 		"kills": kills, "play_time": roundi(play_time), "debug": debug, "hero": hid, "hero_level": hero.level}
-	return Profile.record_run("heroes", info, {"types": types, "towers": towers, "wave_log": wave_log})
+	return systems.run_record.finish(info, {"types": types, "towers": towers, "wave_log": wave_log})
 
 
 func leave() -> void:

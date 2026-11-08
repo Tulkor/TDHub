@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems inventory (Item-Plätze, Items auf Tower ziehen). Ein Modus überschreibt sie in data/modes.json unter system_cfg.inventory; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}
