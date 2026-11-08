@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems build (Bauen, Belegen, Wege, Lichtpfad). Ein Modus überschreibt sie in data/modes.json unter system_cfg.build; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

@@ -1,5 +1,5 @@
 {
-	"_info": "TD-Modi im Hauptmenü und in der Lobby. ready: schon spielbar. min_players/max_players: erlaubte Spielerzahl (Lobby: nur diese Modi sind wählbar). scene: Einstieg des Modus, dort steht der Modus in Session.game_kind. Maps gehören über ihr Feld \"game\" zu einem Modus (ohne Feld: gemtd). needs_map false: der Modus wählt seine Karte selbst, die Map-Auswahl entfällt. coop_only: mit mehreren Spielern immer Koop (keine eigenen Felder).",
+	"_info": "TD-Modi im Hauptmenü und in der Lobby. ready: schon spielbar. min_players/max_players: erlaubte Spielerzahl (Lobby: nur diese Modi sind wählbar). scene: Einstieg des Modus, dort steht der Modus in Session.game_kind. Maps gehören über ihr Feld \"game\" zu einem Modus (ohne Feld: gemtd). needs_map false: der Modus wählt seine Karte selbst, die Map-Auswahl entfällt. coop_only: mit mehreren Spielern immer Koop (keine eigenen Felder). systems: welche modusunabhängigen Spielsysteme (scripts/systems/katalog.json) der Modus nutzt; prüfen mit python3 tools/systeme.py pruefen. system_cfg: Einstellungen je System (optional).",
 	"modes": [
 		{
 			"id": "gemtd",
@@ -9,7 +9,8 @@
 			"max_players": 8,
 			"scene": "res://scenes/game.tscn",
 			"hint": "Gems setzen, kombinieren, Labyrinth bauen. 50 Wellen, Rezepte und Spezial-Tower.",
-			"needs_map": true
+			"needs_map": true,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"]
 		},
 		{
 			"id": "eevetd",
@@ -19,7 +20,8 @@
 			"max_players": 4,
 			"scene": "res://scenes/eeve_game.tscn",
 			"hint": "Barrikaden bauen, zu Element-Towern aufwerten, 57 Level, Koop oder eigene Felder bis 4 Spieler",
-			"needs_map": true
+			"needs_map": true,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"]
 		},
 		{
 			"id": "shoppingmaul",
@@ -29,7 +31,8 @@
 			"max_players": 8,
 			"scene": "res://scenes/maul_game.tscn",
 			"hint": "Filiale eröffnen, Tower kaufen und aufwerten, Profi-Filialen ab 25 XP, Koop bis 8 Spieler",
-			"needs_map": false
+			"needs_map": false,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "inventory", "build", "controls"]
 		},
 		{
 			"id": "randgruppen",
@@ -39,7 +42,8 @@
 			"max_players": 9,
 			"scene": "res://scenes/rg_game.tscn",
 			"hint": "Rasse wählen, Tower frei in die eigene Zone bauen, 35 Level gegen die Spießer, Koop bis 9 Spieler",
-			"needs_map": false
+			"needs_map": false,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"]
 		},
 		{
 			"id": "youtd",
@@ -50,7 +54,8 @@
 			"scene": "res://scenes/youtd_game.tscn",
 			"hint": "Elemente erforschen, Tower würfeln oder kaufen, Items sammeln, feste Wege. Koop bis 4 Spieler, jeder mit eigenem Weg. Spieler-XP bleibt über Partien.",
 			"needs_map": true,
-			"coop_only": true
+			"coop_only": true,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"]
 		},
 		{
 			"id": "heroes",
@@ -60,7 +65,8 @@
 			"max_players": 1,
 			"scene": "res://scenes/heroes_game.tscn",
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
-			"needs_map": false
+			"needs_map": false,
+			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory"]
 		},
 		{
 			"id": "survivors",
@@ -70,7 +76,8 @@
 			"max_players": 1,
 			"scene": "res://scenes/survivors_game.tscn",
 			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
-			"needs_map": false
+			"needs_map": false,
+			"systems": ["run_record", "targeting", "economy", "waves"]
 		}
 	]
 }

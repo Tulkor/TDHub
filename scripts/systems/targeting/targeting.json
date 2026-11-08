@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems targeting (Ziele, Reichweite, Deckung, Leerlauf-Tempo). Ein Modus überschreibt sie in data/modes.json unter system_cfg.targeting; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

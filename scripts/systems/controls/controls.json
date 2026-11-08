@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems controls (Eingabe, Auswahl, Hover, Pause, Tempo). Ein Modus überschreibt sie in data/modes.json unter system_cfg.controls; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

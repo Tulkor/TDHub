@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems coop (Koop-Abgleich: Snapshot und Befehle). Ein Modus überschreibt sie in data/modes.json unter system_cfg.coop; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

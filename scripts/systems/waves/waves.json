@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems waves (Wellenablauf, Spawn-Warteschlange, Auto-Welle). Ein Modus überschreibt sie in data/modes.json unter system_cfg.waves; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

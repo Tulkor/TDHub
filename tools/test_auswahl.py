@@ -21,7 +21,7 @@ import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 CODE = re.compile(r"\.(gd|tscn|tres|gdshader|gdshaderinc)$|^project\.godot$|^data/")
-CHECKS = {"tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "balanceeditor", "htmleditor"}
+CHECKS = {"tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "systeme_pruefen", "balanceeditor", "htmleditor"}
 
 
 def load_json(rel):

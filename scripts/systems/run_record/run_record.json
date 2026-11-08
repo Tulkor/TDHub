@@ -1,0 +1,3 @@
+{
+	"_info": "Basiswerte des Systems run_record (Run-Ende, Profil, Debug-Run, Abbruch). Ein Modus überschreibt sie in data/modes.json unter system_cfg.run_record; was er angibt, gewinnt, auch verschachtelt (wie CSS)."
+}

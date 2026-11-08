@@ -1,0 +1,93 @@
+{
+	"_info": "Katalog der modusunabhängigen Spielsysteme (tools/systeme.py). titel: Anzeige. etappe: in welcher Umbau-Etappe das System aus den Modi herausgezogen wird. eigen: Funktionsnamen, an denen man erkennt, dass ein Modus das System noch selbst baut. klasse: class_name des gemeinsamen Skripts (sobald es eines gibt); wer sie benutzt, nutzt das System. Modus-Dateien und Muster, die ein System nicht enthalten darf, stehen unter _modi und _verboten.",
+	"_modi": {
+		"gemtd": {
+			"dateien": ["scripts/game/game.gd", "scripts/game/rogue*.gd", "scripts/game/setup_panel.gd"]
+		},
+		"eevetd": {
+			"dateien": ["scripts/game/eeve_*.gd", "scripts/map/eeve_*.gd"],
+			"erbt": "gemtd"
+		},
+		"randgruppen": {
+			"dateien": ["scripts/game/rg_*.gd", "scripts/map/rg_*.gd"],
+			"erbt": "gemtd"
+		},
+		"youtd": {
+			"dateien": ["scripts/youtd/**/*.gd"],
+			"erbt": "gemtd"
+		},
+		"shoppingmaul": {
+			"dateien": ["scripts/maul/*.gd"]
+		},
+		"heroes": {
+			"dateien": ["scripts/heroes/*.gd"]
+		},
+		"survivors": {
+			"dateien": ["scripts/survivors/*.gd"]
+		}
+	},
+	"_verboten": ["\\beeve_\\w+", "\\brg_\\w+", "\\byoutd\\w*", "\\bmaul_\\w+", "\\bhd_\\w+", "\\bsv_\\w+", "\\bMaulGame\\b", "\\bHdGame\\b", "\\bSvGame\\b", "Session\\.game_kind"],
+	"systeme": {
+		"run_record": {
+			"titel": "Run-Ende, Profil, Debug-Run, Abbruch",
+			"etappe": 2,
+			"eigen": ["record_profile", "record_profile_abort", "_record", "_record_profile", "_record_run", "_record_abort", "debug_run", "profile_mode", "profile_extra"]
+		},
+		"difficulty": {
+			"titel": "Schwierigkeit und Aufstieg",
+			"etappe": 2,
+			"eigen": ["difficulty_index", "difficulty_label", "difficulty_count", "take_ascension", "ascension_mods", "_apply_ascension", "_apply_enemy_difficulty", "diff_rules", "diff", "scaling"],
+			"klasse": "Ascension"
+		},
+		"targeting": {
+			"titel": "Ziele, Reichweite, Deckung, Leerlauf-Tempo",
+			"etappe": 3,
+			"eigen": ["find_targets", "find_targets_in", "enemies_in_radius", "is_covered", "_refresh_cover", "free_stretch", "idle_speed_factor", "nearest_enemy", "enemies_in", "nearest", "in_radius"]
+		},
+		"economy": {
+			"titel": "Gold, Einkommen, Leben, Leak-Strafe",
+			"etappe": 4,
+			"eigen": ["earn_gold", "add_gold", "gold_income_factor", "income_factor", "leak_penalty", "income", "_pay", "kill_life", "gain_lives"],
+			"klasse": "PlayerState"
+		},
+		"save": {
+			"titel": "Spielstand, Autosave",
+			"etappe": 4,
+			"eigen": ["save_game", "save_coop", "autosave", "drop_autosave", "save_mode", "save_extra", "load_extra"],
+			"klasse": "SaveGame"
+		},
+		"waves": {
+			"titel": "Wellenablauf, Spawn-Warteschlange, Auto-Welle",
+			"etappe": 5,
+			"eigen": ["_start_wave", "start_wave", "_start_level", "_process_wave", "_spawn_enemy", "_spawn", "group_queue", "is_wave_running", "current_wave", "has_auto_wave", "auto_wave_due", "next_wave_now", "set_auto_wave", "queued_hp", "call_early", "_make_waves"]
+		},
+		"coop": {
+			"titel": "Koop-Abgleich: Snapshot und Befehle",
+			"etappe": 6,
+			"eigen": ["coop_snapshot", "apply_coop_snapshot", "coop_commands", "set_player_away"],
+			"klasse": "CoopSync"
+		},
+		"inventory": {
+			"titel": "Item-Plätze, Items auf Tower ziehen",
+			"etappe": 6,
+			"eigen": ["inv_drop_reason", "inv_drop_hint", "inv_drop_on_tower", "_setup_inv_drop", "move_item", "move_reason"],
+			"klasse": "InvSlot"
+		},
+		"leveling": {
+			"titel": "Tower-Level und EP",
+			"etappe": 0,
+			"eigen": [],
+			"klasse": "Leveling"
+		},
+		"build": {
+			"titel": "Bauen, Belegen, Wege, Lichtpfad",
+			"etappe": 7,
+			"eigen": ["can_place", "_occupy", "_register", "_unregister", "may_build_for", "would_block", "build_problem", "_update_paths", "_refresh_paths", "set_path_lights", "set_show_all_paths", "has_other_paths"]
+		},
+		"controls": {
+			"titel": "Eingabe, Auswahl, Hover, Pause, Tempo",
+			"etappe": 7,
+			"eigen": ["_on_click", "_update_hover", "_box_select", "select", "_select", "set_user_paused", "set_speed", "_on_pause_toggled", "paused_input"]
+		}
+	}
+}
