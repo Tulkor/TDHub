@@ -1,4 +1,5 @@
 extends Node
+## Modi: kern, gemtd
 ## Automatischer Rauchtest: startet .../godot --headless --path . res://tests/smoke_test.tscn
 ## Lädt alle Szenen, spielt ein paar Runden automatisch und beendet sich mit Exit-Code 0/1.
 

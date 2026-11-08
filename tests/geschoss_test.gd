@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name geschosse)
+## Modi: kern
 ## Geschosse wie in Path of Exile: Durchbohren, Gabeln, Verketten und ihre Reihenfolge (tower.gd → _projectile).
 ## Ein Tower bei (0, 0) schießt nach rechts auf einen Gegner bei (2, 0), ohne Spielfeld und Wellen.
 

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name aufstieg)
+## Modi: kern
 ## Aufstiegsstufen (ascension.gd, data/ascension.json): angebotene Schwierigkeiten je Modus, Regeln je Stufe,
 ## Gegner verstärken, Freischalten im Profil (nur Sieg auf der höchsten, ohne Debug und Punkte-Wertung).
 

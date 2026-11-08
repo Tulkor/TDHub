@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name faehigkeiten)
+## Modi: eevetd, gemtd
 ## Fähigkeiten, die früher nur als Text in den Daten standen: eeveTD-Kopfgeld- und Erfahrungs-Auren
 ## (Minen, Weisheit), die Wellen-Eigenschaften Unverwundbar, Tempo-Bremse, Heiler und Fesselnd,
 ## und die Todesexplosion der GemTD-Geisterplatte. Alles im echten eeveTD-Spiel (game.gd ist die Basis).

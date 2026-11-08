@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name treffer)
+## Modi: kern
 ## Treffer-Effekte: Wahl nach Farbe (Feuer nur für warme Tower), Treffer erst beim Einschlag des Geschosses,
 ## Treffer-Lichter in der Schussfarbe mit fester Obergrenze (fx_data.gd, fx_player.gd, effects.gd).
 

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name survivors)
+## Modi: survivors
 ## Tower Survivors: Daten, Start, Laden (Kaufen, Stufe hoch, Verkaufen, Neu würfeln), Upgrades,
 ## jede Waffe trifft, Bonus-Wahl, Bot-Lauf bis zum Ende (Einfach und Schwer), Eintrag im Profil.
 ## Balance genauer: tools/survivors_sim.tscn (mehrere Läufe je Stufe).
@@ -49,9 +50,9 @@ func _new_game(diff: int) -> SvGame:
 	Session.skip_setup = true
 	Session.difficulty = diff
 	var g: SvGame = load("res://scenes/survivors_game.tscn").instantiate()
+	g.fixed_seed = 7  # vor _ready, sonst hängt der Bot-Lauf vom Zufall ab (in CI einmal nur bis Welle 9)
 	add_child(g)
 	g.set_physics_process(false)
-	g.rng.seed = 7
 	await get_tree().process_frame
 	return g
 

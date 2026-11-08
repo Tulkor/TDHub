@@ -1,5 +1,6 @@
 extends "res://tests/lib/tower_probe.gd"
 ## Lauf: fest (Name towrg)
+## Modi: randgruppen
 ## Randgruppen TD: jeder Tower aller Rassen einzeln, Schaden und alle Fähigkeiten (tests/lib/tower_probe.gd).
 ## Start: tools/tower_pruefen.sh rg
 

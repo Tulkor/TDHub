@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name roguelike)
+## Modi: gemtd
 ## GemTD-Variante Roguelike (rogue.gd): Angebot nach jeder zehnten Welle, Setzen gesperrt bis zur Wahl,
 ## alle Bonusarten (Werte, Fähigkeiten, Luftabwehr, Elementflächen, globale Boni), eigene Gegnerwerte,
 ## Fenster, Spielstand und Einstellungen vor Runde 1.

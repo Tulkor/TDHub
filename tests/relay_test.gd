@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: trio
+## Modi: kern
 ## Verbindung über den Relay-Server (tools/relay/relay.py) mit drei Prozessen, sonst wie der Test „gemischt“:
 ## der Host startet den Relay, eröffnet einen Raum (fester Code), A und B treten mit dem Code bei.
 ##   godot --headless --path . res://tests/relay_test.tscn -- --role=host   (und --role=a, --role=b)

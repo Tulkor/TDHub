@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: fest
+## Modi: gemtd
 ## Balance-Check: kann ein einzelner Gem jeder Sorte Welle 1 halten?
 ## Start: godot --headless --fixed-fps 60 --path . res://tests/balance_test.tscn -- [--tier=0] [--wave=1] [--gem=ruby]
 ## Auf der klassischen Map steht der behaltene Gem direkt am Laufweg, einmal an der ersten Ecke

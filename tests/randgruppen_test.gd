@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln
+## Modi: randgruppen
 ## Randgruppen TD: Daten, Karte, ein kurzes Spiel (Rasse, bauen, Weg offen, Endtower gesperrt, Level 1, verkaufen)
 ## und Koop ohne Netz (Rasse je Spieler, Zonen, Bereitschaft, gespiegelte Gegner).
 ## Start: godot --headless --path . res://tests/randgruppen_test.tscn (oder tools/run_tests.sh randgruppen)

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: paar
+## Modi: kern
 ## Lobby-Test (Abstimmung über den TD-Modus) mit zwei Prozessen:
 ##   godot --headless --path . res://tests/lobby_test.tscn -- --role=host
 ##   godot --headless --path . res://tests/lobby_test.tscn -- --role=client
