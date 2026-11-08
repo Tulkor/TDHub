@@ -10,7 +10,8 @@
 			"scene": "res://scenes/game.tscn",
 			"hint": "Gems setzen, kombinieren, Labyrinth bauen. 50 Wellen, Rezepte und Spezial-Tower.",
 			"needs_map": true,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"]
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"],
+			"system_cfg": {"economy": {"income_from_balance": true}}
 		},
 		{
 			"id": "eevetd",
@@ -34,7 +35,7 @@
 			"hint": "Filiale eröffnen, Tower kaufen und aufwerten, Profi-Filialen ab 25 XP, Koop bis 8 Spieler",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "inventory", "build", "controls"],
-			"system_cfg": {"run_record": {"profile": "maul"}, "difficulty": {"source": "rules", "key": "maul"}}
+			"system_cfg": {"run_record": {"profile": "maul"}, "economy": {"split_unowned": false}, "difficulty": {"source": "rules", "key": "maul"}}
 		},
 		{
 			"id": "randgruppen",
@@ -59,7 +60,7 @@
 			"needs_map": true,
 			"coop_only": true,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
-			"system_cfg": {"difficulty": {"source": "rules"}}
+			"system_cfg": {"difficulty": {"source": "rules"}, "economy": {"income_from_balance": true}}
 		},
 		{
 			"id": "heroes",

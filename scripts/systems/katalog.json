@@ -50,14 +50,16 @@
 		"economy": {
 			"titel": "Gold, Einkommen, Leben, Leak-Strafe",
 			"etappe": 4,
-			"eigen": ["earn_gold", "add_gold", "gold_income_factor", "income_factor", "leak_penalty", "income", "_pay", "kill_life", "gain_lives"],
-			"klasse": "PlayerState"
+			"eigen": ["earn_gold", "add_gold", "gold_income_factor", "income"],
+			"klasse": "PlayerState",
+			"haken": ["current_wave", "income_factor", "_pay", "kill_life", "gain_lives", "leak_penalty"]
 		},
 		"save": {
 			"titel": "Spielstand, Autosave",
 			"etappe": 4,
-			"eigen": ["save_game", "save_coop", "autosave", "drop_autosave", "save_mode", "save_extra", "load_extra"],
-			"klasse": "SaveGame"
+			"eigen": ["save_game", "save_coop", "autosave", "drop_autosave"],
+			"klasse": "SaveGame",
+			"haken": ["save_extra", "load_extra", "save_mode"]
 		},
 		"waves": {
 			"titel": "Wellenablauf, Spawn-Warteschlange, Auto-Welle",

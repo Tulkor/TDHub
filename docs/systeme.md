@@ -7,8 +7,8 @@ Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. eige
 | run_record – Run-Ende, Profil, Debug-Run, Abbruch | 2 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
 | difficulty – Schwierigkeit und Aufstieg | 2 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – |
 | targeting – Ziele finden, Gegner im Kreis, nächster Gegner | 3 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
-| economy – Gold, Einkommen, Leben, Leak-Strafe | 4 | eigen (4) ✓ | eigen (1) ✓ | eigen (1) ✓ | eigen (1) ✓ | eigen (5) ✓ | eigen (1) ✓ | eigen (1) ✓ |
-| save – Spielstand, Autosave | 4 | eigen (5) ✓ | eigen (2) ✓ | eigen (2) ✓ | eigen (3) ✓ | eigen (1) ✓ | – | – |
+| economy – Gold, Einkommen, Leben, Leak-Strafe | 4 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | eigen (1) ✓ | gemeinsam ✓ | eigen (1) ✓ | eigen (1) ✓ |
+| save – Spielstand, Autosave | 4 | eigen (4) ✓ | geerbt ✓ | geerbt ✓ | geerbt ✓ | eigen (1) ✓ | – | – |
 | waves – Wellenablauf, Spawn-Warteschlange, Auto-Welle | 5 | eigen (12) ✓ | eigen (9) ✓ | eigen (6) ✓ | eigen (8) ✓ | eigen (6) ✓ | eigen (2) ✓ | eigen (2) ✓ |
 | coop – Koop-Abgleich: Snapshot und Befehle | 6 | eigen (1) ✓ | eigen (3) ✓ | eigen (4) ✓ | eigen (3) ✓ | – ✓ | – | – |
 | inventory – Item-Plätze, Items auf Tower ziehen | 6 | eigen (4) | eigen (4) ✓ | geerbt | eigen (4) ✓ | eigen (3) ✓ | gemeinsam ✓ | – |

@@ -1591,31 +1591,15 @@ func next_chance_wave() -> int:
 	return int(levels[chance_level + 1].get("wave", 1))
 
 
-## Anteil des Golds aus Kills und Fähigkeiten in dieser Welle: gold_income_factor, ab gold_income_ramp
-## linear steigend bis to_factor in Welle to_wave, danach gleichbleibend.
+## Anteil des Golds aus Kills und Fähigkeiten in dieser Welle (System economy; GemTD: data/balance.json
+## gold_income_factor, ab gold_income_ramp steigend; eeveTD/Randgruppen 1.0 über modes.json).
 func gold_income_factor(wave: int) -> float:
-	var start := float(Database.balance.get("gold_income_factor", 1.0))
-	var ramp: Dictionary = Database.balance.get("gold_income_ramp", {})
-	if ramp.is_empty():
-		return start
-	var a := int(ramp.get("from_wave", 1))
-	var b := int(ramp.get("to_wave", a))
-	var t := clampf(float(wave - a) / maxf(b - a, 1), 0.0, 1.0)
-	return lerpf(start, float(ramp.get("to_factor", start)), t)
+	return systems.economy.income_factor(wave)
 
 
-## Gold aus Kills und Fähigkeiten, gekürzt um gold_income_factor (Reste werden gesammelt).
-## p: Spieler, der das Gold bekommt; -1 = gleichmäßig auf alle verteilt (z. B. Kill ohne bekannten Tower).
+## Gold aus Kills und Fähigkeiten, gekürzt um gold_income_factor (Reste werden gesammelt), System economy.
 func earn_gold(amount: float, p := -1) -> void:
-	if p < 0 or p >= players.size():
-		for i in players.size():
-			earn_gold(amount / players.size(), i)
-		return
-	var ps: PlayerState = players[p]
-	ps.gold_frac += amount * gold_income_factor(current_wave())
-	var whole := floori(ps.gold_frac)
-	ps.gold += whole
-	ps.gold_frac -= whole
+	systems.economy.earn(amount, p)
 
 
 func current_wave() -> int:
@@ -1623,7 +1607,7 @@ func current_wave() -> int:
 
 
 func add_gold(amount: int, p := -1) -> void:
-	earn_gold(amount, p)
+	systems.economy.earn(amount, p)
 	_refresh_hud()
 
 

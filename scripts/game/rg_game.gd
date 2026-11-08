@@ -374,10 +374,6 @@ func is_final_boss_wave() -> bool:
 	return false
 
 
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
-
-
 ## Geldteilen: das Kopfgeld geht an alle zu gleichen Teilen (earn_gold ohne Spieler teilt mit Bruchteilen).
 func on_enemy_killed(e: Enemy) -> void:
 	if share_gold:

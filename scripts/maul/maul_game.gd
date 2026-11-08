@@ -1073,9 +1073,9 @@ func add_ring(p: Vector2, r: float, col: Color) -> void:
 		add_beam(Board3D.to_3d(p + Vector2(cos(a), sin(a)) * r, 0.15), Board3D.to_3d(p + Vector2(cos(b), sin(b)) * r, 0.15), col)
 
 
+## Weiterleitung → System  economy
 func add_gold(amount: int, p := -1) -> void:
-	players[acting if p < 0 else p].gold += amount
-	_refresh_hud()
+	systems.economy.add(amount, p)
 
 
 # --- Bauen -------------------------------------------------------------------------

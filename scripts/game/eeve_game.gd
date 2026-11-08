@@ -590,10 +590,6 @@ func _entangle(e: Enemy, towers: Array, duration: float) -> bool:
 	return true
 
 
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
-
-
 func _note(text: String, p := -1) -> void:
 	var lines: Array = ep(p).log
 	lines.append(text)

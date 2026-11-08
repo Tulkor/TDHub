@@ -128,7 +128,7 @@ die Mitspieler treten bei und spielen dort weiter, wo sie waren. Erkannt werden 
 (`user://settings.cfg`), notfalls am Namen. Ein Koop-Spielstand enthält das gemeinsame Feld mit allen Spielern,
 beim Laden bekommt jeder seine alte Spielernummer zurück.
 
-Die Dateien liegen in `user://saves/*.gtd`, binär und mit AES-256 verschlüsselt samt Prüfsumme (`scripts/game/save_game.gd`).
+Die Dateien liegen in `user://saves/*.gtd`, binär und mit AES-256 verschlüsselt samt Prüfsumme (`scripts/systems/save/save_game.gd`).
 Eine veränderte Datei lässt sich nicht mehr laden. Der Schlüssel steckt im Spiel, gegen gezieltes Auslesen schützt das nicht,
 gegen einfaches Ändern schon.
 
