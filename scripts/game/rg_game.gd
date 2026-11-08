@@ -547,9 +547,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	super._unhandled_input(event)
 
 
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
-
 
 func _on_option_chosen(index: int) -> void:
 	var opts := tower_options(selected)

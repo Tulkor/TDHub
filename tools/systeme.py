@@ -131,7 +131,9 @@ def matrix_rows():
             klasse = s.get("klasse")
             uses = bool(klasse) and re.search(r"\b%s\b" % re.escape(klasse), code[m]) is not None
             shared = os.path.exists(system_script(sname)) and bool(FUNC_RE.search(read(system_script(sname))))
-            if own:
+            if own and m in s.get("modusregel", {}):
+                cells[m] = ("Modusregel", own)
+            elif own:
                 cells[m] = ("eigen", own)
             elif uses or (shared and sname in modes.get(m, {}).get("systems", [])) \
                     or ("systems.%s." % sname) in code[m]:
@@ -155,7 +157,8 @@ def cmd_matrix(args):
         lines = ["# Spielsysteme × Modi", "",
                  "Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. "
                  "eigen (n) = der Modus baut das System noch selbst (n erkannte Funktionen), geerbt = über game.gd, "
-                 "gemeinsam = nutzt scripts/systems/ bzw. die gemeinsame Klasse. ✓ = in data/modes.json angekreuzt.", "",
+                 "gemeinsam = nutzt scripts/systems/ bzw. die gemeinsame Klasse, Modusregel = bewusst eigene Umsetzung "
+                 "(Grund unter der Tabelle, katalog.json → modusregel). ✓ = in data/modes.json angekreuzt.", "",
                  "| System | Etappe | " + " | ".join(modi) + " |",
                  "| --- | --- | " + " | ".join("---" for _ in modi) + " |"]
         for sname, s, cells in rows:
@@ -164,6 +167,9 @@ def cmd_matrix(args):
                 tick = " ✓" if sname in modes.get(m, {}).get("systems", []) else ""
                 marks.append(cell_text(cells[m]) + tick)
             lines.append("| %s – %s | %s | %s |" % (sname, s["titel"], s.get("etappe", ""), " | ".join(marks)))
+        regeln = [(sname, m, why) for sname, s, _c in rows for m, why in s.get("modusregel", {}).items()]
+        if regeln:
+            lines += ["", "## Modusregeln", ""] + ["- %s / %s: %s" % r for r in regeln]
         write(os.path.join(ROOT, "docs/systeme.md"), "\n".join(lines) + "\n")
         print("docs/systeme.md geschrieben (%d Systeme × %d Modi)" % (len(rows), len(modi)))
         return 0
@@ -173,7 +179,8 @@ def cmd_matrix(args):
     for sname, _s, cells in rows:
         print(sname.ljust(w) + "  " + "".join("%-13s" % cell_text(cells[m]) for m in modi))
         eigen += sum(1 for m in modi if cells[m][0] == "eigen")
-    print("%d Stellen bauen ein System noch selbst" % eigen)
+    regel = sum(1 for _n, _s, cells in rows for m in modi if cells[m][0] == "Modusregel")
+    print("%d Stellen bauen ein System noch selbst, %d bewusst als Modusregel" % (eigen, regel))
     return 0
 
 
@@ -446,6 +453,8 @@ def cmd_umziehen(args):
         for lam in re.findall(r"\bfunc\s*\(([^)]*)\)", body):
             local |= set(re.findall(r"(\w+)\s*(?::[^,]*)?(?:,|$)", lam))
         fields = members - local
+        # enum des Spiels (Phase.GAME_OVER → game.Phase.GAME_OVER)
+        enums = set(re.findall(r"^enum\s+(\w+)", src, re.M))
         for i, l in enumerate(body.split("\n")):
             if l.startswith("##") or FUNC_RE.match(l):
                 new_lines.append(l)
@@ -454,7 +463,9 @@ def cmd_umziehen(args):
             parts = re.split(r'("(?:[^"\\]|\\.)*")', code)
             for k in range(0, len(parts), 2):
                 def sub(m):
-                    if m.group(1) in fields:
+                    if m.group(1) == "self":
+                        return "game"
+                    if m.group(1) in fields or m.group(1) in enums:
                         used.add(m.group(1))
                         return "game." + m.group(1)
                     return m.group(1)

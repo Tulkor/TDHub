@@ -135,11 +135,6 @@ var setup_done := true
 var rogue: Rogue = null
 var net_panel: NetPanel = null
 var _next_enemy_id := 1
-var _cover: Array = []     ## is_covered: [Tower, größte Reichweite] dieses Bilds
-var _cover_frame := -1
-var _cover_sig := 0        ## ändert sich, wenn Tower dazukommen, wegfallen oder ihre Reichweite ändern
-var _free_cache := {}      ## free_stretch: Bahn/Flieger → {path, sig, list}
-var _probe: Enemy = null   ## Messpunkt für free_stretch
 
 
 func _init() -> void:
@@ -281,9 +276,6 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 	record_profile_abort()
-	if _probe != null:
-		_probe.free()
-		_probe = null
 	get_tree().auto_accept_quit = true
 	if Net.game == self:
 		Net.game = null
@@ -319,42 +311,29 @@ func save_mode() -> String:
 	return "single"
 
 
-## Nach jeder Welle still speichern (Einzelspiel, Lukas 2026-11-03): „Weiterspielen“ im Hub setzt hier fort,
-## auch nach einem Absturz. Überschreibt nur den Spielstand dieser Partie. Nicht im Mehrspieler, nicht beim
-## Testen aus dem Map-Editor und nicht in Tests/Screenshots (Session.skip_setup).
+## Haken des Systems save: unter welchem Modus der Spielstand liegt (Spiel laden startet ihn wieder).
+func save_kind() -> String:
+	return Session.game_kind
+
+
+## Weiterleitung → System  save
 func autosave() -> bool:
-	if not setup_done or not solo() or phase >= Phase.GAME_OVER or Session.return_scene != Session.MAIN_MENU or Session.skip_setup:
-		return false
-	return save_game()
+	return systems.save.autosave()
 
 
-## Partie vorbei: den Spielstand dieser Partie löschen, damit „Weiterspielen“ keine beendete Partie anbietet
-## (wie Shopping Maul).
+## Weiterleitung → System  save
 func drop_autosave() -> void:
-	if solo() and Session.save_id != "" and Session.return_scene == Session.MAIN_MENU:
-		SaveGame.remove(Session.save_id)
-		Session.save_id = ""
+	systems.save.drop_autosave()
 
 
-## Einzelspiel speichern; dieselbe Partie überschreibt ihren Spielstand.
+## Weiterleitung → System  save
 func save_game() -> bool:
-	var st := SaveGame.capture(self)
-	if st.is_empty():
-		return false
-	if Session.save_id == "":
-		Session.save_id = SaveGame.new_id()
-	return SaveGame.write({"id": Session.save_id, "kind": "single", "mode": Session.game_kind, "meta": SaveGame.meta_for(self), "state": st})
+	return systems.save.save_game()
 
 
-## Koop (Host): das gemeinsame Feld mit allen Spielern speichern, Spielernummern bleiben an den Spieler-IDs.
+## Weiterleitung → System  save
 func save_coop() -> bool:
-	var st := SaveGame.capture(self)
-	if st.is_empty():
-		return false
-	var names: Array = players.map(func(p): return p.name)
-	return SaveGame.write({"id": str(Net.session.get("id", SaveGame.new_id())), "kind": "coop", "mode": Session.game_kind,
-		"meta": SaveGame.meta_for(self, {"players": names}), "map": map.to_dict(), "host_uid": Net.uid,
-		"coop": Net.session.get("coop", []), "state": st})
+	return systems.save.save_coop()
 
 
 ## Partie verlassen (quit: Fenster schließen), vorher auf Wunsch speichern.
@@ -469,18 +448,19 @@ func has_path_lights() -> bool:
 	return true
 
 
-## Lichtpfad ein/aus (Knopf im HUD, Taste L); bleibt gespeichert. Solange er läuft, ohne Wegpunkte am Boden.
+## Weiterleitung → System  build
 func set_path_lights(on: bool) -> void:
-	Display.set_path_lights(on)
-	path_lights.visible = on
-	board.set_path_dots(not on)
+	systems.build.set_path_lights(on)
 
 
+## Weiterleitung → System  build
 func set_show_all_paths(on: bool) -> void:
-	show_all_paths = on
-	if hud.paths_button != null:
-		hud.paths_button.set_pressed_no_signal(on)
-	board.set_marker_lanes([] if on else _own_lanes())
+	systems.build.set_show_all_paths(on)
+
+
+## Haken des Systems build: „alle Wege“ umgeschaltet.
+func show_paths() -> void:
+	board.set_marker_lanes([] if show_all_paths else _own_lanes())
 	_update_paths()
 
 
@@ -621,7 +601,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# Linke Maustaste: Klick beim Loslassen, Ziehen spannt einen Auswahlrahmen für Steine auf (wie in RTS-Spielen)
 	if event is InputEventMouseMotion and _left_down and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
-		if not _dragging and event.position.distance_to(_press_pos) >= DRAG_THRESHOLD and moving == null:
+		if not _dragging and event.position.distance_to(_press_pos) >= DRAG_THRESHOLD and moving == null \
+				and systems.controls.box_select():
 			_dragging = true
 		if _dragging:
 			hud.show_drag_box(Rect2(_press_pos, Vector2.ZERO).expand(event.position))
@@ -828,24 +809,14 @@ func take_foreign_build(cmd: Dictionary) -> void:
 		Session.foreign_build = foreign_build
 
 
-## any_zone: Zonen der Maul-Maps nicht beachten (zufällige Steine beim Start)
+## Weiterleitung → System  build (any_zone: Zonen nicht beachten, zufällige Steine beim Start)
 func can_place(a: Vector2i, any_zone := false) -> bool:
-	var cells := Board3D.footprint(a)
-	for c in cells:
-		if not map.is_buildable(c) or occupied.has(c) or not (any_zone or may_build_for(c)):
-			return false
-	return not pathfinder.would_block_cells(cells)
+	return systems.build.can_place(a, any_zone)
 
 
-## Belegt oder räumt die Felder eines Towers/Steins. solid: blockiert er Gegner?
+## Weiterleitung → System  build
 func _occupy(a: Vector2i, on: bool, solid: bool) -> void:
-	var cells := Board3D.footprint(a)
-	for c in cells:
-		if on:
-			occupied[c] = a
-		else:
-			occupied.erase(c)
-	pathfinder.set_solid_cells(cells, on and solid)
+	systems.build.occupy(a, on, solid)
 
 
 func _select(t: Tower, rock := NO_CELL) -> void:
@@ -1452,13 +1423,7 @@ func _execute(cmd: Dictionary) -> bool:
 			_refresh_hud()
 			return true
 		"speed":
-			var f := float(cmd.get("factor", 1.0))
-			if not f in [1.0, 2.0, 4.0]:
-				return false
-			Engine.time_scale = f
-			if solo():
-				Session.speed = f
-			return true
+			return systems.controls.set_speed(float(cmd.get("factor", 1.0)))
 		"option":
 			var t := tower_from_ref(cmd.get("tower", {}))
 			var opts := tower_options(t)
@@ -1748,116 +1713,19 @@ func diff_rules() -> Dictionary:
 	return systems.difficulty.current()
 
 
-## Ist der Gegner in Reichweite eines Towers, der ihn angreifen oder mit einer Aura treffen kann?
-## Wirkt noch Gift, zählt das auch: sonst liefe er mit dem Gift schneller ins Ziel als ohne Schnelllauf.
+## Weiterleitung → System  build
 func is_covered(e: Enemy) -> bool:
-	if e.poison_time > 0.0:
-		return true
-	_refresh_cover()
-	for c in _cover:
-		var t: Tower = c[0]
-		if not is_instance_valid(t) or e.pos.distance_squared_to(t.pos) > c[1] * c[1]:
-			continue
-		if t.can_attack() and t.can_target(e) and t.in_range(e):
-			return true
-		var aura := t.enemy_aura_radius(e)
-		if aura > 0.0 and e.pos.distance_to(t.pos) <= aura:
-			return true
-	return false
+	return systems.build.is_covered(e)
 
 
-## Einmal pro Bild: Tower, die überhaupt etwas erreichen, mit ihrer größten Reichweite.
-func _refresh_cover() -> void:
-	var frame := Engine.get_process_frames()
-	if frame == _cover_frame:
-		return
-	_cover_frame = frame
-	_cover = []
-	var sig := []
-	for t in all_towers():
-		var reach := maxf(t.range_cells() if t.can_attack() else 0.0, t._aura_radius())
-		if t.can_attack() and t.stats.has("range_air"):
-			reach = maxf(reach, float(t.stats.range_air) * (1.0 + t.rogue_range))
-		if reach > 0.0:
-			_cover.append([t, reach + 1.5])
-			sig.append([t.pos, reach, t.target_mode(), t.can_attack()])
-	_cover_sig = hash(sig)
-
-
-## Für Mitspieler: das Stück, auf dem der Gegner schnell läuft oder als Nächstes laufen wird, als [von, bis] in
-## zurückgelegter Strecke, oder [-1, -1]. Damit sagen sie voraus, wo er abbremst, statt bis zur
-## nächsten Meldung mit 8× weiterzulaufen. Solange Gift wirkt, beginnt das Stück erst danach.
+## Weiterleitung → System  build
 func free_stretch(e: Enemy) -> Array:
-	if idle_speed_factor() <= 1.0:
-		return [-1.0, -1.0]
-	_refresh_cover()
-	var key := "%d/%d" % [e.lane, int(e.flying)]
-	var cached: Dictionary = _free_cache.get(key, {})
-	if cached.is_empty() or cached.sig != _cover_sig or not is_same(cached.path, e.path):
-		cached = {"path": e.path, "sig": _cover_sig, "list": _free_stretches(e.path, e.flying)}
-		_free_cache[key] = cached
-	# Das Stück, auf dem er gerade ist, ab seinem echten Anfang: der Mitspieler liegt oft knapp
-	# dahinter und soll dort nicht normal schnell laufen.
-	var from := e.traveled
-	var poisoned := e.poison_time > 0.0
-	if poisoned:
-		from += e.base_speed() * e.poison_time
-	for st in cached.list:
-		if st[1] > from:
-			return [maxf(st[0], from) if poisoned else st[0], st[1]]
-	return [-1.0, -1.0]
+	return systems.build.free_stretch(e)
 
 
-const COVER_SAMPLE := 0.25
-
-
-## Stücke des Wegs ohne Tower in Reichweite, als [von, bis] in Strecke ab dem Start.
-func _free_stretches(path: Array, flying: bool) -> Array:
-	if _probe == null:
-		_probe = Enemy.new()
-	_probe.flying = flying
-	_probe.poison_time = 0.0
-	var out := []
-	var start := -1.0
-	var done := 0.0
-	for i in range(1, path.size()):
-		var a: Vector2 = path[i - 1]
-		var b: Vector2 = path[i]
-		var seg := a.distance_to(b)
-		var n := maxi(ceili(seg / COVER_SAMPLE), 1)
-		for k in range(0 if i == 1 else 1, n + 1):
-			var s := seg * k / n
-			var free := not _probe_covered(a, b, seg, s)
-			if free and start < 0.0:
-				start = done + _cover_edge(a, b, seg, maxf(s - seg / n, 0.0), s, false)
-			elif not free and start >= 0.0:
-				out.append([start, done + _cover_edge(a, b, seg, maxf(s - seg / n, 0.0), s, true)])
-				start = -1.0
-		done += seg
-	if start >= 0.0:
-		out.append([start, done])
-	return out
-
-
-func _probe_covered(a: Vector2, b: Vector2, seg: float, s: float) -> bool:
-	_probe.pos = a.lerp(b, s / seg) if seg > 0.0 else b
-	return is_covered(_probe)
-
-
-## Rand zwischen lo und hi auf dem Abschnitt a–b genauer suchen: dort wechselt is_covered auf covered_at_hi.
-func _cover_edge(a: Vector2, b: Vector2, seg: float, lo: float, hi: float, covered_at_hi: bool) -> float:
-	for i in 5:
-		var mid := (lo + hi) / 2.0
-		if _probe_covered(a, b, seg, mid) == covered_at_hi:
-			hi = mid
-		else:
-			lo = mid
-	return hi
-
-
-## Tempo-Faktor für Gegner, die gerade kein Tower erreicht.
+## Weiterleitung → System  build
 func idle_speed_factor() -> float:
-	return maxf(float(Database.balance.get("idle_speed_factor", 1.0)), 1.0)
+	return systems.build.idle_speed_factor()
 
 
 ## Weiterleitung → System  targeting
@@ -2415,15 +2283,14 @@ const AIR_WARN_SHARE := 0.35  ## weniger als dieser Anteil des Flugwegs in Reich
 func air_cover_share() -> float:
 	if air_path.size() < 2:
 		return 1.0
-	_refresh_cover()
-	var key := [_cover_sig, air_path.size()]
+	var key := [systems.build.cover_signature(), air_path.size()]
 	if _air_share_key == key:
 		return _air_share
 	var total := 0.0
 	for i in range(1, air_path.size()):
 		total += air_path[i - 1].distance_to(air_path[i])
 	var free := 0.0
-	for st in _free_stretches(Array(air_path), true):
+	for st in systems.build.free_stretches(Array(air_path), true):
 		free += float(st[1]) - float(st[0])
 	_air_share_key = key
 	_air_share = clampf(1.0 - free / maxf(total, 0.001), 0.0, 1.0)

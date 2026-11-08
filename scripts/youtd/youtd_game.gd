@@ -532,26 +532,16 @@ func can_place_for(a: Vector2i, pid: int) -> bool:
 	return ok
 
 
-func can_place(a: Vector2i, any_zone := false) -> bool:
+## Haken des Systems build: nur nach dem Setup und vor Spielende.
+func build_rule(a: Vector2i) -> bool:
 	if not setup_done or phase >= Phase.GAME_OVER:
 		return false
-	for c in Board3D.footprint(a):
-		if not map.is_buildable(c) or occupied.has(c) or not (any_zone or may_build_for(c)):
-			return false
 	# Maverick: Tower dürfen nicht direkt nebeneinander stehen
 	if not yp().get_builder().get_allow_adjacent_towers():
 		for c in Board3D.footprint(a - Vector2i.ONE, 4):
 			if occupied.has(c):
 				return false
 	return true
-
-
-func _occupy(a: Vector2i, on: bool, _solid: bool) -> void:
-	for c in Board3D.footprint(a):
-		if on:
-			occupied[c] = a
-		else:
-			occupied.erase(c)
 
 
 func build_tower(id: String, a: Vector2i) -> bool:
@@ -1026,10 +1016,6 @@ func queued_hp() -> float:
 	return total
 
 
-func idle_speed_factor() -> float:
-	return 1.0
-
-
 ## Punkte für einen Gegner (Creep.get_score): Schadensanteil × (Welle/8 + 1) × Schwierigkeit × Modus × Länge × Größe.
 func creep_score(e: YoutdEnemy) -> float:
 	if e.core == null:
@@ -1399,9 +1385,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 # --- Anzeige -----------------------------------------------------------------------

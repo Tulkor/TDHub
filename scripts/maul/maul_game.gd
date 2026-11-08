@@ -784,10 +784,13 @@ func has_other_paths() -> bool:
 	return not _other_path_pts.is_empty()
 
 
+## Weiterleitung → System  build
 func set_show_all_paths(on: bool) -> void:
-	show_all_paths = on
-	if hud.paths_button != null:
-		hud.paths_button.set_pressed_no_signal(on)
+	systems.build.set_show_all_paths(on)
+
+
+## Haken des Systems build: „alle Wege“ umgeschaltet.
+func show_paths() -> void:
 	_show_paths()
 
 
@@ -807,13 +810,9 @@ func _path_light_color(p: Vector2) -> Color:
 	return Board3D.PLAYER_COLORS[z % Board3D.PLAYER_COLORS.size()]
 
 
-## Lichtpfad ein/aus (Knopf im HUD, Taste L); bleibt gespeichert. Solange er läuft, ohne Wegpunkte am Boden.
+## Weiterleitung → System  build
 func set_path_lights(on: bool) -> void:
-	Display.set_path_lights(on)
-	path_lights.visible = on
-	board.set_path_dots(not on)
-	if hud.lights_button != null:
-		hud.lights_button.set_pressed_no_signal(on)
+	systems.build.set_path_lights(on)
 
 
 ## Würde ein Tower auf diesen Feldern einen der Wege versperren?
@@ -995,19 +994,27 @@ func _remove_enemy(e) -> void:
 var selected_enemy = null
 
 
-## Leere Gebiete (ohne Tower) laufen die Gegner dreimal so schnell durch.
+## Weiterleitung → System  build
 func is_covered(e) -> bool:
+	return systems.build.is_covered(e)
+
+
+## Haken des Systems build (cover "rule"): leere Gebiete (ohne Tower) laufen die Gegner schneller durch
+## (system_cfg.build.idle_speed aus rules.empty_zone_speed).
+func cover_rule(e) -> bool:
 	var c := Vector2i(floori(e.pos.x / Board3D.CELL), floori(e.pos.y / Board3D.CELL))
 	var z := map.zone_at(c)
 	return z < 0 or _zone_towers[z] > 0
 
 
+## Weiterleitung → System  build
 func idle_speed_factor() -> float:
-	return float(rules.get("empty_zone_speed", 3.0))
+	return systems.build.idle_speed_factor()
 
 
-func free_stretch(_e) -> Array:
-	return [-1.0, -1.0]
+## Weiterleitung → System  build
+func free_stretch(e) -> Array:
+	return systems.build.free_stretch(e)
 
 
 func is_detected(e) -> bool:
@@ -1295,8 +1302,7 @@ func _execute(cmd: Dictionary) -> bool:
 				return true
 			return false
 		"speed":
-			Engine.time_scale = clampf(float(cmd.get("f", 1.0)), 1.0, 4.0)
-			return true
+			return systems.controls.set_speed(float(cmd.get("f", 1.0)))
 		"reveal":
 			var me: Player = players[p]
 			if me.reveal_ready > game_time or MaulData.rules().detect_shops.has(me.shop):
@@ -1809,9 +1815,7 @@ func _announce_unlocks(before: int, now: int) -> void:
 func _register(t: MaulTower) -> void:
 	towers[t.cell] = t
 	var cells := Board3D.footprint(t.cell)
-	for c in cells:
-		occupied[c] = t.cell
-		pathfinder.set_solid(c, true)
+	systems.build.occupy(t.cell, true)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] += 1
@@ -1822,9 +1826,7 @@ func _register(t: MaulTower) -> void:
 
 func _unregister(t: MaulTower) -> void:
 	towers.erase(t.cell)
-	for c in Board3D.footprint(t.cell):
-		occupied.erase(c)
-		pathfinder.set_solid(c, false)
+	systems.build.occupy(t.cell, false)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] -= 1
@@ -2040,9 +2042,7 @@ func set_speed(f: float) -> void:
 	if mirror:
 		submit({"type": "speed", "f": f})
 		return
-	if solo():
-		Session.speed = f
-	Engine.time_scale = f
+	systems.controls.set_speed(f)
 	hud.refresh_live()
 
 
