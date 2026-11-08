@@ -43,8 +43,14 @@ uniform float plain_shade = 1.0;
 uniform float checker = 0.0;
 /// Rauten an den Kreuzungen der Hauptlinien, halbe Diagonale in Einheiten (0 = keine)
 uniform float diamond_size = 0.0;
-/// Marmor-Adern im Boden (0 = glatt)
+/// Marmor-Adern im Boden (0 = glatt); Farbe und Deckkraft der Adern (A)
 uniform float marble = 0.0;
+uniform vec4 vein_color : source_color = vec4(0.4, 0.5, 0.48, 0.25);
+/// Fugen: Feld- und Towerraster in dieser Farbe statt line_color (A = 0: line_color), kein Metall
+uniform vec4 joint_color : source_color = vec4(0.0);
+/// Zweiter Bodenbelag je Feld (R der Maske, z. B. Maul: Gänge zwischen den Gebieten in Petrol)
+uniform sampler2D paving : filter_nearest, repeat_disable, hint_default_black;
+uniform vec4 paving_color : source_color = vec4(0.06, 0.2, 0.21, 1.0);
 /// Bodenleuchten in den Kreuzungen der Hauptlinien: Helligkeit des Kerns (0 = keine)
 uniform float floor_lamp = 0.0;
 uniform vec4 lamp_color : source_color = vec4(1.0, 0.85, 0.55, 1.0);
@@ -137,7 +143,7 @@ float noise(vec2 p) {
 vec3 marble_color(vec3 base, vec2 p) {
 	float n = noise(p * 0.7) * 0.6 + noise(p * 1.9) * 0.3 + noise(p * 5.0) * 0.1;
 	float vein = 1.0 - smoothstep(0.0, 0.035, abs(sin((p.x * 0.6 + p.y * 0.35 + n * 5.0) * 3.14159)));
-	return base * (0.85 + n * 0.3) + vec3(0.22, 0.3, 0.28) * vein * 0.35;
+	return mix(base * (0.85 + n * 0.3), vein_color.rgb, vein * vein_color.a);
 }
 
 void fragment() {
@@ -148,6 +154,9 @@ void fragment() {
 	float aa = max(length(fwidth(world_xz)) * 0.7, 0.0005);
 
 	vec3 col = floor_color.rgb;
+	if (c.x >= 0 && c.y >= 0 && c.x < int(cells.x) && c.y < int(cells.y) && texelFetch(paving, c, 0).r > 0.5) {
+		col = paving_color.rgb;
+	}
 	// Anteil der Linien/Rauten/Ränder (für das beleuchtete Feld: Metall statt Marmor)
 	float lines = 0.0;
 	// Licht der Bodenleuchten (floor_lamp), wird zuletzt als Eigenleuchten dazugegeben
@@ -184,18 +193,20 @@ void fragment() {
 				}
 			}
 			vec2 dc = abs(fract(go + 0.5) - 0.5) * cell;
-			vec4 cl = tube(min(dc.x, dc.y), line_width * 0.9, lc, line_energy * cell_energy, aa);
+			bool joints = joint_color.a > 0.0;
+			vec3 jc = joints ? joint_color.rgb : lc;
+			vec4 cl = tube(min(dc.x, dc.y), line_width * 0.9, jc, line_energy * cell_energy, aa);
 			cl.a *= cell_alpha;
 			col = mix(col, cl.rgb, cl.a);
 			alpha = max(alpha, cl.a);
-			lines = max(lines, cl.a);
+			lines = max(lines, joints ? 0.0 : cl.a);
 			vec2 gg = go / grid_cells;
 			vec2 dg = abs(fract(gg + 0.5) - 0.5) * grid_cells * cell;
-			vec4 l = tube(min(dg.x, dg.y), line_width, lc, line_energy * minor_energy, aa);
+			vec4 l = tube(min(dg.x, dg.y), line_width, jc, line_energy * minor_energy, aa);
 			l.a *= minor_alpha;
 			col = mix(col, l.rgb, l.a);
 			alpha = max(alpha, l.a);
-			lines = max(lines, l.a);
+			lines = max(lines, joints ? 0.0 : l.a);
 			vec2 gm = go / (grid_cells * major_every);
 			vec2 dm = abs(fract(gm + 0.5) - 0.5) * grid_cells * major_every * cell;
 			float dmm = min(dm.x, dm.y);

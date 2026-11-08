@@ -4,7 +4,8 @@ extends RefCounted
 ## Felsbrocken, Tower-Sockel, Licht und Himmel. Board3D, Tower und CameraRig lesen current().
 ## - Arcade (GemTD): Neon-Gitter über dem Weltraum, wie bisher.
 ## - Druidenhain (eeveTD): Gras und Erde bei Tageslicht, dunkles Raster wie in den Boden geritzt, Steinsockel.
-## - Art déco (Shopping Maul): Petrol-Marmor mit Messingfugen und Messingrauten, Messingsockel, Abendlicht.
+## - Art déco (Shopping Maul): heller Kalkstein-Marmor mit Fugenraster und Messingrauten, Gänge in Petrol,
+##   Messingsockel, Dämmerungslicht (Plaza-Vorbild).
 ## - Plakatwand (Randgruppen TD): hellgrauer Beton mit ein paar Steinen, Splitt auf den Wegen, Tageslicht;
 ##   die Wände bestehen aus Häusern und Bäumen (RgScenery).
 
@@ -132,59 +133,64 @@ const STYLES := {
 		"ground_alpha": 0.0,
 		"floor_lit": true,
 		"floor": {
-			# durchgehend tiefgrün (Lukas, 2026-10-28)
-			"floor_color": Color("0c3322"), "floor_alpha": 1.0,
-			"line_color": Color("c9a36a"), "edge_color": Color("d8b97f"),
-			"line_energy": 1.0, "major_energy": 1.0, "minor_energy": 0.55, "cell_energy": 0.5,
-			"cell_alpha": 0.0, "minor_alpha": 0.22, "major_alpha": 0.9,
-			"edge_energy": 1.1, "core_white": 0.0, "halo_width": 0.004, "line_width": 0.011,
-			"major_double": 1.0, "diamond_size": 0.2, "marble": 1.0, "plain_shade": 0.8,
-			# Kacheln im Schachmuster, jede zweite etwas dunkler
-			"checker": 0.18,
-			# beleuchteter Marmor (floor_lit): etwas dunkler, weil die Sonne ihn aufhellt; glänzend
-			"lit_albedo": 1.0, "line_glow": 0.4, "floor_roughness": 0.55, "floor_specular": 0.25,
-			# warme Bodenleuchten in den Messingrauten
-			"floor_lamp": 3.5, "lamp_color": Color("ffbf70"), "lamp_size": 0.085, "lamp_radius": 1.0, "lamp_pool": 0.12,
-			"tint_shade": 0.4,
-			"blocked_color": Color("071618"), "blocked_alpha": 1.0,
+			# Plaza-Art-déco (Lukas, 2026-11-08): heller Kalkstein-Marmor mit dunklem Fugenraster in den Gebieten,
+			# die Gänge zwischen den Gebieten in Petrol, dicke Linien und Rauten in Messing
+			"floor_color": Color("d9d8d2"), "floor_alpha": 1.0,
+			"paving_color": Color("1d4446"),
+			"line_color": Color("b08a4e"), "edge_color": Color("c9a36a"),
+			"joint_color": Color("5c584a"),
+			"line_energy": 1.0, "major_energy": 1.0, "minor_energy": 1.0, "cell_energy": 1.0,
+			"cell_alpha": 0.22, "minor_alpha": 0.5, "major_alpha": 0.95,
+			"edge_energy": 1.0, "core_white": 0.0, "halo_width": 0.004, "line_width": 0.011,
+			"major_double": 1.0, "diamond_size": 0.2, "marble": 1.0, "plain_shade": 0.78,
+			"vein_color": Color(0.5, 0.49, 0.47, 0.45),
+			# Platten im Schachmuster, jede zweite eine Spur dunkler
+			"checker": 0.06,
+			# polierter Stein: deutliches Glanzlicht der tief stehenden Sonne
+			"lit_albedo": 0.85, "line_glow": 0.15, "floor_roughness": 0.4, "floor_specular": 0.45,
+			# warme Bodenleuchten in den Messingrauten, auf hellem Stein nur ein kleiner Schein
+			"floor_lamp": 2.5, "lamp_color": Color("ffd08a"), "lamp_size": 0.07, "lamp_radius": 0.8, "lamp_pool": 0.05,
+			"tint_shade": 0.45,
+			"blocked_color": Color("15373a"), "blocked_alpha": 1.0,
 			"zone_color": Color("b4553f"), "zone_alpha": 0.3, "zone_edge_energy": 1.0,
-			"zone_edge_color": Color("d8b97f"),
+			"zone_edge_color": Color("c9a36a"),
 		},
-		"path": Color("d8b97f"), "path_energy": 1.25,
-		"marker": Color("d8b97f"), "marker_energy": 1.2,
+		"path": Color("c9a36a"), "path_energy": 1.25,
+		"marker": Color("b08a4e"), "marker_energy": 1.2,
 		"zone_own": Color("e8c87a"), "zone_other": Color("4d7a78"), "zone_leak": Color("b4553f"),
 		"rock": "marble",
 		"base": "brass",
-		"reflect": 0.25,
-		"contact_shadow": 0.55,
+		"reflect": 0.12,
+		"contact_shadow": 0.6,
 		"hit_glow": 0.5,
 		"env": {
-			"sky_top": Color("030a0d"), "sky_horizon": Color("0e2428"), "ground_bottom": Color("030a0b"),
-			# Mondlicht (Lukas, 2026-10-28): kühles, schwaches Licht von schräg oben, die Häuser am Rand
-			# bleiben dunkel und heben sich nur mit Dächern und Kanten ab; die Bodenleuchten tragen das Licht
-			"ambient": Color("4d6c98"), "ambient_energy": 0.14,
-			"sun": Color("9fb8ec"), "sun_energy": 0.42, "sun_pitch": -40.0, "sun_yaw": -115.0, "sun_specular": 0.3,
-			"shadow_blur": 2.0, "shadow_opacity": 0.75,
-			"fill": Color("3a5a78"), "fill_energy": 0.2, "fill_pitch": -25.0,
-			"glow_threshold": 1.0, "glow_intensity": 0.5,
-			"exposure": 0.95, "contrast": 1.05,
-			"vignette": 0.4, "vignette_color": Color(0.02, 0.1, 0.11),
+			# Dämmerung (Plaza-Vorbild): Himmel von Königsblau oben zu hellem Dunst am Horizont, kühles
+			# Himmelslicht von oben, eine tief stehende warme Abendsonne; Laternen und Fenster leuchten schon
+			"sky_top": Color("0a3d66"), "sky_horizon": Color("9dc5e5"), "ground_bottom": Color("1a2630"),
+			"ambient": Color("8eaad0"), "ambient_energy": 0.32, "ambient_sky": 0.45,
+			"sun": Color("ffe0c0"), "sun_energy": 1.1, "sun_pitch": -34.0, "sun_yaw": 55.0, "sun_specular": 0.6,
+			"shadow_blur": 2.0, "shadow_opacity": 0.7,
+			"fill": Color("6a8cd0"), "fill_energy": 0.3, "fill_pitch": -25.0,
+			"fog": Color("6f8fb0"), "fog_density": 0.003,
+			"glow_threshold": 1.1, "glow_intensity": 0.45,
+			"tonemap": Environment.TONE_MAPPER_ACES, "exposure": 0.95, "white": 6.0,
+			"contrast": 1.05, "saturation": 0.95,
+			"vignette": 0.35, "vignette_color": Color(0.03, 0.08, 0.16),
 			"ssao": 1.5, "ssil": 0.5,
 		},
 		# Nacht: schwaches, kühles Mondlicht von oben, die Bodenleuchten tragen das Licht
 		"env_night": {
 			"sky_top": Color("02070a"), "sky_horizon": Color("0a1c22"), "ground_bottom": Color("020507"),
-			# Mond kräftig genug, dass Dächer und Fassaden der Häuser sich voneinander abheben
-			"ambient": Color("5d7fa8"), "ambient_energy": 0.24,
-			"sun": Color("a8c0ec"), "sun_energy": 0.75, "sun_pitch": -40.0, "sun_specular": 0.3,
+			"ambient": Color("5d7fa8"), "ambient_energy": 0.2, "ambient_sky": 0.0,
+			"sun": Color("a8c0ec"), "sun_energy": 0.55, "sun_pitch": -40.0, "sun_specular": 0.3,
 			"shadow_opacity": 0.75, "shadow_blur": 2.2,
-			"fill": Color("3a5a78"), "fill_energy": 0.25,
-			# etwa 400 K wärmer als neutrales Mondlicht
-			"glow_threshold": 0.95, "glow_intensity": 0.65, "exposure": 1.05, "tint": Color(1.0, 0.95, 0.86),
+			"fill": Color("3a5a78"), "fill_energy": 0.25, "fog_density": 0.0,
+			"glow_threshold": 0.95, "glow_intensity": 0.65, "tint": Color(1.0, 0.95, 0.86),
+			"tonemap": Environment.TONE_MAPPER_FILMIC, "exposure": 1.0, "white": 1.0,
 		},
-		# wärmerer Marmor, die dicken Messinglinien glimmen golden
+		# Kalkstein im Mondlicht dunkler, die dicken Messinglinien glimmen golden
 		"floor_night": {
-			"floor_color": Color("1d2e29"), "floor_lamp": 6.0, "lamp_pool": 0.4, "lamp_radius": 1.2, "line_glow": 0.3,
+			"floor_color": Color("7a786e"), "floor_lamp": 6.0, "lamp_pool": 0.3, "lamp_radius": 1.2, "line_glow": 0.3,
 			"major_glow": 0.35, "major_glow_color": Color("ffc35a"),
 		},
 	},

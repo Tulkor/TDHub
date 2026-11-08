@@ -1,16 +1,19 @@
 class_name MaulCity
 extends Node3D
-## Blockstadt um das Spielfeld von Shopping Maul: Quader in Petrol (Farbton und Sättigung wie der
-## Marmorboden), gestuft wie Art-déco-Hochhäuser, mit Gesimsen in mattem Messing. Steht nur auf Feldern,
+## Blockstadt um das Spielfeld von Shopping Maul im Plaza-Art-déco (Lukas, 2026-11-08): Quader aus hellem
+## Kalkstein, gestuft wie Art-déco-Hochhäuser, mit Gesimsen und senkrechten Lisenen in Messing. Steht nur auf Feldern,
 ## die kein Gegner je erreicht (Flutfüllung von allen Wegpunkten aus) und die in keinem Spielergebiet
 ## liegen, mit Abstand zu allem Begehbaren. Nah am Spielfeld niedrig, nach außen höher, damit die
 ## schräge Kamera nichts verdeckt. Weiter draußen stehen einzelne Art-déco-Hochhäuser wie in New York
 ## oder Chicago (Sockel, Schaft mit Lisenen, Rücksprünge, gestufte Messingkrone, Spitze).
 ## Restflächen zwischen den Blöcken füllen kleine Häuser und Art-déco-Statuen (Messingfigur mit
 ## erhobenen Armen auf gestuftem Sockel); kleine Laternen stehen an Straßenkreuzungen und entlang des
-## Spielfeldrands. Alles in drei MultiMeshes (Wände, Messing, Laternenlicht).
+## Spielfeldrands, Flaggenreihen in Königsblau säumen die Straßen nah am Spielfeld. In der Kartenmitte
+## (über dem Hauptgebiet) liegt ein Platz mit dem Atlas-Brunnen (MaulFountain).
+## Alles in vier MultiMeshes (Wände, Messing, Laternenlicht, Flaggentuch).
 
 const SHADER := preload("res://assets/shaders/city.gdshader")
+const FLAG_SHADER := preload("res://assets/shaders/flag.gdshader")
 ## Straßenraster: alle BLOCK Felder eine Straße von STREET Feldern
 const BLOCK := 14
 const STREET := 1
@@ -20,20 +23,28 @@ const LOT_MAX := 7
 ## Felder Abstand zu allem Begehbaren
 const GAP := 2
 ## Höhe in Einheiten: Grundhöhe + Zuwachs je Feld Abstand zum Spielfeld, gedeckelt
-const H_BASE := 0.5
-const H_STEP := 0.07
-const H_MAX := 4.2
+const H_BASE := 0.6
+const H_STEP := 0.09
+const H_MAX := 5.2
 ## Hochhäuser: nehmen einen ganzen Block ein, erst ab SKY_DIST Feldern Abstand, mit dieser Wahrscheinlichkeit
-const SKY_DIST := 12.0
-const SKY_CHANCE := 0.3
-const SKY_HEIGHT := Vector2(8.0, 14.0)
-const PIER := Color("2a5a60")
-## Wandfarben (gemischt), Gesims
-const WALLS := [Color("0f2b31"), Color("133238"), Color("0c2429"), Color("173a40"), Color("112e33"), Color("15353a")]
-const CORNICE := Color("7d6a48")
-## Statuen und Laternen
-const PLINTH := Color("244649")
-const LAMP := Color("ffd9a0")
+const SKY_DIST := 11.0
+const SKY_CHANCE := 0.42
+const SKY_HEIGHT := Vector2(10.0, 17.0)
+## Wandfarben (Kalkstein, gemischt), Gesims und Lisenen in Messing
+const WALLS := [Color("b0b0b0"), Color("9aa8a8"), Color("c2beb2"), Color("a9a59a"), Color("bab5a8"), Color("a0a6a2")]
+const CORNICE := Color("b0904f")
+## Statuen und Laternen; A = 0: Fläche ohne Fenster (city.gdshader)
+const PLINTH := Color(0.56, 0.44, 0.44, 0.0)
+const LAMP := Color("ffe2b8")
+## Lisenen: Gebäude ab dieser Höhe bekommen senkrechte Messingstreifen am Sockel
+const PIER_HEIGHT := 1.3
+## Flaggen: Königsblau, Reihen entlang der Straßen bis FLAG_NEAR Felder vom Spielfeld, alle FLAG_EVERY Felder
+const FLAG_BLUE := Color("305090")
+const FLAG_NEAR := 22.0
+const FLAG_EVERY := 3
+const FLAG_POLE := 1.15
+## Platz mit Atlas-Brunnen: Kantenlänge in Feldern
+const PLAZA := 18
 ## Laternen am Spielfeldrand: ungefähr jedes LAMP_EVERY-te Randfeld
 const LAMP_EVERY := 9
 ## Restflächen: Anteil der Statuen statt kleiner Häuser (nur nah am Spielfeld, wo man sie sieht)
@@ -47,6 +58,10 @@ var _dist := PackedFloat32Array()
 var _width := 0
 var _cornices: MultiMeshInstance3D
 var _lamps: MultiMeshInstance3D
+var _flags: MultiMeshInstance3D
+var fountain: MaulFountain
+## Feld in der Mitte des Brunnenplatzes (-1, -1 = kein Platz gefunden)
+var plaza_center := Vector2i(-1, -1)
 
 
 func build(map: MaulMap) -> void:
@@ -62,6 +77,7 @@ func build(map: MaulMap) -> void:
 	var walls: Array = []     # [Transform3D, Color]
 	var cornices: Array = []  # Transform3D
 	var lamps: Array = []     # Transform3D (Leuchtkörper)
+	var flags: Array = []     # Transform3D (Tuch)
 	var used := PackedByteArray()
 	used.resize(w * h)
 	var free := func(x0: int, y0: int, sx: int, sy: int) -> bool:
@@ -79,6 +95,12 @@ func build(map: MaulMap) -> void:
 		for x in w:
 			if x % BLOCK < STREET or y % BLOCK < STREET:
 				used[y * w + x] = 2
+	# Brunnenplatz in der Kartenmitte zuerst freihalten
+	var plaza := _plaza_rect(map, dist)
+	if plaza.size.x > 0:
+		take.call(plaza)
+		plaza_center = plaza.get_center()
+		_plaza_dressing(plaza, cornices, lamps, flags)
 	for by in range(0, h, BLOCK):
 		for bx in range(0, w, BLOCK):
 			var block := Rect2i(bx + STREET, by + STREET, BLOCK - STREET, BLOCK - STREET)
@@ -128,6 +150,13 @@ func build(map: MaulMap) -> void:
 			var rim := dist[k] == float(GAP) and (x * 7 + y * 13) % LAMP_EVERY == 0
 			if (crossing and dist[k] > GAP) or rim:
 				_lantern(Vector2i(x, y), cornices, lamps)
+				continue
+			# Flaggenreihen: entlang der Straßen nah am Spielfeld, das Tuch zeigt die Straße entlang
+			if used[k] == 2 and dist[k] > GAP and dist[k] <= FLAG_NEAR:
+				var vertical := x % BLOCK < STREET
+				var along := y if vertical else x
+				if along % FLAG_EVERY == 1 and not (x % BLOCK < STREET and y % BLOCK < STREET):
+					_flag(Vector2i(x, y), 90.0 if vertical else 0.0, cornices, flags)
 	_walls = _multimesh(walls.size(), true)
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER
@@ -152,6 +181,28 @@ func build(map: MaulMap) -> void:
 	_lamps.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for i in lamps.size():
 		_lamps.multimesh.set_instance_transform(i, lamps[i])
+	_flags = MultiMeshInstance3D.new()
+	var fm := MultiMesh.new()
+	fm.transform_format = MultiMesh.TRANSFORM_3D
+	var quad := QuadMesh.new()
+	quad.subdivide_width = 8
+	quad.subdivide_depth = 2
+	fm.mesh = quad
+	fm.instance_count = flags.size()
+	_flags.multimesh = fm
+	var flag_mat := ShaderMaterial.new()
+	flag_mat.shader = FLAG_SHADER
+	flag_mat.set_shader_parameter("cloth", FLAG_BLUE)
+	_flags.material_override = flag_mat
+	add_child(_flags)
+	for i in flags.size():
+		fm.set_instance_transform(i, flags[i])
+	if plaza.size.x > 0:
+		fountain = MaulFountain.new()
+		var pc := (Vector2(plaza.position) + Vector2(plaza.size) / 2.0) * Board3D.CELL
+		fountain.position = Vector3(pc.x, 0, pc.y)
+		add_child(fountain)
+		fountain.build(float(plaza.size.x) * Board3D.CELL)
 
 
 ## Gehört das Feld zur Stadt (Boden dort ohne Gitterlinien)?
@@ -163,6 +214,11 @@ func is_city(c: Vector2i) -> bool:
 ## Anzahl Laternen (für Tests).
 func lamp_count() -> int:
 	return _lamps.multimesh.instance_count if _lamps != null else 0
+
+
+## Anzahl Flaggen (für Tests).
+func flag_count() -> int:
+	return _flags.multimesh.instance_count if _flags != null else 0
 
 
 ## Anzahl Gebäudeteile (für Tests).
@@ -210,6 +266,8 @@ func _building(r: Rect2i, d: float, rng: RandomNumberGenerator, walls: Array, co
 		var part := maxf(total * float(shares[t]), 0.12)
 		var basis := Basis.from_scale(Vector3(foot.x, part, foot.y))
 		walls.append([Transform3D(basis, Vector3(center.x, y + part / 2.0, center.y)), col])
+		if t == 0 and total > PIER_HEIGHT:
+			_piers(center, foot, y, part * 0.92, cornices)
 		y += part
 		# Gesims als Band knapp unter der Dachkante, das Dach selbst bleibt in Wandfarbe
 		cornices.append(Transform3D(Basis.from_scale(Vector3(foot.x + 0.03, 0.03, foot.y + 0.03)), Vector3(center.x, y - 0.035, center.y)))
@@ -281,13 +339,13 @@ func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, walls: Array, 
 	var shaft := total * 0.62
 	var y := podium
 	box.call(Vector3(sx, shaft, sz), y, walls, col)
-	# Lisenen: schmale helle Pfeiler über die ganze Schafthöhe, je Seite gleichmäßig verteilt
+	# Lisenen: schmale Messingstreifen über die ganze Schafthöhe, je Seite gleichmäßig verteilt
 	var n := rng.randi_range(5, 7)
 	for i in n:
 		var t := (float(i) + 0.5) / n - 0.5
 		for side in [-1.0, 1.0]:
-			walls.append([Transform3D(Basis.from_scale(Vector3(0.06, shaft, 0.1)), Vector3(c.x + t * sx, y + shaft / 2.0, c.y + side * sz / 2.0)), PIER])
-			walls.append([Transform3D(Basis.from_scale(Vector3(0.1, shaft, 0.06)), Vector3(c.x + side * sx / 2.0, y + shaft / 2.0, c.y + t * sz)), PIER])
+			cornices.append(Transform3D(Basis.from_scale(Vector3(0.05, shaft, 0.06)), Vector3(c.x + t * sx, y + shaft / 2.0, c.y + side * sz / 2.0)))
+			cornices.append(Transform3D(Basis.from_scale(Vector3(0.06, shaft, 0.05)), Vector3(c.x + side * sx / 2.0, y + shaft / 2.0, c.y + t * sz)))
 	y += shaft
 	band.call(sx, sz, y)
 	# Rücksprünge
@@ -316,6 +374,77 @@ func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, walls: Array, 
 				cornices.append(Transform3D(Basis.from_scale(Vector3(sx * 0.12, 0.25, sz * 0.12)), tx.origin + Vector3(0, 0.4, 0)))
 		box.call(Vector3(sx * 0.4, 0.8, sz * 0.4), y, walls, col)
 		box.call(Vector3(sx * 0.25, 0.35, sz * 0.25), y + 0.8, cornices)
+
+
+## Senkrechte Messing-Lisenen an allen vier Seiten eines Quaders (Grundfläche foot, ab Höhe y0, Höhe hgt).
+func _piers(center: Vector2, foot: Vector2, y0: float, hgt: float, cornices: Array) -> void:
+	for axis in 2:
+		var len_: float = foot.x if axis == 0 else foot.y
+		var other: float = foot.y if axis == 0 else foot.x
+		var n := clampi(int(len_ / 0.4), 2, 6)
+		for i in n:
+			var t := ((float(i) + 0.5) / n - 0.5) * len_
+			for side in [-1.0, 1.0]:
+				var pos := Vector3(center.x + t, y0 + hgt / 2.0, center.y + side * other / 2.0) if axis == 0 \
+						else Vector3(center.x + side * other / 2.0, y0 + hgt / 2.0, center.y + t)
+				var sc := Vector3(0.035, hgt, 0.03) if axis == 0 else Vector3(0.03, hgt, 0.035)
+				cornices.append(Transform3D(Basis.from_scale(sc), pos))
+
+
+## Fahnenmast mit königsblauem Tuch auf Feld c; yaw_deg = Richtung, in die das Tuch weht.
+func _flag(c: Vector2i, yaw_deg: float, cornices: Array, flags: Array) -> void:
+	var p := (Vector2(c) + Vector2(0.5, 0.5)) * Board3D.CELL
+	cornices.append(Transform3D(Basis.from_scale(Vector3(0.08, 0.04, 0.08)), Vector3(p.x, 0.02, p.y)))
+	cornices.append(Transform3D(Basis.from_scale(Vector3(0.025, FLAG_POLE, 0.025)), Vector3(p.x, FLAG_POLE / 2.0, p.y)))
+	cornices.append(Transform3D(Basis.from_scale(Vector3(0.04, 0.04, 0.04)), Vector3(p.x, FLAG_POLE + 0.02, p.y)))
+	# Tuch: Quad 1×1 um seine Mitte, linke Kante am Mast
+	var size := Vector2(0.46, 0.27)
+	var yaw := Basis(Vector3.UP, deg_to_rad(yaw_deg))
+	var basis := yaw * Basis.from_scale(Vector3(size.x, size.y, 1.0))
+	var off := yaw * Vector3(size.x / 2.0 + 0.01, 0, 0)
+	flags.append(Transform3D(basis, Vector3(p.x, FLAG_POLE - size.y / 2.0 - 0.03, p.y) + off))
+
+
+## Platz für den Atlas-Brunnen: freies Quadrat (PLAZA Felder, nur Stadt) möglichst nah an der Kartenmitte.
+## Kartenmitte = Mittel der Spielergebiete; gesucht wird in Schritten von 2 Feldern.
+func _plaza_rect(map: MaulMap, dist: PackedFloat32Array) -> Rect2i:
+	var w := map.width
+	var mid := Vector2.ZERO
+	for z in map.zones:
+		mid += Vector2(z.rect.position) + Vector2(z.rect.size) / 2.0
+	mid /= maxf(map.zones.size(), 1)
+	var best := Rect2i()
+	var best_d := INF
+	for y in range(0, map.height - PLAZA, 2):
+		for x in range(0, w - PLAZA, 2):
+			var d := (Vector2(x, y) + Vector2(PLAZA, PLAZA) / 2.0).distance_squared_to(mid)
+			if d >= best_d:
+				continue
+			var ok := true
+			for yy in range(y, y + PLAZA):
+				for xx in range(x, x + PLAZA):
+					if dist[yy * w + xx] <= GAP:
+						ok = false
+						break
+				if not ok:
+					break
+			if ok:
+				best = Rect2i(x, y, PLAZA, PLAZA)
+				best_d = d
+	return best
+
+
+## Schmuck des Brunnenplatzes: Flaggen im Kreis um den Brunnen, Laternen in den Ecken.
+func _plaza_dressing(r: Rect2i, cornices: Array, lamps: Array, flags: Array) -> void:
+	var c := Vector2(r.position) + Vector2(r.size) / 2.0
+	var rad := float(r.size.x) / 2.0 - 1.5
+	for i in 12:
+		var a := TAU * float(i) / 12.0 + PI / 12.0
+		var cell := Vector2i((c + Vector2(cos(a), sin(a)) * rad).floor())
+		# Tuch weht im Kreis herum (tangential)
+		_flag(cell, -rad_to_deg(a) - 90.0, cornices, flags)
+	for corner in [Vector2i(1, 1), Vector2i(r.size.x - 2, 1), Vector2i(1, r.size.y - 2), Vector2i(r.size.x - 2, r.size.y - 2)]:
+		_lantern(r.position + corner, cornices, lamps)
 
 
 ## Abstand (Felder, Schachbrett) jedes Felds zum nächsten Feld, das Gegner erreichen oder auf dem

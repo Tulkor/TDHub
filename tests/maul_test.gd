@@ -40,6 +40,10 @@ func _ready() -> void:
 				break
 	check(game.board.city.part_count() > 500, "Blockstadt gebaut: %d Teile" % game.board.city.part_count())
 	check(game.board.city.lamp_count() > 50, "Laternen: %d" % game.board.city.lamp_count())
+	check(game.board.city.flag_count() > 40, "Flaggen: %d" % game.board.city.flag_count())
+	var plaza: Vector2i = game.board.city.plaza_center
+	check(game.board.city.fountain != null and game.board.city.is_city(plaza), "Atlas-Brunnen auf einem Stadtplatz bei %s" % plaza)
+	check(plaza.distance_to(Vector2i(118, 118)) < 30.0, "Brunnen nah an der Kartenmitte: %s" % plaza)
 	for z in game.map.zones:
 		check(not game.board.city.is_city(z.rect.get_center()), "Keine Stadt im Gebiet %s" % z.rect)
 
