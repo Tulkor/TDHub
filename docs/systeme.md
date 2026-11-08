@@ -10,8 +10,8 @@ Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. eige
 | economy – Gold, Einkommen, Leben, Leak-Strafe | 4 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | eigen (1) ✓ | gemeinsam ✓ | eigen (1) ✓ | eigen (1) ✓ |
 | save – Spielstand, Autosave | 4 | eigen (4) ✓ | geerbt ✓ | geerbt ✓ | geerbt ✓ | eigen (1) ✓ | – | – |
 | waves – Spawn-Warteschlange, Auto-Welle | 5 | gemeinsam ✓ | eigen (1) ✓ | gemeinsam ✓ | eigen (1) ✓ | eigen (1) ✓ | gemeinsam ✓ | gemeinsam ✓ |
-| coop – Koop-Abgleich: Snapshot und Befehle | 6 | eigen (1) ✓ | eigen (3) ✓ | eigen (4) ✓ | eigen (3) ✓ | – ✓ | – | – |
-| inventory – Item-Plätze, Items auf Tower ziehen | 6 | eigen (4) | eigen (4) ✓ | geerbt | eigen (4) ✓ | eigen (3) ✓ | gemeinsam ✓ | – |
+| coop – Koop-Abgleich: Snapshot und Befehle | 6 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – |
+| inventory – Item-Plätze, Items auf Tower ziehen | 6 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – |
 | leveling – Tower-Level und EP | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – | – |
 | build – Bauen, Belegen, Wege, Lichtpfad, Deckung | 7 | eigen (13) ✓ | geerbt ✓ | geerbt ✓ | eigen (4) ✓ | eigen (11) ✓ | – | – |
 | controls – Eingabe, Auswahl, Hover, Pause, Tempo | 7 | eigen (6) ✓ | eigen (3) ✓ | eigen (3) ✓ | eigen (4) ✓ | eigen (5) ✓ | – | – |

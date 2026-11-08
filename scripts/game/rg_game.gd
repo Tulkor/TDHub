@@ -272,8 +272,8 @@ func _all_players(f: Callable) -> bool:
 	return true
 
 
-func set_player_away(p: int, away: bool) -> void:
-	super.set_player_away(p, away)
+func on_player_away(p: int, away: bool) -> void:
+	super.on_player_away(p, away)
 	if not mirror:
 		_check_setup()
 
@@ -645,30 +645,7 @@ func load_extra(d: Dictionary, made: Array) -> void:
 
 # --- Koop (coop_sync.gd): alle auf der einen Karte, jeder in seiner Zone, der Host rechnet ----------------------
 
-## Befehle, die Mitspieler zusätzlich zu denen von GemTD schicken dürfen.
-func coop_commands() -> Array:
-	return ["setup", "build", "start_level"]
-
-
-## Was Randgruppen TD über den Stand von GemTD hinaus schickt. Die Pause in ganzen Sekunden, damit sich der Stand
-## nicht jedes Bild ändert.
-func coop_snapshot() -> Dictionary:
-	var spent := {}
-	for t in all_towers():
-		spent["%d,%d" % [t.cell.x, t.cell.y]] = int(t.get_meta("spent", 0))
-	return {"difficulty": difficulty, "pause": ceili(maxf(level_pause, 0.0)), "players": rg_players.duplicate(true),
-		"spent": spent, "share": share_gold}
-
-
-func apply_coop_snapshot(d: Dictionary) -> void:
-	difficulty = int(d.get("difficulty", difficulty))
-	share_gold = bool(d.get("share", share_gold))
-	level_pause = float(d.get("pause", level_pause))
-	var ps: Array = d.get("players", [])
-	if not ps.is_empty():
-		rg_players = ps
-	var spent: Dictionary = d.get("spent", {})
-	for t in all_towers():
-		t.set_meta("spent", int(spent.get("%d,%d" % [t.cell.x, t.cell.y], 0)))
+## Stand für Mitspieler: modes.json → system_cfg.coop (System coop). Danach die Anzeige nachziehen.
+func coop_applied(_d: Dictionary, _changed: Array) -> void:
 	if rg_panel != null:
 		rg_panel.refresh()

@@ -204,7 +204,7 @@ func _ready() -> void:
 	hud = MaulHud.new()
 	hud.game = self
 	add_child(hud)
-	_setup_inv_drop()
+	inv_drop = systems.inventory.setup_drop()
 	_refresh_paths()
 	camera_rig.look_at_point(map.zone_center(players[local_player].zone), 42.0)
 	hud.show_setup()
@@ -1540,13 +1540,7 @@ func move_item(p: int, from: Dictionary, to: Dictionary) -> bool:
 	var b := _tower(p, to.get("tower"))
 	var k := int(from.get("slot", -1))
 	var j := int(to.get("slot", -1))
-	var id: String = a.items[k]
-	if j >= 0 and j < b.items.size():
-		a.items[k] = b.items[j]
-		b.items[j] = id
-	else:
-		a.items.remove_at(k)
-		b.items.append(id)
+	systems.inventory.move(a.items, k, b.items, j)
 	a._item_cd.clear()
 	b._item_cd.clear()
 	_combine(a)
@@ -1870,27 +1864,13 @@ func choose_build(id: String) -> void:
 	hud.refresh_shop()
 
 
-# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (InvWorldDrop) ---
+# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (System inventory) ---
 
 var inv_drop: InvWorldDrop
 
 
-func _setup_inv_drop() -> void:
-	inv_drop = InvWorldDrop.new()
-	inv_drop.tower_at = func():
-		return towers.get(occupied.get(board.mouse_cell(camera_rig.camera), NO_CELL))
-	inv_drop.reason = func(t: MaulTower, data: Dictionary) -> String:
-		return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
-	inv_drop.hint = func(t: MaulTower, _data: Dictionary) -> String:
-		return "+ " + tr("Einlegen · %d frei") % (t.slots() - t.items.size())
-	inv_drop.drop = func(t: MaulTower, data: Dictionary) -> void:
-		submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": t.cell, "slot": -1}})
-	inv_drop.mark = func(t, ok: bool) -> void:
-		board.hover_cell = t.cell if t != null else NO_CELL
-		board.hover_ok = ok
-		board.refresh_hover()
-	inv_drop.tell = func(text: String) -> void: show_message(text)
-	add_child(inv_drop)
+func inv_drop_reason(t: MaulTower, data: Dictionary) -> String:
+	return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
 
 
 func _update_hover() -> void:

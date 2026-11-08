@@ -192,20 +192,16 @@ func save_mode() -> String:
 
 # --- Koop (coop_sync.gd, youtd_coop.gd) ------------------------------------------------
 
-func coop_commands() -> Array:
-	return ["research", "roll", "build", "item_put", "item_take", "item_move", "item_use", "item_lock", "transmute", "oil_merge", "tower_merge",
-			"next_wave", "player_setup"]
-
-
 func new_tower() -> Tower:
 	return YoutdTower.new()
 
 
-func coop_snapshot() -> Dictionary:
+## Stand für Mitspieler (Haken des Systems coop, Befehle in modes.json → system_cfg.coop).
+func coop_extra() -> Dictionary:
 	return YoutdCoop.snapshot(self)
 
 
-func apply_coop_snapshot(d: Dictionary) -> void:
+func coop_applied(d: Dictionary, _changed: Array) -> void:
 	var prev = YtWorld.use(self)
 	YoutdCoop.apply(self, d)
 	YtWorld.use(prev)
@@ -1544,12 +1540,7 @@ func inv_drop_hint(t: Tower, data: Dictionary) -> String:
 	var it := _drag_item(data)
 	if it != null and it.is_oil():
 		return "+ " + tr("Öl anwenden (wird verbraucht)")
-	var yt := t as YoutdTower
-	return "+ " + tr("Einlegen · %d frei") % (yt.slots() - yt.items.size())
-
-
-func inv_drop_on_tower(t: Tower, data: Dictionary) -> void:
-	submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": tower_ref(t), "slot": -1}})
+	return systems.inventory.free_hint(t)
 
 
 func _option_view(_t: Tower, o: Dictionary) -> Dictionary:

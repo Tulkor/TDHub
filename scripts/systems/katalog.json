@@ -70,14 +70,16 @@
 		"coop": {
 			"titel": "Koop-Abgleich: Snapshot und Befehle",
 			"etappe": 6,
-			"eigen": ["coop_snapshot", "apply_coop_snapshot", "coop_commands", "set_player_away"],
-			"klasse": "CoopSync"
+			"eigen": ["coop_commands", "coop_snapshot", "apply_coop_snapshot", "set_player_away"],
+			"klasse": "CoopSync",
+			"haken": ["coop_extra", "coop_applied", "on_player_away"]
 		},
 		"inventory": {
 			"titel": "Item-Plätze, Items auf Tower ziehen",
 			"etappe": 6,
-			"eigen": ["inv_drop_reason", "inv_drop_hint", "inv_drop_on_tower", "_setup_inv_drop", "move_item", "move_reason"],
-			"klasse": "InvSlot"
+			"eigen": ["_setup_inv_drop", "inv_drop_on_tower"],
+			"klasse": "InvSlot",
+			"haken": ["inv_drop_reason", "inv_drop_hint", "item_slots", "move_item", "move_reason"]
 		},
 		"leveling": {
 			"titel": "Tower-Level und EP",

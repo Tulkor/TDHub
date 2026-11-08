@@ -10,8 +10,12 @@
 			"scene": "res://scenes/game.tscn",
 			"hint": "Gems setzen, kombinieren, Labyrinth bauen. 50 Wellen, Rezepte und Spezial-Tower.",
 			"needs_map": true,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"],
-			"system_cfg": {"economy": {"income_from_balance": true}}
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
+			"system_cfg": {
+				"economy": {
+					"income_from_balance": true
+				}
+			}
 		},
 		{
 			"id": "eevetd",
@@ -23,7 +27,36 @@
 			"hint": "Barrikaden bauen, zu Element-Towern aufwerten, 57 Level, Koop oder eigene Felder bis 4 Spieler",
 			"needs_map": true,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
-			"system_cfg": {"difficulty": {"source": "rules"}, "waves": {"auto": {"enabled": true, "command": "start_level", "due": "build_after_first"}}}
+			"system_cfg": {
+				"difficulty": {
+					"source": "rules"
+				},
+				"waves": {
+					"auto": {
+						"enabled": true,
+						"command": "start_level",
+						"due": "build_after_first"
+					}
+				},
+				"coop": {
+					"extra_commands": ["build", "trap", "element", "start_level", "item_use", "item_move", "item_sell", "market_buy", "market_upgrade"],
+					"fields": {
+						"difficulty": "difficulty",
+						"field": "field_type",
+						"seed": "wave_seed",
+						"pause": {
+							"var": "level_pause",
+							"ceil": true
+						},
+						"ready": {
+							"var": "ready_players",
+							"keys": true
+						},
+						"players": "eeve_players"
+					},
+					"tower_meta": ["spent"]
+				}
+			}
 		},
 		{
 			"id": "shoppingmaul",
@@ -35,7 +68,21 @@
 			"hint": "Filiale eröffnen, Tower kaufen und aufwerten, Profi-Filialen ab 25 XP, Koop bis 8 Spieler",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "inventory", "build", "controls"],
-			"system_cfg": {"run_record": {"profile": "maul"}, "economy": {"split_unowned": false}, "difficulty": {"source": "rules", "key": "maul"}}
+			"system_cfg": {
+				"run_record": {
+					"profile": "maul"
+				},
+				"economy": {
+					"split_unowned": false
+				},
+				"difficulty": {
+					"source": "rules",
+					"key": "maul"
+				},
+				"inventory": {
+					"tower_ref": "cell"
+				}
+			}
 		},
 		{
 			"id": "randgruppen",
@@ -46,8 +93,32 @@
 			"scene": "res://scenes/rg_game.tscn",
 			"hint": "Rasse wählen, Tower frei in die eigene Zone bauen, 35 Level gegen die Spießer, Koop bis 9 Spieler",
 			"needs_map": false,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls"],
-			"system_cfg": {"difficulty": {"source": "rules"}, "waves": {"auto": {"enabled": true, "command": "start_level", "due": "build_after_first"}}}
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
+			"system_cfg": {
+				"difficulty": {
+					"source": "rules"
+				},
+				"waves": {
+					"auto": {
+						"enabled": true,
+						"command": "start_level",
+						"due": "build_after_first"
+					}
+				},
+				"coop": {
+					"extra_commands": ["setup", "build", "start_level"],
+					"fields": {
+						"difficulty": "difficulty",
+						"pause": {
+							"var": "level_pause",
+							"ceil": true
+						},
+						"players": "rg_players",
+						"share": "share_gold"
+					},
+					"tower_meta": ["spent"]
+				}
+			}
 		},
 		{
 			"id": "youtd",
@@ -60,7 +131,23 @@
 			"needs_map": true,
 			"coop_only": true,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory"],
-			"system_cfg": {"difficulty": {"source": "rules"}, "economy": {"income_from_balance": true}, "waves": {"auto": {"enabled": true, "command": "next_wave"}}}
+			"system_cfg": {
+				"difficulty": {
+					"source": "rules"
+				},
+				"economy": {
+					"income_from_balance": true
+				},
+				"waves": {
+					"auto": {
+						"enabled": true,
+						"command": "next_wave"
+					}
+				},
+				"coop": {
+					"extra_commands": ["research", "roll", "build", "item_put", "item_take", "item_move", "item_use", "item_lock", "transmute", "oil_merge", "tower_merge", "next_wave", "player_setup"]
+				}
+			}
 		},
 		{
 			"id": "heroes",
@@ -72,7 +159,19 @@
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory"],
-			"system_cfg": {"run_record": {"profile": "heroes"}, "difficulty": {"source": "cfg", "key": "heroes"}, "targeting": {"position": "xz", "radius": "radius"}}
+			"system_cfg": {
+				"run_record": {
+					"profile": "heroes"
+				},
+				"difficulty": {
+					"source": "cfg",
+					"key": "heroes"
+				},
+				"targeting": {
+					"position": "xz",
+					"radius": "radius"
+				}
+			}
 		},
 		{
 			"id": "survivors",
@@ -84,7 +183,15 @@
 			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
 			"needs_map": false,
 			"systems": ["run_record", "targeting", "economy", "waves"],
-			"system_cfg": {"run_record": {"profile": "survivors"}, "targeting": {"position": "global_xz", "radius": "half_size"}}
+			"system_cfg": {
+				"run_record": {
+					"profile": "survivors"
+				},
+				"targeting": {
+					"position": "global_xz",
+					"radius": "half_size"
+				}
+			}
 		}
 	]
 }
