@@ -59,6 +59,7 @@ var cam_yaw := 0.0
 var cam_dist := 27.0
 var cam_pitch := 52.0  ## Grad über dem Boden
 var rng := RandomNumberGenerator.new()
+var fixed_seed := -1  ## Tests: fester Zufall ab _ready (vor add_child setzen), sonst zufällig
 
 
 func _ready() -> void:
@@ -73,7 +74,11 @@ func _ready() -> void:
 		upgrade_defs[str(u.id)] = u
 	for p in cfg.perks:
 		perk_defs[str(p.id)] = p
-	rng.randomize()
+	if fixed_seed >= 0:
+		rng.seed = fixed_seed
+		seed(fixed_seed)  # auch globaler Zufall (Gegner-Wackeln, shuffle)
+	else:
+		rng.randomize()
 	_build_world()
 	hud = load("res://scripts/survivors/sv_hud.gd").new()
 	hud.game = self
