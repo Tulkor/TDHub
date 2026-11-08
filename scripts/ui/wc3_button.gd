@@ -96,6 +96,12 @@ func _draw() -> void:
 			draw_polyline(Wc3Theme.closed(Wc3Theme.hex(r.grow(1.5 + i * 1.5), TIP + 1 + i)), Color(1.0, 0.45, 0.2, 0.1 - i * 0.02), 2.0, true)
 	# Rahmen kommt aus dem Messing-Render (_draw_frame); heller beim Überfahren, grau wenn gesperrt
 	_brass.modulate = Color(0.55, 0.55, 0.55) if disabled else (Color(1.25, 1.2, 1.1) if hover or chosen else Color.WHITE)
+	# Schatten des Messingrahmens nach rechts unten (Licht der Renders von links oben)
+	for o in Wc3Theme.SHADOW_STEPS:
+		var sh := PackedVector2Array()
+		for pt in outer:
+			sh.append(pt + o * 0.8)
+		draw_colored_polygon(sh, Wc3Theme.SHADOW)
 	draw_colored_polygon(outer, Wc3Theme.INK)
 	var fr := r.grow(-3)
 	var face := Wc3Theme.hex(fr, TIP - 2)
@@ -115,14 +121,6 @@ func _draw() -> void:
 	draw_line(Vector2(TIP + 2, 5), Vector2(size.x - TIP - 2, 5), Color(1.0, 0.86, 0.63, 0.1), 2.0)
 	draw_line(Vector2(TIP + 2, size.y - 6), Vector2(size.x - TIP - 2, size.y - 6), Color(0, 0, 0, 0.35), 3.0)
 	draw_polyline(Wc3Theme.closed(face), Wc3Theme.INK, 1.0, true)
-	# Innenlinie folgt der spitzen Außenform, 6 px nach innen versetzt
-	var i := 6.0
-	var tip := TIP - 2
-	var w := size.x
-	var h := size.y
-	var inner := PackedVector2Array([Vector2(tip + i * 0.6, i), Vector2(w - tip - i * 0.6, i), Vector2(w - i * 1.3, h / 2),
-		Vector2(w - tip - i * 0.6, h - i), Vector2(tip + i * 0.6, h - i), Vector2(i * 1.3, h / 2)])
-	draw_polyline(Wc3Theme.closed(inner), Color(Wc3Theme.GOLD_HI, 0.45), 1.0, true)
 	_draw_text(hover or chosen, down)
 
 

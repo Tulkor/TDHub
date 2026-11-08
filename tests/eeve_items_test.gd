@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name eeveitems)
+## Modi: eevetd
 ## eeveTD Items und Marktplatz: Daten, Item-Plätze, Drops, Marktplatz bauen, kaufen, verkaufen, Upgrades,
 ## Items einsetzen und benutzen, Abreißen, Spielstand.
 ## Start: godot --headless --path . res://tests/eeve_items_test.tscn (oder tools/run_tests.sh eeveitems)

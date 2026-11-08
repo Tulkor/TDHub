@@ -1,0 +1,81 @@
+{
+  "_info": [
+    "Welche Tests laufen bei 'tools/run_tests.sh geaendert' (und in CI bei jedem PR)? Gelesen von tools/test_auswahl.py.",
+    "regeln: [Muster, Ziele], die erste passende Regel entscheidet. Muster wie in der Shell (fnmatch, * passt auch über /).",
+    "Ziele: ein Modus-Id aus data/modes.json (= alle Tests mit '## Modi: <id>' im Kopf, ohne die langen 'fest'),",
+    "ein Testname (auch lange 'fest'-Tests, nur so laufen sie mit), 'alle' (= schnell: gemeinsamer Code) oder [] (keine Tests).",
+    "Gemeinsame Systeme unter scripts/systems/<system>/: getestet werden die Modi, die das System in data/modes.json",
+    "unter 'systems' führen, dazu die Tests mit '## Modi: system:<system>'. Führt kein Modus das Feld, laufen alle.",
+    "Datei passt auf keine Regel: Code (.gd .tscn .tres .gdshader, project.godot, data/) = alle, sonst keine Tests.",
+    "Die Prüfskripte (tabelle ui maps marken werkzeuge auswahl) und 'skripte' laufen immer mit."
+  ],
+  "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "skripte"],
+  "regeln": [
+    ["tests/bereiche.json", []],
+    ["tests/lib/tower_probe.gd", ["towgemtd", "toweeve", "towrg", "towmaul"]],
+    ["tools/relay/*", ["relay"]],
+    ["tools/balance_editor/*", ["balanceeditor"]],
+    ["tools/balance_anwenden.py", ["balanceeditor"]],
+    ["tools/html_editor/*", ["htmleditor"]],
+    ["tools/*", []],
+    ["docs/*", []],
+    ["*.md", []],
+    ["data/i18n/*", []],
+    [".github/*", []],
+    [".claude/*", []],
+
+    ["scripts/maul/*", ["shoppingmaul"]],
+    ["data/maul/*", ["shoppingmaul", "towmaul"]],
+    ["data/maps/maul_*", ["shoppingmaul"]],
+    ["scenes/maul_*", ["shoppingmaul"]],
+    ["assets/models/city/*", ["shoppingmaul"]],
+
+    ["scripts/youtd/*", ["youtd"]],
+    ["data/youtd/*", ["youtd"]],
+    ["data/maps/youtd.json", ["youtd"]],
+    ["scenes/youtd*", ["youtd"]],
+    ["assets/youtd/*", ["youtd"]],
+
+    ["scripts/game/eeve_*", ["eevetd"]],
+    ["scripts/map/eeve_*", ["eevetd"]],
+    ["scripts/ui/druid_*", ["eevetd"]],
+    ["data/eeve*.json", ["eevetd"]],
+    ["data/towers/eeve_*", ["eevetd", "toweeve"]],
+    ["data/enemies/eeve_*", ["eevetd"]],
+    ["data/maps/eeve.json", ["eevetd"]],
+    ["scenes/eeve_*", ["eevetd"]],
+
+    ["scripts/game/rg_*", ["randgruppen"]],
+    ["scripts/map/rg_*", ["randgruppen"]],
+    ["scripts/ui/rg_*", ["randgruppen"]],
+    ["scripts/ui/poster_*", ["randgruppen"]],
+    ["data/randgruppen.json", ["randgruppen"]],
+    ["data/towers/rg_*", ["randgruppen", "towrg"]],
+    ["data/enemies/rg_*", ["randgruppen"]],
+    ["data/maps/randgruppen.json", ["randgruppen"]],
+    ["scenes/rg_*", ["randgruppen"]],
+
+    ["scripts/heroes/*", ["heroes"]],
+    ["data/heroes*.json", ["heroes"]],
+    ["scenes/heroes_*", ["heroes"]],
+
+    ["scripts/survivors/*", ["survivors"]],
+    ["scripts/ui/holo_*", ["survivors"]],
+    ["data/survivors.json", ["survivors"]],
+    ["scenes/survivors_*", ["survivors"]],
+
+    ["scripts/game/rogue*", ["gemtd"]],
+    ["scripts/game/setup_panel.gd", ["gemtd"]],
+    ["scripts/ui/recipe*", ["gemtd"]],
+    ["data/roguelike*.json", ["gemtd"]],
+    ["data/waves/*", ["gemtd"]],
+    ["data/towers/*", ["gemtd", "towgemtd"]],
+    ["data/maps/classic.json", ["gemtd"]],
+    ["data/maps/canyon.json", ["gemtd"]],
+
+    ["data/sfx.json", ["sound"]],
+    ["assets/sounds/*", ["sound"]],
+    ["assets/shaders/*", ["alle"]],
+    ["assets/*", []]
+  ]
+}

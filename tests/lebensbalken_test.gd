@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name lebensbalken)
+## Modi: kern
 ## Lebensbalken der Gegner (enemy.gd → bar_visible): Bosse immer, Massenwellen nie, alle anderen erst auf
 ## dem letzten Stück des Wegs (balance.json → health_bar_last), danach bleibt der Balken an.
 

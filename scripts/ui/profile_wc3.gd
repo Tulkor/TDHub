@@ -13,6 +13,7 @@ const MODES := [
 	["randgruppen", "Randgruppen TD", Color("5d8ff0")],
 	["youtd", "YouTD", Color("e0b56a")],
 	["heroes", "Bollwerk", Color("ff8a3a")],
+	["survivors", "Tower Survivors", Color("22c4ee")],
 ]
 const WIN := Color("9fd27a")
 const LOSS := Color("e07b5f")
@@ -30,7 +31,7 @@ static func mode_name(m: String) -> String:
 
 ## Kurzer Name für Reiter und Filter.
 static func short_name(m: String) -> String:
-	return {"maul": "Maul", "randgruppen": "Randgruppen"}.get(m, mode_name(m))
+	return {"maul": "Maul", "randgruppen": "Randgruppen", "survivors": "Survivors"}.get(m, mode_name(m))
 
 
 static func mode_color(m: String) -> Color:
@@ -59,13 +60,7 @@ static func body(text: String, parent: Node, size := 16, color := Wc3Theme.CREAM
 
 
 static func rule() -> Control:
-	var line := ColorRect.new()
-	line.color = Wc3Theme.GOLD
-	line.custom_minimum_size = Vector2(30, 2)
-	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return line
+	return Wc3Theme.Rule.new()
 
 
 ## Abschnittstitel: Cinzel in Großbuchstaben zwischen zwei Messinglinien.

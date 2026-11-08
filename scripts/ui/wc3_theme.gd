@@ -118,40 +118,123 @@ static func closed(pts: PackedVector2Array) -> PackedVector2Array:
 	return out
 
 
+## Schatten des Messings: das Licht der Renders kommt von links oben, also fällt der Schatten nach rechts unten,
+## weich aus drei versetzten Lagen (Lukas 2026-11-02: Schatten passend zum 3D).
+const SHADOW_STEPS := [Vector2(1.5, 2.0), Vector2(2.5, 3.5), Vector2(3.5, 5.0)]
+const SHADOW := Color(0, 0, 0, 0.22)
+
+
 ## Messingschraube (3D-Render), d = Durchmesser.
 static func screw(ci: CanvasItem, pos: Vector2, angle: float, d := 14.0) -> void:
+	for o in SHADOW_STEPS:
+		ci.draw_set_transform(pos + o * d / 20.0, angle)
+		ci.draw_texture_rect(brass("schraube"), Rect2(-d / 2, -d / 2, d, d), false, SHADOW)
 	ci.draw_set_transform(pos, angle)
 	ci.draw_texture_rect(brass("schraube"), Rect2(-d / 2, -d / 2, d, d), false)
 	ci.draw_set_transform(Vector2.ZERO)
 
 
-## Eckbeschlag mit drei Schrauben (3D-Render, 80 × 80, Ursprung = Ecke, x/y zeigen nach innen).
-static func corner(ci: CanvasItem, origin: Vector2, x: Vector2, _y: Vector2) -> void:
+## Ecke des Rahmens (3D-Render, 84 × 84, Ursprung = Ecke, x zeigt nach innen entlang der ersten Kante): Band mit
+## Wulst um die abgeschrägte Ecke, angeschweißtes Knotenblech mit zwei Schrauben. Gleiches Profil wie edge(), damit
+## die Ecke wie verschweißt wirkt (Lukas 2026-11-02). shadow false: Schatten zeichnet panel_frame() vorher.
+static func corner(ci: CanvasItem, origin: Vector2, x: Vector2, _y: Vector2, shadow := true) -> void:
+	if shadow:
+		# Schatten in Bildschirmrichtung (nicht mitgedreht), damit er bei allen vier Ecken gleich fällt
+		for o in SHADOW_STEPS:
+			ci.draw_set_transform(origin + o, x.angle())
+			ci.draw_texture_rect(brass("ecke"), Rect2(-2, -2, 84, 84), false, SHADOW)
 	ci.draw_set_transform(origin, x.angle())
 	ci.draw_texture_rect(brass("ecke"), Rect2(-2, -2, 84, 84), false)
 	ci.draw_set_transform(Vector2.ZERO)
 
 
-## Messingleiste (Rundstab) waagrecht oder senkrecht von a nach b, Dicke t.
-static func edge(ci: CanvasItem, a: Vector2, b: Vector2, t := 10.0) -> void:
-	# Die Textur ist 20 px dick und kachelt in Längsrichtung; skaliert auf die Dicke t
-	var k := t / 20.0
-	if is_equal_approx(a.y, b.y):
-		ci.draw_set_transform(Vector2(minf(a.x, b.x), a.y - t / 2), 0.0, Vector2(k, k))
-		ci.draw_texture_rect(brass("kante_h"), Rect2(0, 0, absf(b.x - a.x) / k, 20), true)
+## Messingleiste waagrecht oder senkrecht von a nach b, Dicke t (17 = volles Band mit Wulst), Schatten nach rechts
+## unten. flip: Profil gespiegelt (untere und rechte Kante), damit überall die Außenseite das Licht fängt wie an den Ecken.
+static func edge(ci: CanvasItem, a: Vector2, b: Vector2, t := 10.0, shadow := true, flip := false) -> void:
+	if shadow:
+		var k := clampf(t / 13.0, 0.35, 1.0)
+		for o in SHADOW_STEPS:
+			_edge(ci, a + o * k, b + o * k, t, SHADOW, flip)
+	_edge(ci, a, b, t, Color.WHITE, flip)
+
+
+static func _edge(ci: CanvasItem, a: Vector2, b: Vector2, t: float, col: Color, flip := false) -> void:
+	# Die Textur kachelt in Längsrichtung; quer skaliert auf die Dicke t
+	var horizontal := is_equal_approx(a.y, b.y)
+	var tex := brass("kante_h" if horizontal else "kante_v")
+	var depth := float(tex.get_height() if horizontal else tex.get_width())
+	var k := t / depth
+	var f := -1.0 if flip else 1.0
+	if horizontal:
+		var y0 := a.y - t / 2 if not flip else a.y + t / 2
+		ci.draw_set_transform(Vector2(minf(a.x, b.x), y0), 0.0, Vector2(k, k * f))
+		ci.draw_texture_rect(tex, Rect2(0, 0, absf(b.x - a.x) / k, depth), true, col)
 	else:
-		ci.draw_set_transform(Vector2(a.x - t / 2, minf(a.y, b.y)), 0.0, Vector2(k, k))
-		ci.draw_texture_rect(brass("kante_v"), Rect2(0, 0, 20, absf(b.y - a.y) / k), true)
+		var x0 := a.x - t / 2 if not flip else a.x + t / 2
+		ci.draw_set_transform(Vector2(x0, minf(a.y, b.y)), 0.0, Vector2(k * f, k))
+		ci.draw_texture_rect(tex, Rect2(0, 0, depth, absf(b.y - a.y) / k), true, col)
 	ci.draw_set_transform(Vector2.ZERO)
 
 
-## Messingrahmen um r: vier Leisten, Ecken offen für die Beschläge (inset = wie weit die Leisten vor der Ecke enden).
-static func frame(ci: CanvasItem, r: Rect2, t := 10.0, inset := 30.0) -> void:
-	var h := t / 2
-	edge(ci, Vector2(r.position.x + inset, r.position.y + h), Vector2(r.end.x - inset, r.position.y + h), t)
-	edge(ci, Vector2(r.position.x + inset, r.end.y - h), Vector2(r.end.x - inset, r.end.y - h), t)
-	edge(ci, Vector2(r.position.x + h, r.position.y + inset), Vector2(r.position.x + h, r.end.y - inset), t)
-	edge(ci, Vector2(r.end.x - h, r.position.y + inset), Vector2(r.end.x - h, r.end.y - inset), t)
+## Messingrahmen um r: vier Leisten (untere und rechte gespiegelt). inset = wie weit die Leisten vor der Ecke enden,
+## center = Abstand der Leistenmitte vom Rand (-1: t / 2).
+static func frame(ci: CanvasItem, r: Rect2, t := 10.0, inset := 30.0, center := -1.0) -> void:
+	_frame(ci, r, t, inset, center, false)
+
+
+static func _frame_sides(r: Rect2, inset: float, h: float) -> Array:
+	return [[Vector2(r.position.x + inset, r.position.y + h), Vector2(r.end.x - inset, r.position.y + h), false],
+		[Vector2(r.position.x + inset, r.end.y - h), Vector2(r.end.x - inset, r.end.y - h), true],
+		[Vector2(r.position.x + h, r.position.y + inset), Vector2(r.position.x + h, r.end.y - inset), false],
+		[Vector2(r.end.x - h, r.position.y + inset), Vector2(r.end.x - h, r.end.y - inset), true]]
+
+
+static func _frame(ci: CanvasItem, r: Rect2, t: float, inset: float, center: float, corners: bool) -> void:
+	var h := t / 2 if center < 0 else center
+	var sides := _frame_sides(r, inset, h)
+	var w := r.size.x
+	var hh := r.size.y
+	var cs := [[r.position, Vector2.RIGHT], [r.position + Vector2(w, 0), Vector2.DOWN],
+		[r.position + Vector2(w, hh), Vector2.LEFT], [r.position + Vector2(0, hh), Vector2.UP]]
+	# erst alle Schatten (Leisten und Ecken), dann Leisten, dann Ecken: nichts wirft Schatten auf das Messing selbst
+	var k := clampf(t / 13.0, 0.35, 1.0)
+	for o in SHADOW_STEPS:
+		for sd in sides:
+			_edge(ci, sd[0] + o * k, sd[1] + o * k, t, SHADOW, sd[2])
+		if corners:
+			for c in cs:
+				ci.draw_set_transform(c[0] + o, (c[1] as Vector2).angle())
+				ci.draw_texture_rect(brass("ecke"), Rect2(-2, -2, 84, 84), false, SHADOW)
+			ci.draw_set_transform(Vector2.ZERO)
+	for sd in sides:
+		_edge(ci, sd[0], sd[1], t, Color.WHITE, sd[2])
+	if corners:
+		for c in cs:
+			corner(ci, c[0], c[1], Vector2.ZERO, false)
+
+
+## Großer Tafelrahmen: Band mit Wulst (17 px) und verschweißte Ecken (Säule, Tafeln, Profil).
+static func panel_frame(ci: CanvasItem, r: Rect2) -> void:
+	_frame(ci, r, 17.0, 40.0, 8.5, true)
+
+
+## Waagrechte Messingleiste als Control (Titel- und Abschnittslinien): Rundstab mit Schatten und Glanz.
+class Rule extends Control:
+	var thickness := 6.0
+
+	func _init(min_width := 30.0, t := 6.0, expand := true) -> void:
+		thickness = t
+		custom_minimum_size = Vector2(min_width, t + 5)
+		if expand:
+			size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		material = Wc3Theme.gloss_material()
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var y := thickness / 2 + 1
+		Wc3Theme.edge(self, Vector2(0, y), Vector2(size.x, y), thickness)
 
 
 ## Ebene über einer Fläche, die nur das Messing zeichnet, mit dem Glanz-Material (Node2D, damit Container sie
@@ -179,4 +262,6 @@ class Divider extends Control:
 		var m := size.x / 2
 		Wc3Theme.edge(self, Vector2(0, y), Vector2(m - 12, y), 5.0)
 		Wc3Theme.edge(self, Vector2(m + 12, y), Vector2(size.x, y), 5.0)
+		for o in Wc3Theme.SHADOW_STEPS:
+			draw_texture_rect(Wc3Theme.brass("raute"), Rect2(Vector2(m - 10, y - 10) + o * 0.6, Vector2(20, 20)), false, Wc3Theme.SHADOW)
 		draw_texture_rect(Wc3Theme.brass("raute"), Rect2(m - 10, y - 10, 20, 20), false)

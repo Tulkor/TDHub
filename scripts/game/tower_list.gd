@@ -4,7 +4,7 @@ extends PanelContainer
 ## Klick wählt den Tower aus, Doppelklick fährt die Kamera hin. Einklappbar.
 ## Tower, die mit anderen fertigen Towern auf dem Feld ein Rezept ergeben, haben einen hellblau unterstrichenen Namen.
 
-const SORTS := [["damage", "Sortieren: Schaden"], ["kills", "Sortieren: Kills"], ["name", "Sortieren: Name"]]
+const SORTS := [["group", "Nach Sorte"], ["damage", "Sortieren: Schaden"], ["kills", "Sortieren: Kills"], ["name", "Sortieren: Name"]]
 
 var game  # game.gd
 var above: Control:  ## sitzt darunter (Gegner-Fenster oder DPS-Meter)
@@ -13,8 +13,10 @@ var above: Control:  ## sitzt darunter (Gegner-Fenster oder DPS-Meter)
 		# Sofort nachziehen, wenn das Fenster darüber wächst (sonst liegt es einen Frame lang darüber)
 		if v != null:
 			v.item_rect_changed.connect(func(): offset_top = (above.get_rect().end.y if above.visible else above.offset_top) + 12)
+var tabs: SideTabs  ## Reiter der rechten Spalte (hud.side_tabs)
 var limits: Array[Control] = []  ## endet darüber (Auswahlkarte unten, Mitspieler-Liste), solange die sichtbar sind
-var sort := "damage"
+var sort := "group"  ## "group": eine Zeile je Sorte mit Anzahl, Klick wählt reihum den nächsten dieser Sorte
+var _groups := {}  ## sort "group": Name -> Tower dieser Sorte (stärkster zuerst)
 var summary: Label
 var fold: Button
 var body: VBoxContainer
@@ -109,6 +111,18 @@ func towers() -> Array:
 		return []
 	# eeveTD: Barrikaden sind nur Mauern und stehen nicht in der Liste
 	var list_t: Array = game.all_towers().filter(func(t): return is_instance_valid(t) and not t.is_new and not t.def.get("eeve", {}).get("barricade", false) and not t.def.get("eeve", {}).get("market", false))
+	if sort == "group":
+		list_t.sort_custom(func(a, b): return a.total_damage > b.total_damage if a.total_damage != b.total_damage else a.kills > b.kills)
+		_groups = {}
+		var reps := []
+		for t in list_t:
+			var key: String = t.label()
+			if not _groups.has(key):
+				_groups[key] = []
+				reps.append(t)
+			_groups[key].append(t)
+		reps.sort_custom(func(a, b): return group_damage(a) > group_damage(b))
+		return reps
 	match sort:
 		"kills":
 			list_t.sort_custom(func(a, b): return a.kills > b.kills if a.kills != b.kills else a.total_damage > b.total_damage)
@@ -123,7 +137,7 @@ func refresh() -> void:
 	if list == null:
 		return
 	var ts := towers()
-	visible = game != null and not ts.is_empty()
+	visible = game != null and not ts.is_empty() and (tabs == null or tabs.shows("tower"))
 	_update_summary(ts)
 	if not body.visible or ts.is_empty():
 		return
@@ -147,11 +161,12 @@ func refresh() -> void:
 		var r: Dictionary = rows[t.get_instance_id()]
 		if r.button.get_index() != i:
 			list.move_child(r.button, i)
-		r.name.text = t.label()
+		var group: Array = _groups.get(t.label(), [t]) if sort == "group" else [t]
+		r.name.text = t.label() + (" ×%d" % group.size() if group.size() > 1 else "")
 		r.gem.add_theme_color_override("font_color", t.color)
-		r.kills.text = "✖ %d" % t.kills if t.can_attack() else "–"
-		r.damage.text = DpsMeter._fmt(t.total_damage) if t.can_attack() else tr("Aura")
-		var on: bool = sel == t
+		r.kills.text = "✖ %d" % group.reduce(func(a, o): return a + o.kills, 0) if t.can_attack() else "–"
+		r.damage.text = DpsMeter._fmt(group_damage(t)) if t.can_attack() else tr("Aura")
+		var on: bool = group.has(sel)
 		if r.on != on:   # neuer Rahmen nur bei Wechsel der Auswahl, sonst baut jede Zeile alle 0,5 s ihr Layout neu
 			r.on = on
 			r.button.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL_2 if on else UiTheme.BAR, UiTheme.CYAN if on else Color.TRANSPARENT, 0, 2, 4))
@@ -159,6 +174,23 @@ func refresh() -> void:
 			r.combinable = combinable.has(t)
 			r.name.set_meta("combinable", r.combinable)
 			r.name.queue_redraw()
+
+
+## Schaden aller Tower der Sorte von t (in der Ansicht „Nach Sorte“), sonst nur von t.
+func group_damage(t) -> float:
+	if sort != "group":
+		return t.total_damage
+	return _groups.get(t.label(), [t]).reduce(func(a, o): return a + o.total_damage, 0.0)
+
+
+## Klick auf eine Zeile: ohne Gruppen der Tower selbst, sonst reihum der nächste dieser Sorte.
+func next_in_group(t):
+	var group: Array = _groups.get(t.label(), []) if sort == "group" else []
+	group = group.filter(func(o): return is_instance_valid(o))
+	if group.size() <= 1:
+		return t
+	var i := group.find(game.selected)
+	return group[(i + 1) % group.size()] if i >= 0 else group[0]
 
 
 ## Spezial-Tower, die t zusammen mit anderen fertigen Towern auf dem Feld ergeben würde (Namen).
@@ -201,9 +233,10 @@ func _row(t) -> Dictionary:
 	b.make = _tooltip.bind(t)
 	b.gui_input.connect(func(ev):
 		if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed and is_instance_valid(t):
-			game._select(t)
+			var pick = next_in_group(t)
+			game._select(pick)
 			if ev.double_click:
-				focus(t)
+				focus(pick)
 			refresh())
 	list.add_child(b)
 	var h := HBoxContainer.new()

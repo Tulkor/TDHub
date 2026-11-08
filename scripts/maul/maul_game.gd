@@ -88,6 +88,10 @@ var level_save := {}        ## Einzelspiel: Stand vom Beginn des laufenden Level
 
 var phase := Phase.SETUP
 var difficulty := 1
+## Aufstiegsstufe (+1, +2, …) auf der höchsten Schwierigkeit (ascension.gd), wählt der Host im Startfenster.
+var ascension := 0
+## Nach der Partie neu freigeschaltete Stufe (0 = keine), fürs Ende-Fenster.
+var ascension_unlocked := 0
 var mode := "group"
 var level := 0               ## zuletzt gestartetes Level (1-basiert)
 var countdown := 0.0
@@ -224,6 +228,8 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	if phase != Phase.SETUP:
 		return
 	difficulty = clampi(diff, 0, rules.get("difficulties", []).size() - 1)
+	if difficulty != Ascension.top("maul", rules.get("difficulties", []).size()):
+		ascension = 0
 	mode = play_mode
 	sandbox = sandbox_on
 	foreign_build = foreign_on
@@ -247,6 +253,9 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	countdown = float(rules.first_delay_many if m >= 4 else rules.first_delay)
 	phase = Phase.COUNTDOWN
 	_pick_shop(local_player, shop_id)
+	if solo():
+		Engine.time_scale = Session.speed
+		auto_wave = Session.auto_wave_on()
 	_refresh_hud()
 
 
@@ -302,6 +311,8 @@ func _process(delta: float) -> void:
 	if not mirror:
 		match phase:
 			Phase.COUNTDOWN:
+				if auto_wave and level > 0 and solo():
+					countdown = 0.0
 				countdown -= delta
 				if countdown <= 0.0:
 					_start_level(level + 1)
@@ -375,6 +386,9 @@ func _start_level(n: int) -> void:
 		return
 	if not mirror:
 		level_save = MaulSave.state(self)
+	# Einzelspiel: vor jedem Level still speichern („Weiterspielen“ im Hub, Lukas 2026-11-03)
+	if n > 1 and solo() and not Session.skip_setup and not sandbox:
+		MaulSave.save(self)
 	level = n
 	var lv := level_def(n)
 	level_kind = str(lv.get("kind", "ground"))
@@ -460,6 +474,7 @@ func _spawn(index: int) -> void:
 	var route: Dictionary = map.maul.routes[s.route]
 	var lv := level_def(level)
 	var e := MaulEnemy.new()
+	var asc := Ascension.mods("maul", ascension)
 	e.net_id = _next_enemy_id
 	_next_enemy_id += 1
 	e.route = str(s.route)
@@ -500,9 +515,9 @@ func _spawn(index: int) -> void:
 		"color": _enemy_color(),
 	}
 	var o := {
-		"hp": level_hp,
-		"speed": speed / 128.0,
-		"armor": armor,
+		"hp": level_hp * float(asc.hp) + float(asc.hp_add),
+		"speed": (speed / 128.0) * float(asc.speed) + float(asc.speed_add),
+		"armor": armor * float(asc.armor) + float(asc.armor_add),
 		"bounty": float(lv.get("bounty", 1)),
 		"armor_type": str(lv.get("armor_type", "medium")),
 		"size": 1.6 if boss else 1.0,
@@ -641,13 +656,13 @@ func _record_profile(won: bool) -> void:
 ## Run ins allgemeine Profil (profile.gd), auch mit Sandbox und Debug (dann nur in der Liste).
 func _record_run(won: bool) -> void:
 	var me = players[local_player]
-	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "victory": won,
+	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension, "victory": won,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "max_lives": max_lives, "kills": enemies_killed,
 		"play_time": roundi(play_time), "coop": players.size() > 1, "players": players.size(),
 		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox,
 		"debug": debug_run(), "time_counted": profile_time}
 	profile_time = roundi(play_time)
-	Profile.record_run("maul", info, run_stats.result(_my_towers()))
+	ascension_unlocked = int(Profile.record_run("maul", info, run_stats.result(_my_towers())).get("ascension_unlocked", 0))
 
 
 ## Debug-Menü, Sandbox oder Unsterblich in diesem Run: keine XP, zählt nicht für Siege und Rekorde (nur die Zeit).
@@ -659,7 +674,7 @@ func debug_run() -> bool:
 func _record_abort() -> void:
 	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0 or roundi(play_time) - profile_time < 10:
 		return
-	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty,
+	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time),
 		"debug": debug_run(), "time_counted": profile_time, "saved": SaveGame.writes > _saves_at_start})
 	profile_time = roundi(play_time)
@@ -1956,6 +1971,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				set_speed(4.0)
 			KEY_L:
 				set_path_lights(not path_lights.visible)
+			KEY_N:
+				if phase == Phase.COUNTDOWN:
+					submit({"type": "start_now"})
+			KEY_P, KEY_PAUSE:
+				set_user_paused(true)
 			KEY_DELETE:
 				if selected != null:
 					submit({"type": "sell", "cell": selected.cell})
@@ -2021,10 +2041,46 @@ func select_unit(u: MaulUnit) -> void:
 
 
 ## Spieltempo: im Koop bestimmt es der Host, Mitspieler schicken ihren Wunsch als Befehl.
+## Einzelspiel ohne Mitspieler: Pause, Auto-Start und gemerktes Tempo gibt es nur dort.
+func solo() -> bool:
+	return sync == null and not mirror and not Net.is_active() and players.size() <= 1
+
+
+var auto_wave := false  ## Schalter „Auto“: Countdown zwischen den Leveln überspringen
+var user_paused := false
+var _pause_input: PauseInput = null
+
+
+func set_auto_wave(on: bool) -> void:
+	auto_wave = on
+	Session.auto_wave[Session.game_kind] = on
+	Session.save_last()
+
+
+## Pause (Taste P, nur Einzelspiel): Welt steht, Kamera und Oberfläche laufen weiter.
+func set_user_paused(on: bool) -> void:
+	if not solo() or phase == Phase.SETUP or phase >= Phase.GAME_OVER:
+		on = false
+	user_paused = on
+	get_tree().paused = on
+	camera_rig.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.show_pause(on)
+	if _pause_input == null:
+		_pause_input = PauseInput.new()
+		_pause_input.on_event = func(e):
+			if e is InputEventKey and e.pressed and not e.echo and e.keycode in [KEY_P, KEY_PAUSE, KEY_ESCAPE]:
+				set_user_paused(false)
+				get_viewport().set_input_as_handled()
+		add_child(_pause_input)
+
+
 func set_speed(f: float) -> void:
 	if mirror:
 		submit({"type": "speed", "f": f})
 		return
+	if solo():
+		Session.speed = f
 	Engine.time_scale = f
 	hud.refresh_live()
 

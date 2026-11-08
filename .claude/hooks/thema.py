@@ -18,6 +18,7 @@ THEMEN = {
     "eeve": r"eeve",
     "randgruppen": r"randgruppen|/rg_|\brg_",
     "heroes": r"scripts/heroes/|/hd_|heroes",
+    "survivors": r"survivors|scripts/survivors/|/sv_",
     "netz": r"scripts/net/|net\.gd|coop|lobby|gemischt|sitzung_test|relay",
     "gemtd": r"scripts/game/(game|tower|enemy|abilities|effects|fx_|rogue|player_state|run_stats|save_game|profile)"
              r"|scripts/ui/hud|scripts/map/|roguelike|profile",

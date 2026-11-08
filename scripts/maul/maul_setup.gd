@@ -26,6 +26,8 @@ var _grid: GridContainer
 var _detail: Label
 var _xp: Label
 var _open: Button
+var _asc: AscensionPicker
+var _diff_ids: Array = []   ## Schwierigkeit je Knopf in _diff_buttons
 
 
 func _ready() -> void:
@@ -36,7 +38,7 @@ func _ready() -> void:
 	_difficulty = int(MaulData.rules().get("default_difficulty", 1))
 	# Neustart: die Wahl der letzten Runde vorauswählen
 	var last: Dictionary = Session.maul_choice
-	_difficulty = int(last.get("difficulty", _difficulty))
+	_difficulty = Ascension.snap("maul", int(last.get("difficulty", _difficulty)), _diff_count())
 	_mode = str(last.get("mode", _mode))
 	_sandbox = bool(last.get("sandbox", _sandbox))
 	_foreign = bool(last.get("foreign", _foreign))
@@ -75,11 +77,12 @@ func _ready() -> void:
 		var diff_row := HBoxContainer.new()
 		diff_box.add_child(diff_row)
 		var diffs: Array = MaulData.rules().get("difficulties", [])
-		for i in diffs.size():
+		for i in Ascension.choices("maul", diffs.size()):
 			var d: Dictionary = diffs[i]
 			var b := _toggle(str(d.name), diff_row, _set_difficulty.bind(i))
 			b.tooltip_text = tr("%d Leben, Gegner-Leben ×%s") % [int(d.lives), TowerStats.num(float(d.factor), 2)]
 			_diff_buttons.append(b)
+			_diff_ids.append(i)
 		var mode_box := VBoxContainer.new()
 		opts.add_child(mode_box)
 		DecoTheme.caption("Modus", mode_box)
@@ -111,6 +114,8 @@ func _ready() -> void:
 			_share = not _share
 			_refresh())
 		_share_button.tooltip_text = "An: das Kopfgeld aller Kills kommt in einen Topf und wird gleich an alle verteilt, das Einkommen ist für alle gleich. Aus: Kopfgeld bekommt, wer trifft, dafür gleicht der Konzernbonus das Einkommen nach Kills aus."
+		_asc = AscensionPicker.new().setup("maul", _diff_count(), _difficulty, int(Session.ascension_choice.get("maul", 0)), true, true, CARD_WIDTH * 4 + 30)
+		box.add_child(_asc)
 	else:
 		var info := UiUtil.wrap_label("Koop: der Host wählt Schwierigkeit und Modus, jeder eröffnet seine eigene Filiale in seinem Gebiet. Die Leben sind gemeinsam.", box, CARD_WIDTH * 4 + 30)
 		info.add_theme_color_override("font_color", DecoTheme.CYAN)
@@ -141,7 +146,7 @@ func _ready() -> void:
 	_detail = UiUtil.label("", bottom, 14)
 	_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiUtil.button("Zurück", bottom, func(): Session.goto(Session.MAIN_MENU)).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	UiUtil.button("Zurück zum Menü", bottom, func(): Session.goto(Session.MAIN_MENU)).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_open = UiUtil.button("Filiale eröffnen", bottom, _start)
 	_open.custom_minimum_size = Vector2(340, 58)
 	_open.add_theme_font_size_override("font_size", 28)
@@ -224,6 +229,10 @@ func _short(text: String) -> String:
 	return text.replace("Reichweite:", tr("Reichweite")).replace("  ", " ")
 
 
+func _diff_count() -> int:
+	return (MaulData.rules().get("difficulties", []) as Array).size()
+
+
 func _set_difficulty(i: int) -> void:
 	_difficulty = i
 	_refresh()
@@ -260,7 +269,9 @@ func _refresh() -> void:
 	var sandbox := game.sandbox if game.mirror else _sandbox
 	_xp.text = tr("Sandbox: 800 XP") if sandbox else tr("Deine Erfahrung: %s XP") % MaulXp.text(xp)
 	for i in _diff_buttons.size():
-		_diff_buttons[i].set_pressed_no_signal(i == _difficulty)
+		_diff_buttons[i].set_pressed_no_signal(_diff_ids[i] == _difficulty)
+	if _asc != null:
+		_asc.set_difficulty(_difficulty)
 	for e in _mode_buttons:
 		e[0].set_pressed_no_signal(e[1] == _mode)
 	if _sandbox_button != null:
@@ -331,4 +342,7 @@ func _start() -> void:
 		_refresh()
 		return
 	Session.maul_choice = {"shop": _shop, "kind": _kind, "difficulty": _difficulty, "mode": _mode, "sandbox": _sandbox, "foreign": _foreign, "share": _share}
+	if _asc != null:
+		Session.ascension_choice["maul"] = _asc.level
+		game.ascension = _asc.chosen()
 	game.start_game(_shop, _difficulty, _mode, _sandbox, _foreign, _share)

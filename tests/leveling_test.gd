@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name leveling)
+## Modi: kern
 ## Gemeinsames Level- und EP-System (leveling.gd, data/leveling.json): EP-Kurven und Formeln, Boni je Level,
 ## Freischaltungen von Werten und Fähigkeiten, Abweichungen je Tower, YouTD-Tabellen aus dem System und
 ## ein Tower im echten eeveTD-Spiel, der durch Kills aufsteigt.

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: fest (Name spaet)
+## Modi: gemtd
 ## Balance-Check späte Wellen: wie viel Prozent der Gesamt-HP einer Welle schafft ein einzelner Tower?
 ## Start: godot --headless --fixed-fps 60 --path . res://tests/late_balance_test.tscn -- [--tower=gold:1] [--waves=30,35]
 ##        [--scenarios=normal,mass,boss] [--absolute] [--trap-passes=3]

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: paar (Name koop)
+## Modi: gemtd
 ## Koop-Test über eine echte Verbindung mit zwei Prozessen:
 ##   godot --headless --path . res://tests/coop_test.tscn -- --role=host
 ##   godot --headless --path . res://tests/coop_test.tscn -- --role=client

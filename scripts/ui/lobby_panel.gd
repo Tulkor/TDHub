@@ -258,12 +258,7 @@ func _ready() -> void:
 
 
 func _rule() -> Control:
-	var line := ColorRect.new()
-	line.color = Wc3Theme.GOLD
-	line.custom_minimum_size = Vector2(150, 2)
-	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return line
+	return Wc3Theme.Rule.new(150, 6.0, false)
 
 
 ## Überschrift einer Steintafel: Cinzel zwischen Linien.
@@ -271,15 +266,9 @@ func _caption(text_de: String, parent: Node) -> Label:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	parent.add_child(row)
-	var a := _rule()
-	a.custom_minimum_size.x = 30
-	a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(a)
+	row.add_child(Wc3Theme.Rule.new())
 	var l := Wc3Theme.label(tr(text_de).to_upper(), row, 18, Wc3Theme.CREAM, 4)
-	var b := _rule()
-	b.custom_minimum_size.x = 30
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(b)
+	row.add_child(Wc3Theme.Rule.new())
 	return l
 
 

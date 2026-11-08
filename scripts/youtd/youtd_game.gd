@@ -314,6 +314,7 @@ func _apply_setup(cmd: Dictionary) -> void:
 	mode_index = clampi(int(cmd.get("mode", 0)), 0, (rules.get("modes", []) as Array).size() - 1)
 	length_index = clampi(int(cmd.get("length", 1)), 0, (rules.get("lengths", []) as Array).size() - 1)
 	difficulty = clampi(int(cmd.get("difficulty", 2)), 0, (rules.get("difficulties", []) as Array).size() - 1)
+	take_ascension(cmd)
 	wave_seed = int(cmd.get("seed", rng.randi()))
 	wave_rng.seed = wave_seed
 	YtGlobals.synced_rng.seed = wave_seed * 17 + 3
@@ -910,6 +911,7 @@ func is_wave_running() -> bool:
 
 
 func _process(delta: float) -> void:
+	_ux_tick()
 	if phase < Phase.GAME_OVER:
 		play_time += delta / maxf(Engine.time_scale, 0.001)
 	_update_hover()
@@ -952,6 +954,8 @@ static func alive_key(lane: int, level: int) -> String:
 func _start_next_wave() -> void:
 	if next_wave > max_wave():
 		return
+	if next_wave > 1:
+		autosave()  # Stand vor der Welle: „Weiterspielen“ im Hub setzt hier fort
 	var w: Dictionary = waves[next_wave - 1]
 	wave_index = next_wave - 1
 	for lane in wave_lanes():
@@ -982,7 +986,14 @@ func _spawn_youtd(w: Dictionary, size_id: String, lane := 0) -> void:
 	_next_enemy_id += 1
 	board.add_child(e)
 	var lp: Dictionary = lane_paths[lane_index(lane)]
-	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, 1.0, -1.0, lane)
+	var hp_factor := 1.0
+	if ascension > 0:
+		# Aufstieg: Leben und Rüstung der Welle (Kinder aus Eigenschaften erben die Leben ihrer Eltern)
+		var m := ascension_mods()
+		w = w.duplicate()
+		w.armor = float(w.armor) * float(m.armor) + float(m.armor_add)
+		hp_factor = float(m.hp)
+	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, hp_factor, -1.0, lane)
 	e.final_boss = int(w.level) == max_wave() and size_id.contains("boss")
 	enemies.append(e)
 	if e.boss:
@@ -1147,6 +1158,7 @@ func _finish(p: Phase) -> void:
 	if phase >= Phase.GAME_OVER:
 		return
 	phase = p
+	drop_autosave()
 	if not debug_run():
 		xp_result = YoutdProgress.record(my_score(), waves_done, p == Phase.VICTORY, enemies_killed)
 	record_profile(p == Phase.VICTORY)
@@ -1166,6 +1178,18 @@ func _finish(p: Phase) -> void:
 
 func profile_mode() -> String:
 	return "youtd"
+
+
+func difficulty_index() -> int:
+	return difficulty
+
+
+func difficulty_count() -> int:
+	return (rules.get("difficulties", []) as Array).size()
+
+
+func difficulty_label() -> String:
+	return Ascension.full_name(str(diff_rules().get("name", "")), ascension)
 
 
 func profile_extra() -> Dictionary:
@@ -1330,13 +1354,32 @@ func pick_item(i: int) -> void:
 	_refresh_hud()
 
 
+func has_auto_wave() -> bool:
+	return true
+
+
+## Auto: sobald die letzte Welle weg ist (Timer läuft), sofort die nächste.
+func auto_wave_due() -> bool:
+	return next_wave > 1 and next_wave <= max_wave() and alive.is_empty() and next_wave_in > 0.0
+
+
+func next_wave_now() -> void:
+	submit({"type": "next_wave"})
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	var c := NO_CELL
 	if setup_done and phase < Phase.GAME_OVER and (build_id != "" or debug_tower != "") and not occupied.has(board.mouse_cell(camera_rig.camera)):
 		c = board.mouse_anchor(camera_rig.camera)
-	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS:
+	# Reichweite des Towers, der gesetzt wird, als Ring um die Bauvorschau (Lukas 2026-11-03)
+	var r := 0.0
+	if build_id != "" and debug_tower == "":
+		r = YoutdData.units(float(YoutdData.tower(build_id).get("range", 0)) + YtConstants.RANGE_CHECK_BONUS_FOR_TOWERS)
+	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS or r != board.hover_range:
 		board.hover_cell = c
 		board.hover_size = Board3D.TOWER_CELLS
+		board.hover_range = r
 		board.hover_ok = can_place(c) and (debug_tower != "" or build_reason(build_id) == "")
 		board.refresh_hover()
 

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: paar (Name sitzung)
+## Modi: kern
 ## Sitzungs-Test (Speichern im Mehrspieler und Wiedereinsteigen) mit zwei Prozessen:
 ##   godot --headless --path . res://tests/session_test.tscn -- --role=host
 ##   godot --headless --path . res://tests/session_test.tscn -- --role=client

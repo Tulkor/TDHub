@@ -2,7 +2,7 @@
 	"source": "Shopping Maul 5.44f, Skript (maulwork/maul_rules.md); Werte von Hand übernommen",
 	"difficulties": [
 		{"id": "easy", "name": "Einfach", "lives": 250, "hp": 160, "factor": 0.9, "adapt_min": 0.5, "adapt_max": 2.25, "xp": 0.66, "specials": true},
-		{"id": "normal", "name": "Normal", "lives": 150, "hp": 180, "factor": 1.0, "adapt_min": 0.75, "adapt_max": 7.5, "xp": 1.0, "specials": true},
+		{"id": "normal", "name": "Mittel", "lives": 150, "hp": 180, "factor": 1.0, "adapt_min": 0.75, "adapt_max": 7.5, "xp": 1.0, "specials": true},
 		{"id": "hard", "name": "Schwer", "lives": 75, "hp": 200, "factor": 1.1, "adapt_min": 1.0, "adapt_max": 10.0, "xp": 1.75, "specials": true},
 		{"id": "very_hard", "name": "Sehr schwer", "lives": 25, "hp": 250, "factor": 1.25, "adapt_min": 1.5, "adapt_max": 10.0, "xp": 2.5, "specials": true}
 	],

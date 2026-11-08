@@ -1,5 +1,6 @@
 extends "res://tests/lib/tower_probe.gd"
 ## Lauf: fest (Name toweeve)
+## Modi: eevetd
 ## eeveTD: jeder Tower und jede Falle einzeln, Schaden und alle Fähigkeiten (tests/lib/tower_probe.gd).
 ## Start: tools/tower_pruefen.sh eeve
 

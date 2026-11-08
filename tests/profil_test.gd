@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name profil)
+## Modi: kern
 ## Spielerprofil (profile.gd, run_stats.gd): Tower-Werte je Welle und Art, Summen und Rekorde,
 ## alte Run-History und Maul-Stand aus maul.cfg übernehmen, Profil-Fenster. Eigener Ordner statt user://profile.
 
