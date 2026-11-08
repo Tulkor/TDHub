@@ -302,75 +302,101 @@ def ratte(f, loc, rz, bone, s=1.0, rx=0.0):
 
 
 def unrat():
+    # Großer Rattenmensch (Vorbild Deadlock Rat King): Rattenkopf mit langer Schnauze, gebeugter Rücken,
+    # Königsumhang mit Hermelinkragen, Rüstung aus Schrott (Radkappe, Blechplatten), langer Schwanz.
     f = Figur('unrat')
-    mensch(f, hip=0.62, neck=1.3, head_top=1.8, sh=(0.52, 0, 1.18), elbow=(0.7, 0.06, 0.86),
-           hand=(0.72, 0.28, 0.66), knee=(0.24, 0.04, 0.34), foot=(0.24, 0, 0.08), hip_x=0.24)
-    skin, cloak, shirt = M('#b7b98e', 0.8), M('#4e5a36', 0.95), M('#7a3a2a', 0.9)
-    rag, tin, rust = M('#8a7a5a', 0.95), M('#a8a8b0', 0.4, 0.75), M('#8a4a2a', 0.8, 0.5)
-    wood, tooth, eye = M('#5a4028', 0.9), M('#efe6c8', 0.5), M('#ffd040', 0.3, 0.0, 4.0)
-    ruby, nose = M('#d0203a', 0.2, 0.0, 1.5), M('#c88a7a', 0.8)
-    # Bauch und Hemd mit Flicken
-    f.ball(0.6, (0, 0.06, 0.9), shirt, 'chest', scale=(1.0, 0.92, 0.88), seg=12, rings=8)
-    f.box((0.2, 0.04, 0.18), (0.18, 0.6, 0.98), rag, 'chest', rot=(0, 12, 0), bevel=0.01)
-    f.box((0.14, 0.04, 0.14), (-0.22, 0.56, 0.76), cloak, 'chest', rot=(0, -20, 0), bevel=0.01)
-    f.cyl(0.58, 0.58, 0.1, (0, 0.04, 0.66), wood, 'hips', seg=12)
-    f.box((0.14, 0.05, 0.12), (0, 0.6, 0.66), tin, 'hips', bevel=0.015)
-    # Lumpenmantel (hinten offen nach vorn) mit Fellkragen
-    v = f.cyl(0.78, 0.5, 1.08, (0, -0.16, 0.66), cloak, 'chest', seg=12, scale=(1.0, 0.85, 1.0))
-    f.jag(v, 0.22, seed=3)
-    f.cyl(0.58, 0.5, 0.22, (0, -0.06, 1.2), rag, 'chest', seg=10)
-    for k in range(9):
-        a = math.radians(-40 + k * 280 / 8 + 90)
-        f.ball(0.12, (math.cos(a) * 0.52, -0.06 + math.sin(a) * 0.46 - 0.04, 1.3), rag, 'chest', seg=6, rings=4)
-    # Kopf: fahles Gesicht, Knollennase, Nagezähne, Bartstoppeln
-    f.ball(0.3, (0, 0.1, 1.48), skin, 'head', scale=(1.05, 1.0, 0.98), seg=10)
-    f.ball(0.11, (0, 0.38, 1.46), nose, 'head', scale=(0.9, 1.2, 1.0), seg=8, rings=5)
-    f.ball(0.04, (0.1, 0.34, 1.57), eye, 'head', seg=6, rings=4)
-    f.ball(0.04, (-0.1, 0.34, 1.57), eye, 'head', seg=6, rings=4)
-    f.box((0.12, 0.05, 0.035), (0.11, 0.35, 1.63), wood, 'head', rot=(0, -15, 0))
-    f.box((0.12, 0.05, 0.035), (-0.11, 0.35, 1.63), wood, 'head', rot=(0, 15, 0))
-    f.box((0.05, 0.03, 0.09), (0.03, 0.37, 1.33), tooth, 'head')
-    f.box((0.05, 0.03, 0.09), (-0.03, 0.37, 1.33), tooth, 'head')
-    bv = f.cyl(0.22, 0.12, 0.22, (0, 0.24, 1.27), rag, 'head', rot=(20, 0, 0), seg=8)
-    f.jag(bv, 0.06, seed=5)
-    for s in (1, -1):
-        f.ball(0.09, (0.29 * s, 0.08, 1.52), skin, 'head', scale=(0.5, 1, 1.3), seg=6, rings=4)
-    # Blechkrone: verbeult, ungleiche Zacken, ein Rubin
-    f.cyl(0.25, 0.27, 0.16, (0, 0.08, 1.76), tin, 'head', rot=(0, 6, 0), seg=10)
-    rnd = random.Random(7)
+    mensch(f, hip=1.0, neck=1.82, head_top=2.3, sh=(0.5, 0.08, 1.74), elbow=(0.68, 0.16, 1.32),
+           hand=(0.72, 0.42, 1.08), knee=(0.26, 0.22, 0.56), foot=(0.26, -0.04, 0.1), hip_x=0.24)
+    f.bone('tail', (0, -0.3, 0.95), (0, -0.9, 0.55), 'hips')
+    fur, fur2, belly = M('#6e6258', 0.95), M('#4e463f', 0.95), M('#a8988a', 0.95)
+    pink, claw, eye = M('#d99a9a', 0.8), M('#e8dcc0', 0.5), M('#ff3828', 0.3, 0.0, 5.0)
+    cape, cape2 = M('#7a1c2a', 0.85), M('#521420', 0.9)
+    ermine, spot = M('#ece6d8', 0.9), M('#1a1a1a', 0.9)
+    tin, rust, gold = M('#a8a8b0', 0.4, 0.75), M('#8a4a2a', 0.8, 0.5), M('#c9a040', 0.35, 0.85)
+    wood, ruby, strap = M('#5a4028', 0.9), M('#d0203a', 0.2, 0.0, 1.5), M('#3a2a20', 0.9)
+    # Rumpf: birnenförmig, nach vorn gebeugt, heller Bauch
+    f.ball(0.48, (0, 0.06, 1.15), fur, 'hips', scale=(1.0, 0.85, 0.75), seg=10)
+    f.ball(0.5, (0, 0.14, 1.52), fur, 'chest', scale=(1.05, 0.82, 0.8), rot=(20, 0, 0), seg=10)
+    f.ball(0.36, (0, 0.4, 1.3), belly, 'chest', scale=(0.9, 0.5, 1.0), seg=8)
+    # Schrottrüstung: Brustplatte aus Blech, Radkappe als Schulter, Gürtel mit Kronkorken
+    f.box((0.5, 0.06, 0.34), (0, 0.5, 1.55), tin, 'chest', rot=(-15, 0, 0), bevel=0.03)
+    for x, z in ((-0.17, 1.66), (0.17, 1.66), (-0.17, 1.44), (0.17, 1.44)):
+        f.ball(0.025, (x, 0.54, z), rust, 'chest', seg=5, rings=3)
+    f.cyl(0.32, 0.22, 0.12, (0.58, 0.06, 1.86), tin, 'chest', rot=(0, 25, 0), seg=10)
+    f.cyl(0.08, 0.08, 0.04, (0.63, 0.06, 1.93), rust, 'chest', rot=(0, 25, 0), seg=6)
+    f.box((0.26, 0.3, 0.06), (-0.6, 0.05, 1.86), rust, 'chest', rot=(0, -25, 8), bevel=0.02)
+    f.cyl(0.46, 0.44, 0.1, (0, 0.08, 1.0), strap, 'hips', seg=10)
     for k in range(6):
-        a = k * math.tau / 6 + 0.3
-        h = 0.14 + rnd.random() * 0.12
-        f.cyl(0.07, 0.0, h, (math.cos(a) * 0.24, 0.08 + math.sin(a) * 0.24, 1.84 + h / 2 - 0.02), tin, 'head',
+        a = math.radians(30 + k * 24)
+        f.cyl(0.04, 0.04, 0.03, (math.cos(a) * 0.46, 0.08 + math.sin(a) * 0.4, 1.0), gold, 'hips', rot=(90, 0, -90 + math.degrees(a)), seg=8)
+    # Königsumhang hinten mit Hermelinkragen
+    v = f.cyl(0.78, 0.42, 1.6, (0, -0.28, 1.05), cape, 'chest', seg=12, scale=(1.0, 0.55, 1.0))
+    f.jag(v, 0.25, seed=4)
+    f.cyl(0.52, 0.5, 0.06, (0, -0.1, 1.84), cape2, 'chest', seg=10)
+    for k in range(11):
+        a = math.radians(-20 + k * 220 / 10 + 160)
+        p = (math.cos(a) * 0.5, 0.06 + math.sin(a) * 0.42, 1.88)
+        f.ball(0.11, p, ermine, 'chest', seg=6, rings=4)
+        if k % 2 == 0:
+            f.ball(0.03, (p[0] * 1.15, p[1] * 1.15 - 0.01, 1.92), spot, 'chest', seg=4, rings=3)
+    f.box((0.1, 0.06, 0.1), (0, 0.5, 1.82), gold, 'chest', rot=(0, 45, 0))
+    # Rattenkopf: Schädel, lange Schnauze, große Ohren, Schnurrhaare, Nagezähne, Krone
+    hz = 2.0
+    f.ball(0.27, (0, 0.18, hz), fur, 'head', scale=(1.0, 1.1, 0.95), seg=10)
+    f.cyl(0.2, 0.07, 0.48, (0, 0.52, hz - 0.08), fur, 'head', rot=(-80, 0, 0), seg=8, scale=(1.0, 0.85, 1.0))
+    f.ball(0.07, (0, 0.77, hz - 0.13), pink, 'head', seg=6, rings=4)
+    f.cyl(0.13, 0.05, 0.3, (0, 0.5, hz - 0.2), belly, 'head', rot=(-85, 0, 0), seg=6, scale=(1.0, 0.6, 1.0))
+    f.box((0.05, 0.03, 0.1), (0.028, 0.66, hz - 0.27), claw, 'head')
+    f.box((0.05, 0.03, 0.1), (-0.028, 0.66, hz - 0.27), claw, 'head')
+    for e in (1, -1):
+        f.ball(0.045, (0.13 * e, 0.4, hz + 0.06), eye, 'head', seg=6, rings=4)
+        f.ball(0.17, (0.24 * e, 0.06, hz + 0.24), fur, 'head', scale=(1.0, 0.3, 1.0), rot=(0, 0, -25 * e), seg=8, rings=5)
+        f.ball(0.12, (0.25 * e, 0.1, hz + 0.24), pink, 'head', scale=(1.0, 0.25, 1.0), rot=(0, 0, -25 * e), seg=8, rings=5)
+        for k in (-1, 0, 1):
+            f.stab((0.07 * e, 0.68, hz - 0.1), (0.36 * e, 0.66 + 0.04 * k, hz - 0.08 + 0.07 * k), 0.008, 0.004, claw, 'head', seg=3)
+    f.cyl(0.19, 0.22, 0.14, (0, 0.12, hz + 0.27), gold, 'head', rot=(-10, 8, 0), seg=8)
+    rnd = random.Random(7)
+    for k in range(5):
+        a = k * math.tau / 5 + 0.3
+        h = 0.12 + rnd.random() * 0.1
+        f.cyl(0.06, 0.0, h, (math.cos(a) * 0.19, 0.12 + math.sin(a) * 0.19, hz + 0.34 + h / 2), gold, 'head',
               rot=(rnd.uniform(-12, 12), rnd.uniform(-12, 12), 0), seg=4)
-    f.ball(0.05, (0, 0.34, 1.77), ruby, 'head', scale=(1, 0.6, 1), seg=6, rings=4)
-    # Arme: dicke Ärmel, Hände; rechts das Szepter (Kanaldeckel auf krummem Stock)
-    def arm(s, side):
-        f.glied('arm.' + side, 0.18, 0.15, cloak, ext=(0.05, 0))
-        f.glied('fore.' + side, 0.15, 0.11, rag)
-        f.ball(0.12, f.J['fore.' + side][1], skin, 'fore.' + side, seg=8, rings=5)
-        f.glied('thigh.' + side, 0.16, 0.13, rag, ext=(0.05, 0.02))
-        f.glied('shin.' + side, 0.13, 0.12, rag)
+    f.ball(0.045, (0, 0.33, hz + 0.27), ruby, 'head', scale=(1, 0.6, 1), seg=6, rings=4)
+    # Arme mit Krallen; rechts das Szepter (Kanaldeckel auf krummem Rohr), Beine mit Rattenfüßen
+    def glieder(s, side):
+        f.ball(0.15, f.J['arm.' + side][0], fur, 'chest', seg=8, rings=5)
+        f.glied('arm.' + side, 0.14, 0.11, fur)
+        f.glied('fore.' + side, 0.11, 0.08, fur2, ext=(0.03, 0))
+        t = f.J['fore.' + side][1]
+        f.ball(0.1, t, pink, 'fore.' + side, seg=8, rings=5)
+        for k in (-1, 0, 1):
+            f.cyl(0.025, 0.0, 0.12, (t.x + 0.05 * k, t.y + 0.08, t.z - 0.06), claw, 'fore.' + side, rot=(-130, 0, 0), seg=4)
+        f.glied('thigh.' + side, 0.18, 0.12, fur, ext=(0.06, 0.02))
+        f.glied('shin.' + side, 0.1, 0.07, fur2)
         ft = f.J['shin.' + side][1]
-        f.box((0.24, 0.36, 0.14), (ft.x, ft.y + 0.07, 0.07), wood, 'shin.' + side, bevel=0.04)
-    f.spiegel(arm)
+        f.box((0.18, 0.4, 0.1), (ft.x, ft.y + 0.14, 0.05), pink, 'shin.' + side, bevel=0.03)
+        for k in (-1, 0, 1):
+            f.cyl(0.025, 0.0, 0.1, (ft.x + 0.06 * k, ft.y + 0.38, 0.04), claw, 'shin.' + side, rot=(-90, 0, 0), seg=4)
+        # Lumpenwickel am Unterschenkel
+        h0, h1 = f.J['shin.' + side]
+        f.stab(h0 + (h1 - h0) * 0.5, h0 + (h1 - h0) * 0.85, 0.11, 0.1, M('#8a7a5a', 0.95), 'shin.' + side)
+    f.spiegel(glieder)
+    # Schwanz: drei Glieder, nach hinten abfallend und wieder hoch
+    pts = [Vector((0, -0.3, 0.95)), Vector((0, -0.75, 0.6)), Vector((0.15, -1.15, 0.25)), Vector((0.35, -1.45, 0.3)), Vector((0.5, -1.6, 0.5))]
+    for i in range(len(pts) - 1):
+        f.stab(pts[i], pts[i + 1], 0.09 - i * 0.02, 0.07 - i * 0.02, pink, 'tail', seg=6)
     h = f.J['fore.R'][1]
-    f.stab((h.x, h.y, h.z - 0.55), (h.x + 0.02, h.y + 0.04, h.z + 0.05), 0.04, 0.045, wood, 'fore.R', seg=6)
-    f.stab((h.x + 0.02, h.y + 0.04, h.z + 0.05), (h.x - 0.04, h.y + 0.02, h.z + 0.62), 0.045, 0.04, wood, 'fore.R', seg=6)
-    top = Vector((h.x - 0.04, h.y + 0.02, h.z + 0.72))
-    f.cyl(0.2, 0.2, 0.05, tuple(top), rust, 'fore.R', rot=(90, 0, 0), seg=10)
+    f.stab((h.x, h.y, h.z - 0.75), (h.x + 0.02, h.y + 0.02, h.z + 0.05), 0.04, 0.045, rust, 'fore.R', seg=6)
+    f.stab((h.x + 0.02, h.y + 0.02, h.z + 0.05), (h.x - 0.04, h.y, h.z + 0.62), 0.045, 0.04, rust, 'fore.R', seg=6)
+    top = Vector((h.x - 0.04, h.y, h.z + 0.72))
+    f.cyl(0.2, 0.2, 0.05, tuple(top), M('#3a3a3e', 0.6, 0.6), 'fore.R', rot=(90, 0, 0), seg=10)
     for k in (-1, 0, 1):
-        f.box((0.04, 0.07, 0.34), (top.x + k * 0.09, top.y, top.z), M('#3a2a20', 0.9), 'fore.R')
-    f.cyl(0.08, 0.1, 0.06, (top.x, top.y, top.z + 0.22), tin, 'fore.R', seg=6)
-    for k in range(4):
-        a = k * math.tau / 4
-        f.cyl(0.03, 0.0, 0.08, (top.x + math.cos(a) * 0.07, top.y + math.sin(a) * 0.07, top.z + 0.28), tin, 'fore.R', seg=4)
-    # Ratten: Krone, Schulter, Mantel hinten, Bauch, Szepter
-    ratte(f, (0.06, 0.02, 2.0), 60, 'head', 0.9, rx=-10)
-    ratte(f, (0.56, 0.0, 1.38), 160, 'chest', 1.0)
-    ratte(f, (-0.3, -0.62, 0.9), 200, 'chest', 1.0, rx=-60)
-    ratte(f, (0.42, 0.42, 0.78), 40, 'chest', 0.9, rx=40)
-    ratte(f, (top.x + 0.06, top.y, top.z + 0.06), -80, 'fore.R', 0.8)
+        f.box((0.04, 0.07, 0.3), (top.x + k * 0.09, top.y, top.z), strap, 'fore.R')
+    # Ratten des Hofstaats: Schulter, Umhang, Szepter
+    ratte(f, (0.6, 0.06, 2.02), 160, 'chest', 1.0)
+    ratte(f, (-0.35, -0.55, 1.2), 200, 'chest', 1.0, rx=-60)
+    ratte(f, (0.3, -0.5, 0.7), 150, 'chest', 0.9, rx=-50)
+    ratte(f, (top.x + 0.06, top.y, top.z + 0.08), -80, 'fore.R', 0.8)
     return f
 
 
@@ -410,9 +436,21 @@ def vesna():
     f.box((0.06, 0.02, 0.2), (0, 0.3, 1.47), red, 'chest')
     f.box((0.2, 0.02, 0.06), (0, 0.3, 1.47), red, 'chest')
     f.cyl(0.32, 0.32, 0.07, (0, 0, 1.17), M('#4a3020', 0.8), 'hips', seg=10)
-    for k, x in enumerate((-0.24, -0.14, 0.18, 0.27)):
-        a = math.atan2(0.3, x)
-        f.cyl(0.035, 0.035, 0.13, (x, math.sqrt(max(0.0, 0.33 ** 2 - x * x)) * 0.95, 1.13), fluid, 'hips', seg=6)
+    # Blutegel-Gläser am Gürtel (Glas, dunkle Egel, Korken) und Arzttasche an der linken Hüfte
+    glass, leech, cork = M('#9ad8c0', 0.1, 0.0, 0.6), M('#2a1418', 0.6), M('#a07848', 0.9)
+    for x in (-0.24, -0.1, 0.06):
+        y = math.sqrt(max(0.0, 0.34 ** 2 - x * x))
+        f.cyl(0.055, 0.055, 0.16, (x, y, 1.08), glass, 'hips', seg=8)
+        f.ball(0.03, (x + 0.01, y + 0.02, 1.06), leech, 'hips', scale=(0.7, 0.7, 1.6), seg=5, rings=3)
+        f.cyl(0.045, 0.045, 0.04, (x, y, 1.18), cork, 'hips', seg=6)
+    bag, bag2 = M('#5a3420', 0.75), M('#3a2014', 0.8)
+    f.box((0.18, 0.4, 0.3), (0.38, 0.02, 0.92), bag, 'hips', bevel=0.05)
+    f.box((0.2, 0.42, 0.06), (0.38, 0.02, 1.06), bag2, 'hips', bevel=0.02)
+    f.box((0.03, 0.14, 0.04), (0.48, 0.02, 1.0), brass, 'hips')
+    f.box((0.02, 0.12, 0.12), (0.475, 0.02, 0.9), white, 'hips')
+    f.box((0.025, 0.04, 0.1), (0.485, 0.02, 0.9), red, 'hips')
+    f.box((0.025, 0.1, 0.035), (0.485, 0.02, 0.9), red, 'hips')
+    f.stab((0.3, 0.02, 1.08), (-0.2, 0.0, 1.62), 0.025, 0.025, bag2, 'chest', seg=4)
     # Kopf: Kapuze, Pestmaske mit Schnabel, Schutzbrille, Schwesternhaube
     f.cyl(0.11, 0.12, 0.1, (0, 0, 1.7), coat2, 'head', seg=8)
     f.ball(0.25, (0, -0.02, 1.88), coat2, 'head', scale=(1.0, 1.05, 1.08), seg=10)
@@ -594,7 +632,7 @@ def merge(*ps):
 # Je Held: wie stark die Arme beim Laufen pendeln, Grundhaltung, Angriff und Zauber.
 STIL = {
     'torvik': {'swing': 22, 'step': 34, 'bob': 0.05, 'lean': 8},
-    'unrat': {'swing': 30, 'step': 30, 'bob': 0.06, 'lean': 4, 'waddle': 8},
+    'unrat': {'swing': 26, 'step': 30, 'bob': 0.06, 'lean': 6, 'waddle': 5},
     'vesna': {'swing': 4, 'step': 30, 'bob': 0.035, 'lean': 6},
     'zix': {'swing': 0, 'step': 30, 'bob': 0.07, 'lean': 3, 'mech': True},
 }
@@ -607,7 +645,7 @@ def animieren(hid, rig):
     br = {'chest': [(X, -2.5)], 'head': [(X, 2)], 'arm.L': [(Y, -3)], 'arm.R': [(Y, 3)]}
     if st.get('mech'):
         br = {'chest': [(X, -2)], 'head': [(Z, 8)], 'arm.R': [(X, 5)]}
-    A.action('idle', [(1, {}, None), (25, br, (0, 0, -0.012)), (49, {}, None)])
+    A.action('idle', [(1, {}, None), (25, merge(br, {'tail': [(Z, 12)]}), (0, 0, -0.012)), (49, {}, None)])
     # Laufen: 16 Bilder je Doppelschritt
     N, S = 8, 16
     frames = []
@@ -623,6 +661,7 @@ def animieren(hid, rig):
              'hips': [(Z, -6 * s), (X, st['lean'])], 'chest': [(Z, 9 * s)], 'head': [(Z, -4 * s), (X, -st['lean'] * 0.6)]}
         if st.get('waddle'):
             p['hips'].append((Y, st['waddle'] * s))
+        p['tail'] = [(Z, 18 * s), (X, 6 * c)]
         if st.get('mech'):
             p['chest'] = [(X, 4 * c), (Y, 3 * s)]
             p['head'] = [(Y, -5 * s)]
