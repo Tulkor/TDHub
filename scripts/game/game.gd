@@ -1907,26 +1907,14 @@ func idle_speed_factor() -> float:
 	return maxf(float(Database.balance.get("idle_speed_factor", 1.0)), 1.0)
 
 
+## Weiterleitung → System  targeting
 func find_targets(t: Tower, count: int) -> Array:
-	if count == 1:
-		# häufigster Fall ohne Lambda, Zwischenliste und Sortieren: der am weitesten gelaufene Gegner in Reichweite
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets(t, count)
 
 
+## Weiterleitung → System  targeting
 func enemies_in_radius(p: Vector2, radius: float) -> Array:
-	var out := []
-	var r2 := radius * radius
-	for e in enemies:
-		if not e.dead and e.pos.distance_squared_to(p) <= r2:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(p, radius)
 
 
 ## fx: Schuss-/Treffer-Effekt, siehe effects.gd

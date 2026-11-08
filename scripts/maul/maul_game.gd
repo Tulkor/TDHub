@@ -1042,40 +1042,19 @@ func frost_factor(t) -> float:
 	return 1.0
 
 
+## Weiterleitung → System  targeting
 func find_targets(t, count: int) -> Array:
-	if count == 1:
-		# häufigster Fall ohne Lambda und Sortieren (wie game.gd)
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets(t, count)
 
 
+## Weiterleitung → System  targeting
 func find_targets_in(t, r: float, count: int) -> Array:
-	var r2 := r * r
-	if count == 1:
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and e.pos.distance_squared_to(t.pos) <= r2 \
-					and t.can_target(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and e.pos.distance_squared_to(t.pos) <= r2)
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets_in(t, r, count)
 
 
+## Weiterleitung → System  targeting
 func enemies_in_radius(p: Vector2, radius: float) -> Array:
-	var out := []
-	var r2 := radius * radius
-	for e in enemies:
-		if not e.dead and e.pos.distance_squared_to(p) <= r2:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(p, radius)
 
 
 ## fx wie bei game.gd ("t:<tower>:<stufe>"); FxData wählt den Effekt nach Filialfarbe und Fähigkeit.

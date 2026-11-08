@@ -605,29 +605,14 @@ func choose_perk(i: int) -> void:
 
 # ---------------------------------------------------------------- Kampf
 
+## Weiterleitung → System  targeting
 func nearest(from: Vector3, rng_: float, skip: Array = []) -> SvEnemy:
-	var best: SvEnemy = null
-	var bd := INF
-	for e in enemies:
-		if e.dead or skip.has(e):
-			continue
-		var p: Vector3 = e.global_position
-		var d: float = Vector2(p.x - from.x, p.z - from.z).length() - e.size * 0.5
-		if d <= rng_ and d < bd:
-			bd = d
-			best = e
-	return best
+	return systems.targeting.nearest(Vector2(from.x, from.z), rng_, skip)
 
 
+## Weiterleitung → System  targeting
 func in_radius(at: Vector3, r: float) -> Array:
-	var out: Array = []
-	for e in enemies:
-		if e.dead:
-			continue
-		var p: Vector3 = e.global_position
-		if Vector2(p.x - at.x, p.z - at.z).length() <= r + e.size * 0.5:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(Vector2(at.x, at.z), r)
 
 
 ## Schaden mit Resistenz der Schadensart und Rüstung (Rüstung wirkt nicht auf Brennen und Gift).

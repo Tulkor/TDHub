@@ -43,9 +43,9 @@
 			"haken": ["profile_mode", "_apply_enemy_difficulty", "scaling"]
 		},
 		"targeting": {
-			"titel": "Ziele, Reichweite, Deckung, Leerlauf-Tempo",
+			"titel": "Ziele finden, Gegner im Kreis, nächster Gegner",
 			"etappe": 3,
-			"eigen": ["find_targets", "find_targets_in", "enemies_in_radius", "is_covered", "_refresh_cover", "free_stretch", "idle_speed_factor", "nearest_enemy", "enemies_in", "nearest", "in_radius"]
+			"eigen": ["find_targets", "find_targets_in", "enemies_in_radius", "nearest_enemy", "nearest", "in_radius"]
 		},
 		"economy": {
 			"titel": "Gold, Einkommen, Leben, Leak-Strafe",
@@ -83,9 +83,9 @@
 			"klasse": "Leveling"
 		},
 		"build": {
-			"titel": "Bauen, Belegen, Wege, Lichtpfad",
+			"titel": "Bauen, Belegen, Wege, Lichtpfad, Deckung",
 			"etappe": 7,
-			"eigen": ["can_place", "_occupy", "_register", "_unregister", "may_build_for", "would_block", "build_problem", "_update_paths", "_refresh_paths", "set_path_lights", "set_show_all_paths", "has_other_paths"]
+			"eigen": ["can_place", "_occupy", "_register", "_unregister", "may_build_for", "would_block", "build_problem", "_update_paths", "_refresh_paths", "set_path_lights", "set_show_all_paths", "has_other_paths", "is_covered", "_refresh_cover", "free_stretch", "idle_speed_factor"]
 		},
 		"controls": {
 			"titel": "Eingabe, Auswahl, Hover, Pause, Tempo",

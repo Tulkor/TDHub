@@ -71,7 +71,7 @@
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory"],
-			"system_cfg": {"run_record": {"profile": "heroes"}, "difficulty": {"source": "cfg", "key": "heroes"}}
+			"system_cfg": {"run_record": {"profile": "heroes"}, "difficulty": {"source": "cfg", "key": "heroes"}, "targeting": {"position": "xz", "radius": "radius"}}
 		},
 		{
 			"id": "survivors",
@@ -83,7 +83,7 @@
 			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
 			"needs_map": false,
 			"systems": ["run_record", "targeting", "economy", "waves"],
-			"system_cfg": {"run_record": {"profile": "survivors"}}
+			"system_cfg": {"run_record": {"profile": "survivors"}, "targeting": {"position": "global_xz", "radius": "half_size"}}
 		}
 	]
 }
