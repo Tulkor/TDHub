@@ -602,7 +602,7 @@ function viewMaulLevel(i) {
 
 // ---------------------------------------------------------------- Zeichnen
 let rendering = false;
-// ---- Level & EP (data/leveling.json, scripts/game/leveling.gd)
+// ---- Level & EP (data/leveling.json, scripts/systems/leveling/leveling.gd)
 const LEVEL_FILE = "data/leveling.json";
 const CURVE_TYPES = { konstant: "Konstant (jede Stufe base)", linear: "Linear (base + step × (Level − 1))", exponentiell: "Exponentiell (base × growth^(Level − 1))", formel: "Eigene Formel", tabelle: "Tabelle (EP je Stufe)" };
 const CURVE_FORMULAS = { konstant: "base", linear: "base + step * (level - 1)", exponentiell: "base * pow(growth, level - 1)" };
@@ -775,7 +775,7 @@ function viewLevelProfile(id) {
   return out;
 }
 
-// ---- Aufstieg (data/ascension.json, scripts/game/ascension.gd)
+// ---- Aufstieg (data/ascension.json, scripts/systems/difficulty/ascension.gd)
 const ASC_FILE = "data/ascension.json";
 const ASC_MODES = { gemtd: "GemTD", roguelike: "GemTD Roguelike", eeve: "eeveTD", maul: "Shopping Maul", randgruppen: "Randgruppen TD", youtd: "YouTD" };
 const ASC_STATS = { hp: "Gegner-Leben", speed: "Gegner-Tempo", armor: "Gegner-Rüstung" };
