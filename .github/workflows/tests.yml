@@ -1,0 +1,59 @@
+# Tests bei jedem PR, aber nur für die Modi, deren Dateien sich geändert haben (tools/test_auswahl.py,
+# Regeln in tests/bereiche.json). Gemeinsamer Code -> alle schnellen Tests. Lange "fest"-Tests laufen hier
+# nicht, nur lokal (tools/run_tests.sh alle oder geaendert). Von Hand mit "alle": Actions > Tests > Run workflow.
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      auswahl:
+        description: "geaendert (gegen main) oder schnell"
+        default: schnell
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GEMTD_SPRACHE: de
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Godot zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/godot
+          key: godot-4.3-linux
+
+      - name: Godot
+        run: tools/setup_godot.sh --ohne-vorlage
+
+      - name: Welche Tests?
+        env:
+          BASIS: ${{ github.base_ref && format('origin/{0}', github.base_ref) || 'origin/main' }}
+        run: |
+          echo "TEST_BASIS=$BASIS" >> "$GITHUB_ENV"
+          python3 tools/test_auswahl.py --basis="$BASIS" --ohne-fest --erklaeren
+
+      - name: Tests
+        run: |
+          if [ "${{ inputs.auswahl || 'geaendert' }}" = schnell ]; then
+            tools/run_tests.sh schnell
+          else
+            tools/run_tests.sh geaendert --basis="$TEST_BASIS" --ohne-fest
+          fi
+
+      - name: Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: /tmp/gemtd-tests/
+          retention-days: 7

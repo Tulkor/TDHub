@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name boss)
+## Modi: kern
 ## Boss-Modell (enemy.gd → BOSS_MODEL): Bosse ohne eigenes Modell bekommen den animierten "Little Man",
 ## laufen mit "walk", stehen betäubt mit "idle", zucken bei großen Treffern und hinterlassen beim Tod
 ## kurz eine Leiche mit "death", die sich selbst wieder entfernt.

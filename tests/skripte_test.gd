@@ -1,4 +1,5 @@
 extends Node
+## Modi: kern
 ## Lädt jedes GDScript unter res://scripts, res://tools und res://tests einmal, damit Parse- und
 ## Typfehler auch in Dateien auffallen, die kein anderer Test öffnet (Editoren, Menüs, Panels).
 ## Start: godot --headless --path . res://tests/skripte_test.tscn (oder tools/run_tests.sh skripte)

@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name ytfaehig)
+## Modi: youtd
 ## YouTD Etappe 2: alle 690 Tower (214 Skripte aus YouTD 2) stehen in Gruppen am Weg, schießen auf Gegner mit allen
 ## 41 Wellen-Eigenschaften, steigen im Level auf, zaubern von Hand und werden aufgewertet. Godot-Fehler aus den
 ## Skripten zeigt run_tests.sh als ⚠. Start: godot --headless --path . res://tests/youtd_faehigkeiten_test.tscn

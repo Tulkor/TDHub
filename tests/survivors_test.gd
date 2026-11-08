@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name survivors)
+## Modi: survivors
 ## Tower Survivors: Daten, Start, Laden (Kaufen, Stufe hoch, Verkaufen, Neu würfeln), Upgrades,
 ## jede Waffe trifft, Bonus-Wahl, Bot-Lauf bis zum Ende (Einfach und Schwer), Eintrag im Profil.
 ## Balance genauer: tools/survivors_sim.tscn (mehrere Läufe je Stufe).

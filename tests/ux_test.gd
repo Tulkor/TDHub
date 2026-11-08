@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name ux)
+## Modi: kern
 ## Komfort im Spiel (Lukas 2026-11-03): letzte Wahl merken, Autosave und „Weiterspielen“, Pause mit P,
 ## Schilder über den neuen Gems, Warnung vor Luftwellen, Hover-Reichweite, Reiter rechts, Liste nach Sorte,
 ## Reichweitenring beim Setzen, Auto-Start der nächsten Welle.

@@ -1,5 +1,6 @@
 extends "res://tests/lib/tower_probe.gd"
 ## Lauf: fest (Name towmaul)
+## Modi: shoppingmaul
 ## Shopping Maul: jeder Tower aller Filialen einzeln, Schaden und alle Fähigkeiten (tests/lib/tower_probe.gd).
 ## Start: tools/tower_pruefen.sh maul
 

@@ -1,4 +1,5 @@
 extends Node
+## Modi: eevetd
 ## eeveTD: Daten, Wellen und ein kurzes Spiel (Barrikade bauen, Element setzen, aufwerten, Level 1 spielen).
 ## Start: godot --headless --path . res://tests/eeve_test.tscn (oder tools/run_tests.sh eeve)
 

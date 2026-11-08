@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name ytitems)
+## Modi: youtd
 ## YouTD Etappe 3: alle 315 Items (135 mit Skript aus YouTD 2) liegen in Towern am Weg, während Gegner laufen; Zauber
 ## der Items werden von Hand ausgelöst, Items wieder herausgenommen, Öle verbraucht, Verbrauchsgegenstände benutzt.
 ## Dazu die 7 Rezepte des Horadrischen Würfels, die 21 Baumeister und Items beim Aufwerten. Godot-Fehler aus den

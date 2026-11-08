@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name heroes)
+## Modi: heroes
 ## Bollwerk (Hero Defense, Modus heroes): Daten, CC mit abnehmender Wirkung (normal/Elite/Boss,
 ## Zurücksetzen, Verlangsamung und Rüstungssenkung auf Bossen halb), Warnflächen-Formen,
 ## Gegner-KI (Straße, Aggro, Leine, Angreifer, Helden vor Gebäuden), Fähigkeit beim Aufladen

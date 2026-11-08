@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: paar (Name netz)
+## Modi: kern
 ## Mehrspieler-Test mit zwei Prozessen auf demselben Rechner:
 ##   godot --headless --path . res://tests/net_test.tscn -- --role=host
 ##   godot --headless --path . res://tests/net_test.tscn -- --role=client
