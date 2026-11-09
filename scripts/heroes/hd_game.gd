@@ -1039,6 +1039,7 @@ func _remove(e: HdEnemy) -> void:
 func _kill(e: HdEnemy) -> void:
 	if e.dead:
 		return
+	e.leave_corpse()
 	_remove(e)
 	if e.plagued():
 		_spread_plague(e)

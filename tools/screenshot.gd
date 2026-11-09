@@ -3,7 +3,7 @@ extends Node
 ## Start über tools/screenshot.sh (setzt Xvfb und OpenGL), Optionen nach "--":
 ##   --szene=spiel|menu|map_editor|tower_editor|maul|heroes|survivors   Standard spiel
 ##   survivors: --zeit=S --bonus --nah --gold=N --klappe=S --waffe=id --neigung=Grad --auswahl=turm|1..6 --abwahl
-##   Bollwerk (--szene=heroes): --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
+##   Bollwerk (--szene=heroes): --gegner=id,id stellt Gegner vor den Helden, --zeit=S Bot spielt S Sekunden (Standard 150), --stufe=0|1|2, --setup Startfenster,
 ##     Etappe 3: --welle=N ab Welle N, --boss=N Kriegsherr der Welle N, --zone=arena|hain|schmiede|pruefung [--pruefung=jagd|tanz]
 ##     (Held steht in der Zone, mit Ausrüstung), --ereignis=haendler|karawane|blutmond|gefangener|schrein,
 ##                           --warnung warten, bis Warnflächen halb gefüllt sind, --boss ab Welle 10, --nah Kamera näher,
@@ -497,6 +497,16 @@ func _prepare_survivors(game: Node) -> void:
 		return
 	game.rng.seed = int(opts.get("seed", "1"))
 	game.gold += float(opts.get("gold", "0"))
+	# --gegner=a,b,c stellt diese Gegner in einer Reihe vor den Helden (Modelle ansehen), meist mit --zeit=1
+	if opts.has("gegner"):
+		game.spawn_queue.clear()
+		for e in game.enemies.duplicate():
+			game._remove(e)
+		var ids := str(opts.gegner).split(",")
+		game.hero.position += Vector3(10, 0, 4)  # weg von der Feste, damit nichts verdeckt
+		var p0: Vector3 = game.hero.position + Vector3(-1.6 * (ids.size() - 1), 0, 3.5)
+		for i in ids.size():
+			game.spawn(ids[i], p0 + Vector3(3.2 * i, 0, 0))  # schauen zur Kamera, solange --zeit=0
 	var left := float(opts.get("zeit", "150"))
 	var dt := 1.0 / 30.0
 	var k := 0
@@ -614,6 +624,16 @@ func _prepare_heroes(game: Node) -> void:
 			"pruefung":
 				if opts.has("pruefung"):
 					game.shop.act({"kind": "trial", "id": str(opts.pruefung)})
+	# --gegner=a,b,c stellt diese Gegner in einer Reihe vor den Helden (Modelle ansehen), meist mit --zeit=1
+	if opts.has("gegner"):
+		game.spawn_queue.clear()
+		for e in game.enemies.duplicate():
+			game._remove(e)
+		var ids := str(opts.gegner).split(",")
+		game.hero.position += Vector3(10, 0, 4)  # weg von der Feste, damit nichts verdeckt
+		var p0: Vector3 = game.hero.position + Vector3(-1.6 * (ids.size() - 1), 0, 3.5)
+		for i in ids.size():
+			game.spawn(ids[i], p0 + Vector3(3.2 * i, 0, 0))  # schauen zur Kamera, solange --zeit=0
 	var left := float(opts.get("zeit", "150"))
 	var dt := 1.0 / 30.0
 	var k := 0

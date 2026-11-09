@@ -66,6 +66,12 @@ var _side_dir := Vector3.ZERO
 var _side_t := 0.0
 var _last_dir := Vector3.FORWARD
 var _body: Node3D
+## Modell aus Blender (tools/modelle/bollwerk_figuren.py): Animationen idle, run, attack, cast, hit, death
+var _anim: AnimationPlayer = null
+var _anim_name := ""
+var _anim_lock := 0.0
+var _anim_pos := Vector3.ZERO
+var _anim_flash := 0.0
 ## Etappe 3: Sonderzonen, Fraktionen, Elite-Eigenschaften, Bosse
 var zone := ""                 ## Sonderzone/Ereignis (arena, hain, pruefung, raid, kerker, siege): steht an home statt auf einer Straße
 var home := Vector3.ZERO
@@ -116,6 +122,94 @@ func setup(g, d: Dictionary, wave: int) -> void:
 	_build_body()
 	if d.has("encounter"):
 		boss_brain = HdBossBrain.new(self)
+	_load_model()
+
+
+## Eigenes Modell ("model" in data/heroes.json): blendet die Dev-Formen aus, Elite-Kugeln kommen danach dazu.
+func _load_model() -> void:
+	var path := str(def.get("model", ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return
+	var scene = load(path)
+	if not scene is PackedScene:
+		return
+	for c in _body.get_children():
+		c.visible = false
+	var m: Node3D = scene.instantiate()
+	m.scale = Vector3.ONE * float(def.get("model_scale", 1.0))
+	_body.add_child(m)
+	var players := m.find_children("*", "AnimationPlayer", true, false)
+	if players.is_empty():
+		return
+	_anim = players[0]
+	for a in ["idle", "run"]:
+		if _anim.has_animation(a):
+			_anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+	_anim_pos = position
+	_play("idle")
+	if _anim.is_playing():
+		_anim.seek(randf() * _anim.current_animation_length)
+
+
+func has_model() -> bool:
+	return _anim != null
+
+
+func _play(a: String, lock := 0.0, speed := 1.0) -> void:
+	if _anim == null or not _anim.has_animation(a):
+		return
+	if a != _anim_name or lock > 0.0:
+		_anim.play(a, 0.12 if lock <= 0.0 else 0.05)
+		if lock > 0.0:
+			_anim.seek(0.0, true)
+		_anim_name = a
+	_anim.speed_scale = speed
+	if lock > 0.0:
+		_anim_lock = _anim.get_animation(a).length / maxf(speed, 0.1)
+
+
+## Laufen/Stehen nach Bewegung, Treffer-Zucken; Angriff und Zauber starten in _attack/start_cast.
+func _anim_step(dt: float, stunned: bool) -> void:
+	if _anim == null:
+		return
+	var moved := Vector2(position.x - _anim_pos.x, position.z - _anim_pos.z).length() / maxf(dt, 0.0001)
+	_anim_pos = position
+	_anim_lock = maxf(0.0, _anim_lock - dt)
+	_anim_flash -= dt
+	if stunned:
+		_play("idle", 0.0, 0.0)
+		return
+	if hit_flash > 0.1 and _anim_lock <= 0.0 and _anim_flash <= 0.0 and rank != "boss":
+		_anim_flash = 1.2
+		_play("hit", 0.01)
+		return
+	if _anim_lock > 0.0:
+		return
+	if moved > 0.3:
+		_play("run", 0.0, clampf(moved / maxf(height(), 0.5) * 0.35, 0.5, 2.2))
+	else:
+		_play("idle")
+
+
+## Getötet: das Modell bleibt kurz liegen (Animation death), der Gegner selbst ist schon weg.
+func leave_corpse() -> void:
+	if _anim == null or not _anim.has_animation("death") or not is_inside_tree():
+		return
+	var parent := get_parent()
+	var xf := _body.global_transform
+	remove_child(_body)
+	parent.add_child(_body)
+	_body.global_transform = xf
+	for c in _body.get_children():
+		if c is MeshInstance3D:
+			c.visible = false  # Elite-Kugeln
+	_body.rotation.z = 0.0
+	_anim.speed_scale = 1.0
+	_anim.play("death", 0.05)
+	var tw := _body.create_tween()
+	tw.tween_interval(2.0)
+	tw.tween_property(_body, "position:y", _body.position.y - height() * 0.6, 1.0)
+	tw.tween_callback(_body.queue_free)
 
 
 func _build_body() -> void:
@@ -281,6 +375,7 @@ func step(dt: float, now: float) -> void:
 		if boss_visual != null:
 			boss_visual.animate(now, phase, casting())
 	cc.update(now)
+	_anim_step(dt, cc.stunned(now))
 	hit_flash = maxf(0.0, hit_flash - dt)
 	if knock_t > 0.0:
 		knock_t -= dt
@@ -452,6 +547,7 @@ func provoke(source: Node3D) -> void:
 func _attack() -> void:
 	var a: Dictionary = def.attack
 	attack_cd = float(a.interval)
+	_play("attack", 0.01, clampf(0.9 / maxf(float(a.interval), 0.2), 1.0, 2.5))
 	var dmg := float(a.damage) * out_mult()
 	if bool(a.get("ranged", false)):
 		game.fx.tracer(position + Vector3(0, height() * 0.7, 0), target.position + Vector3(0, 1.0, 0), Color("c9a35a"))
@@ -537,6 +633,7 @@ func start_cast(aid: String, now: float) -> void:
 	ab_ready[aid] = now + float(ab.cooldown) * cd_mult
 	gap_until = now + float(ab.windup) + float(game.cfg.ai.ability_gap)
 	casts_started += 1
+	_play("cast", 0.01, clampf(1.0 / maxf(float(ab.windup), 0.3), 0.6, 2.0))
 	var tpos: Vector3 = target.position if target else position
 	var dir := tpos - position
 	dir.y = 0.0

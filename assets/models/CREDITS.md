@@ -179,3 +179,4 @@ Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/he
 ## Bezirk „Überwuchert“ (2026-11-08)
 
 - `bezirke/ueberwuchert/*.glb`: eigene Arbeit (CC0), erzeugt mit `tools/modelle/pilz_bau.py` (Blender, Texturen im Skript berechnet).
+Moor-Gegner `heroes/gegner/` (Sumpfling bis Grolm, 2026-11-09): ebenso eigene Arbeit aus `tools/modelle/bollwerk_figuren.py`, CC0.

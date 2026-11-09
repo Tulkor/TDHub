@@ -54,3 +54,6 @@ baut `pilz_einzel`, `pilz_bueschel`, `pilz_wand`, `pilz_wand_fenster`, `pilz_mau
 `scripts/map/bezirk_ueberwuchert.gd` (Aufbau in `AUFBAU`) daraus einen Hof zusammen: eeveTD/YouTD über das Map-Feld
 `"district": "ueberwuchert"` (statt Friedhof, Map-Editor „Bezirk“), Bollwerk über `arena.district` in `data/heroes.json`.
 Bild: `tools/screenshot.sh --map=eeve --bezirk=ueberwuchert --winkel=nah --punkt=96,63 --frei --ohnehud`.
+Bollwerk-Gegner (Moor): `<python mit bpy> -I tools/modelle/bollwerk_figuren.py -- assets/models/heroes/gegner [--nur=grolm]
+[--bogen=bogen.png] [--posen=posen.png] [--gruppe=reihe.png]`. Ein neuer Gegner = Funktion plus Einträge in `FIGUREN` (Höhe = size[1])
+und `STIL` (Angriffsart hieb/beide/wurf/stoss/stab/sprung); im Spiel `"model"` in `data/heroes.json`.
