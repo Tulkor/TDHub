@@ -97,6 +97,7 @@ func _ready() -> void:
 	if map == null:
 		return
 	scenery = EeveScenery.add_to(self)
+	scenery.start_cycle()
 	world = YtWorld.new()
 	board.add_child(world)
 	if mirror:
