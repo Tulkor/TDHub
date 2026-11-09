@@ -1,0 +1,6 @@
+{
+	"_info": "Basiswerte für Bauen, Wege und Deckung. solid: Tower blockieren die Gegner (Labyrinth), false = Gegner laufen auf festen Wegen. cover: \"towers\" = ein Gegner ist gedeckt, wenn ihn ein Tower angreifen oder mit einer Aura treffen kann (Mitspieler bekommen dazu die freien Wegstücke), \"rule\" = Haken cover_rule(e) des Modus. idle_speed: Tempo-Faktor ungedeckter Gegner, from \"balance\" (data/balance.json), \"rules\" (game.rules) oder \"value\", key/default/min. Ein Modus überschreibt sie in data/modes.json unter system_cfg.build; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"solid": true,
+	"cover": "towers",
+	"idle_speed": {"from": "balance", "key": "idle_speed_factor", "default": 1.0, "min": 1.0}
+}

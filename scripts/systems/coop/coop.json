@@ -1,0 +1,7 @@
+{
+	"_info": "Basiswerte für den Koop-Abgleich (alle auf einem Feld, der Host rechnet, coop_sync.gd). commands: Befehle, die jeder Mitspieler schicken darf; extra_commands: weitere des Modus. fields: Spielvariablen, die der Host zusätzlich schickt, Name im Stand -> Variable oder {var, ceil (ganze Zahl, nicht unter 0, damit sich der Stand nicht jedes Bild ändert), keys (Wörterbuch als Schlüsselliste)}; leere Listen behalten beim Mitspieler den alten Stand. tower_meta: ganzzahlige Tower-Metadaten, die mitgehen. Ein Modus überschreibt sie in data/modes.json unter system_cfg.coop; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"commands": ["place", "remove_rocks", "replace_rocks", "take_back", "option", "move_trap", "speed", "rogue_pick", "swap", "extra_chance"],
+	"extra_commands": [],
+	"fields": {},
+	"tower_meta": []
+}

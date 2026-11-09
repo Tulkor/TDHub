@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: fest --runs=1 (Name tempo)
+## Modi: gemtd
 ## Tempo-Test: macht jeder Tower bei 1×, 2× und 4× gleich viel Schaden in einer Welle?
 ## Start: godot --headless --fixed-fps 60 --path . res://tests/speed_test.tscn -- [--tower=ruby] [--runs=3]
 ## --fixed-fps legt die Bildrate fest (60 = typischer Monitor), das Spieltempo vervielfacht dann die Schrittweite.

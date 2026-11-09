@@ -1,4 +1,5 @@
 extends Node
+## Modi: shoppingmaul
 ## Test für Shopping Maul: godot --headless --path . res://tests/maul_test.tscn
 ## Lädt die Daten, prüft alle Wege, baut im Zentrum und spielt die ersten Level im Zeitraffer.
 

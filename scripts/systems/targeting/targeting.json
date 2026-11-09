@@ -1,0 +1,5 @@
+{
+	"_info": "Basiswerte für die Zielsuche. position: pos (e.pos ist Vector2), xz (e.position am Boden) oder global_xz (e.global_position am Boden). radius: leer (Gegner sind Punkte), radius (e.radius) oder half_size (e.size / 2) zählt zur Reichweite. Ein Modus überschreibt sie in data/modes.json unter system_cfg.targeting; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"position": "pos",
+	"radius": ""
+}

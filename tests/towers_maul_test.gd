@@ -1,5 +1,6 @@
 extends "res://tests/lib/tower_probe.gd"
 ## Lauf: fest (Name towmaul)
+## Modi: shoppingmaul
 ## Shopping Maul: jeder Tower aller Filialen einzeln, Schaden und alle Fähigkeiten (tests/lib/tower_probe.gd).
 ## Start: tools/tower_pruefen.sh maul
 
@@ -75,6 +76,18 @@ func _needs(t: Node, abilities: Array) -> Array:
 	if not t.plant().is_empty():
 		out.append("damage")
 	return out
+
+
+## Life: ein Kill dieses Towers (Chance schon auf 100 %) muss Leben zurückbringen.
+func _life(t: Node, seen: Dictionary) -> void:
+	var keep: int = game.lives
+	game.lives = game.max_lives - 10
+	game.players[0].aok_lives = 0
+	var e := _spawn(false, t.pos)
+	t._killed(e)
+	if game.lives > game.max_lives - 10:
+		seen.life = true
+	game.lives = keep
 
 
 func _spawn(flying: bool, p: Vector2) -> Node:

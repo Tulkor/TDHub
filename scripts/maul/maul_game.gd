@@ -43,6 +43,8 @@ class Player:
 	var emma_timer := 0.0
 	var away := false
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
 var rules: Dictionary
 var levels: Array
 var map: MaulMap
@@ -88,6 +90,10 @@ var level_save := {}        ## Einzelspiel: Stand vom Beginn des laufenden Level
 
 var phase := Phase.SETUP
 var difficulty := 1
+## Aufstiegsstufe (+1, +2, …) auf der höchsten Schwierigkeit (ascension.gd), wählt der Host im Startfenster.
+var ascension := 0
+## Nach der Partie neu freigeschaltete Stufe (0 = keine), fürs Ende-Fenster.
+var ascension_unlocked := 0
 var mode := "group"
 var level := 0               ## zuletzt gestartetes Level (1-basiert)
 var countdown := 0.0
@@ -139,6 +145,10 @@ var _detect_towers: Array = []
 var _range_preview: MeshInstance3D
 var _range_preview_r := -1.0
 var _hud_timer := 0.0
+
+
+func _init() -> void:
+	SystemHost.attach(self, "shoppingmaul")
 
 
 func _ready() -> void:
@@ -194,7 +204,7 @@ func _ready() -> void:
 	hud = MaulHud.new()
 	hud.game = self
 	add_child(hud)
-	_setup_inv_drop()
+	inv_drop = systems.inventory.setup_drop()
 	_refresh_paths()
 	camera_rig.look_at_point(map.zone_center(players[local_player].zone), 42.0)
 	hud.show_setup()
@@ -224,6 +234,8 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	if phase != Phase.SETUP:
 		return
 	difficulty = clampi(diff, 0, rules.get("difficulties", []).size() - 1)
+	if difficulty != systems.difficulty.top():
+		ascension = 0
 	mode = play_mode
 	sandbox = sandbox_on
 	foreign_build = foreign_on
@@ -247,6 +259,9 @@ func start_game(shop_id: String, diff: int, play_mode: String, sandbox_on := fal
 	countdown = float(rules.first_delay_many if m >= 4 else rules.first_delay)
 	phase = Phase.COUNTDOWN
 	_pick_shop(local_player, shop_id)
+	if solo():
+		Engine.time_scale = Session.speed
+		auto_wave = Session.auto_wave_on()
 	_refresh_hud()
 
 
@@ -302,6 +317,8 @@ func _process(delta: float) -> void:
 	if not mirror:
 		match phase:
 			Phase.COUNTDOWN:
+				if auto_wave and level > 0 and solo():
+					countdown = 0.0
 				countdown -= delta
 				if countdown <= 0.0:
 					_start_level(level + 1)
@@ -375,6 +392,9 @@ func _start_level(n: int) -> void:
 		return
 	if not mirror:
 		level_save = MaulSave.state(self)
+	# Einzelspiel: vor jedem Level still speichern („Weiterspielen“ im Hub, Lukas 2026-11-03)
+	if n > 1 and solo() and not Session.skip_setup and not sandbox:
+		MaulSave.save(self)
 	level = n
 	var lv := level_def(n)
 	level_kind = str(lv.get("kind", "ground"))
@@ -460,6 +480,7 @@ func _spawn(index: int) -> void:
 	var route: Dictionary = map.maul.routes[s.route]
 	var lv := level_def(level)
 	var e := MaulEnemy.new()
+	var asc: Dictionary = systems.difficulty.ascension_mods()
 	e.net_id = _next_enemy_id
 	_next_enemy_id += 1
 	e.route = str(s.route)
@@ -500,9 +521,9 @@ func _spawn(index: int) -> void:
 		"color": _enemy_color(),
 	}
 	var o := {
-		"hp": level_hp,
-		"speed": speed / 128.0,
-		"armor": armor,
+		"hp": level_hp * float(asc.hp) + float(asc.hp_add),
+		"speed": (speed / 128.0) * float(asc.speed) + float(asc.speed_add),
+		"armor": armor * float(asc.armor) + float(asc.armor_add),
 		"bounty": float(lv.get("bounty", 1)),
 		"armor_type": str(lv.get("armor_type", "medium")),
 		"size": 1.6 if boss else 1.0,
@@ -641,13 +662,11 @@ func _record_profile(won: bool) -> void:
 ## Run ins allgemeine Profil (profile.gd), auch mit Sandbox und Debug (dann nur in der Liste).
 func _record_run(won: bool) -> void:
 	var me = players[local_player]
-	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "victory": won,
+	var info := {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension, "victory": won,
 		"wave": levels_done, "waves": levels.size(), "lives": lives, "max_lives": max_lives, "kills": enemies_killed,
 		"play_time": roundi(play_time), "coop": players.size() > 1, "players": players.size(),
-		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox,
-		"debug": debug_run(), "time_counted": profile_time}
-	profile_time = roundi(play_time)
-	Profile.record_run("maul", info, run_stats.result(_my_towers()))
+		"xp": me.xp, "xp_gain": me.xp - xp_start, "gold": me.gold, "sandbox": sandbox}
+	systems.run_record.finish(info, run_stats.result(_my_towers()))
 
 
 ## Debug-Menü, Sandbox oder Unsterblich in diesem Run: keine XP, zählt nicht für Siege und Rekorde (nur die Zeit).
@@ -657,12 +676,10 @@ func debug_run() -> bool:
 
 ## Spiel verlassen, bevor die Partie zu Ende ist: Zeit ins Profil, ohne Speichern auch als abgebrochen.
 func _record_abort() -> void:
-	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0 or roundi(play_time) - profile_time < 10:
+	if phase >= Phase.GAME_OVER or phase == Phase.SETUP and levels_done == 0:
 		return
-	Profile.record_abort("maul", {"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty,
-		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time),
-		"debug": debug_run(), "time_counted": profile_time, "saved": SaveGame.writes > _saves_at_start})
-	profile_time = roundi(play_time)
+	systems.run_record.abort({"map": shop_of(local_player), "shop": shop_of(local_player), "difficulty": difficulty, "ascension": ascension,
+		"wave": levels_done, "waves": levels.size(), "lives": lives, "kills": enemies_killed, "play_time": roundi(play_time)})
 
 
 func _my_towers() -> Array:
@@ -767,10 +784,13 @@ func has_other_paths() -> bool:
 	return not _other_path_pts.is_empty()
 
 
+## Weiterleitung → System  build
 func set_show_all_paths(on: bool) -> void:
-	show_all_paths = on
-	if hud.paths_button != null:
-		hud.paths_button.set_pressed_no_signal(on)
+	systems.build.set_show_all_paths(on)
+
+
+## Haken des Systems build: „alle Wege“ umgeschaltet.
+func show_paths() -> void:
 	_show_paths()
 
 
@@ -790,13 +810,9 @@ func _path_light_color(p: Vector2) -> Color:
 	return Board3D.PLAYER_COLORS[z % Board3D.PLAYER_COLORS.size()]
 
 
-## Lichtpfad ein/aus (Knopf im HUD, Taste L); bleibt gespeichert. Solange er läuft, ohne Wegpunkte am Boden.
+## Weiterleitung → System  build
 func set_path_lights(on: bool) -> void:
-	Display.set_path_lights(on)
-	path_lights.visible = on
-	board.set_path_dots(not on)
-	if hud.lights_button != null:
-		hud.lights_button.set_pressed_no_signal(on)
+	systems.build.set_path_lights(on)
 
 
 ## Würde ein Tower auf diesen Feldern einen der Wege versperren?
@@ -978,19 +994,27 @@ func _remove_enemy(e) -> void:
 var selected_enemy = null
 
 
-## Leere Gebiete (ohne Tower) laufen die Gegner dreimal so schnell durch.
+## Weiterleitung → System  build
 func is_covered(e) -> bool:
+	return systems.build.is_covered(e)
+
+
+## Haken des Systems build (cover "rule"): leere Gebiete (ohne Tower) laufen die Gegner schneller durch
+## (system_cfg.build.idle_speed aus rules.empty_zone_speed).
+func cover_rule(e) -> bool:
 	var c := Vector2i(floori(e.pos.x / Board3D.CELL), floori(e.pos.y / Board3D.CELL))
 	var z := map.zone_at(c)
 	return z < 0 or _zone_towers[z] > 0
 
 
+## Weiterleitung → System  build
 func idle_speed_factor() -> float:
-	return float(rules.get("empty_zone_speed", 3.0))
+	return systems.build.idle_speed_factor()
 
 
-func free_stretch(_e) -> Array:
-	return [-1.0, -1.0]
+## Weiterleitung → System  build
+func free_stretch(e) -> Array:
+	return systems.build.free_stretch(e)
 
 
 func is_detected(e) -> bool:
@@ -1025,40 +1049,19 @@ func frost_factor(t) -> float:
 	return 1.0
 
 
+## Weiterleitung → System  targeting
 func find_targets(t, count: int) -> Array:
-	if count == 1:
-		# häufigster Fall ohne Lambda und Sortieren (wie game.gd)
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets(t, count)
 
 
+## Weiterleitung → System  targeting
 func find_targets_in(t, r: float, count: int) -> Array:
-	var r2 := r * r
-	if count == 1:
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and e.pos.distance_squared_to(t.pos) <= r2 \
-					and t.can_target(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and e.pos.distance_squared_to(t.pos) <= r2)
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets_in(t, r, count)
 
 
+## Weiterleitung → System  targeting
 func enemies_in_radius(p: Vector2, radius: float) -> Array:
-	var out := []
-	var r2 := radius * radius
-	for e in enemies:
-		if not e.dead and e.pos.distance_squared_to(p) <= r2:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(p, radius)
 
 
 ## fx wie bei game.gd ("t:<tower>:<stufe>"); FxData wählt den Effekt nach Filialfarbe und Fähigkeit.
@@ -1077,9 +1080,9 @@ func add_ring(p: Vector2, r: float, col: Color) -> void:
 		add_beam(Board3D.to_3d(p + Vector2(cos(a), sin(a)) * r, 0.15), Board3D.to_3d(p + Vector2(cos(b), sin(b)) * r, 0.15), col)
 
 
+## Weiterleitung → System  economy
 func add_gold(amount: int, p := -1) -> void:
-	players[acting if p < 0 else p].gold += amount
-	_refresh_hud()
+	systems.economy.add(amount, p)
 
 
 # --- Bauen -------------------------------------------------------------------------
@@ -1299,8 +1302,7 @@ func _execute(cmd: Dictionary) -> bool:
 				return true
 			return false
 		"speed":
-			Engine.time_scale = clampf(float(cmd.get("f", 1.0)), 1.0, 4.0)
-			return true
+			return systems.controls.set_speed(float(cmd.get("f", 1.0)))
 		"reveal":
 			var me: Player = players[p]
 			if me.reveal_ready > game_time or MaulData.rules().detect_shops.has(me.shop):
@@ -1544,13 +1546,7 @@ func move_item(p: int, from: Dictionary, to: Dictionary) -> bool:
 	var b := _tower(p, to.get("tower"))
 	var k := int(from.get("slot", -1))
 	var j := int(to.get("slot", -1))
-	var id: String = a.items[k]
-	if j >= 0 and j < b.items.size():
-		a.items[k] = b.items[j]
-		b.items[j] = id
-	else:
-		a.items.remove_at(k)
-		b.items.append(id)
+	systems.inventory.move(a.items, k, b.items, j)
 	a._item_cd.clear()
 	b._item_cd.clear()
 	_combine(a)
@@ -1819,9 +1815,7 @@ func _announce_unlocks(before: int, now: int) -> void:
 func _register(t: MaulTower) -> void:
 	towers[t.cell] = t
 	var cells := Board3D.footprint(t.cell)
-	for c in cells:
-		occupied[c] = t.cell
-		pathfinder.set_solid(c, true)
+	systems.build.occupy(t.cell, true)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] += 1
@@ -1832,9 +1826,7 @@ func _register(t: MaulTower) -> void:
 
 func _unregister(t: MaulTower) -> void:
 	towers.erase(t.cell)
-	for c in Board3D.footprint(t.cell):
-		occupied.erase(c)
-		pathfinder.set_solid(c, false)
+	systems.build.occupy(t.cell, false)
 	var z := map.zone_at(t.cell)
 	if z >= 0:
 		_zone_towers[z] -= 1
@@ -1874,27 +1866,13 @@ func choose_build(id: String) -> void:
 	hud.refresh_shop()
 
 
-# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (InvWorldDrop) ---
+# --- Inventar: Items auf einen anderen Tower in der Welt ziehen (System inventory) ---
 
 var inv_drop: InvWorldDrop
 
 
-func _setup_inv_drop() -> void:
-	inv_drop = InvWorldDrop.new()
-	inv_drop.tower_at = func():
-		return towers.get(occupied.get(board.mouse_cell(camera_rig.camera), NO_CELL))
-	inv_drop.reason = func(t: MaulTower, data: Dictionary) -> String:
-		return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
-	inv_drop.hint = func(t: MaulTower, _data: Dictionary) -> String:
-		return "+ " + tr("Einlegen · %d frei") % (t.slots() - t.items.size())
-	inv_drop.drop = func(t: MaulTower, data: Dictionary) -> void:
-		submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": t.cell, "slot": -1}})
-	inv_drop.mark = func(t, ok: bool) -> void:
-		board.hover_cell = t.cell if t != null else NO_CELL
-		board.hover_ok = ok
-		board.refresh_hover()
-	inv_drop.tell = func(text: String) -> void: show_message(text)
-	add_child(inv_drop)
+func inv_drop_reason(t: MaulTower, data: Dictionary) -> String:
+	return move_reason(local_player, data.get("from", {}), {"tower": t.cell, "slot": -1})
 
 
 func _update_hover() -> void:
@@ -1956,6 +1934,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				set_speed(4.0)
 			KEY_L:
 				set_path_lights(not path_lights.visible)
+			KEY_N:
+				if phase == Phase.COUNTDOWN:
+					submit({"type": "start_now"})
+			KEY_P, KEY_PAUSE:
+				set_user_paused(true)
 			KEY_DELETE:
 				if selected != null:
 					submit({"type": "sell", "cell": selected.cell})
@@ -2021,11 +2004,45 @@ func select_unit(u: MaulUnit) -> void:
 
 
 ## Spieltempo: im Koop bestimmt es der Host, Mitspieler schicken ihren Wunsch als Befehl.
+## Einzelspiel ohne Mitspieler: Pause, Auto-Start und gemerktes Tempo gibt es nur dort.
+func solo() -> bool:
+	return sync == null and not mirror and not Net.is_active() and players.size() <= 1
+
+
+var auto_wave := false  ## Schalter „Auto“: Countdown zwischen den Leveln überspringen
+var user_paused := false
+var _pause_input: PauseInput = null
+
+
+func set_auto_wave(on: bool) -> void:
+	auto_wave = on
+	Session.auto_wave[Session.game_kind] = on
+	Session.save_last()
+
+
+## Pause (Taste P, nur Einzelspiel): Welt steht, Kamera und Oberfläche laufen weiter.
+func set_user_paused(on: bool) -> void:
+	if not solo() or phase == Phase.SETUP or phase >= Phase.GAME_OVER:
+		on = false
+	user_paused = on
+	get_tree().paused = on
+	camera_rig.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.show_pause(on)
+	if _pause_input == null:
+		_pause_input = PauseInput.new()
+		_pause_input.on_event = func(e):
+			if e is InputEventKey and e.pressed and not e.echo and e.keycode in [KEY_P, KEY_PAUSE, KEY_ESCAPE]:
+				set_user_paused(false)
+				get_viewport().set_input_as_handled()
+		add_child(_pause_input)
+
+
 func set_speed(f: float) -> void:
 	if mirror:
 		submit({"type": "speed", "f": f})
 		return
-	Engine.time_scale = f
+	systems.controls.set_speed(f)
 	hud.refresh_live()
 
 

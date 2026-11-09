@@ -1,5 +1,6 @@
 extends "res://tests/lib/tower_probe.gd"
 ## Lauf: fest (Name towgemtd)
+## Modi: gemtd
 ## GemTD: alle Gems (jede Qualität) und Spezial-Tower (jede Stufe) einzeln, Schaden und alle Fähigkeiten
 ## (tests/lib/tower_probe.gd). Start: tools/tower_pruefen.sh gemtd
 

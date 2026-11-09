@@ -41,6 +41,7 @@ static func capture(game) -> Dictionary:
 	var st := {
 		"map": game.map.to_dict(),
 		"difficulty": Session.difficulty,
+		"ascension": game.ascension,
 		"phase": game.phase,
 		"wave_index": game.wave_index,
 		"lives": game.lives,
@@ -84,6 +85,7 @@ static func capture(game) -> Dictionary:
 ## Zustand in ein frisch aufgebautes Spiel (Map, Board, HUD stehen schon) übernehmen.
 static func apply(game, s: Dictionary) -> void:
 	Session.difficulty = int(s.get("difficulty", Session.difficulty))
+	game.ascension = int(s.get("ascension", 0))
 	game.wave_index = int(s.get("wave_index", 0))
 	game.lives = int(s.get("lives", game.lives))
 	game.score_mode = bool(s.get("score_mode", false))
@@ -184,6 +186,7 @@ static func apply(game, s: Dictionary) -> void:
 			var lp: Dictionary = game.lane_paths[e.lane]
 			e.setup(game, def, g, lp.air if def.get("flying", false) else lp.ground)
 			game._apply_enemy_difficulty(e, g)
+			game._apply_ascension(e)
 			e.max_hp = float(d.get("max_hp", e.max_hp))
 			e.hp = float(d.get("hp", e.hp))
 			for f in ENEMY_FIELDS:
@@ -212,6 +215,7 @@ static func meta_for(game, extra := {}) -> Dictionary:
 		"score_mode": game.score_mode,
 		"score": roundi(game.score),
 		"difficulty": Session.difficulty,
+		"ascension": game.ascension,
 		"time": int(Time.get_unix_time_from_system()),
 	}
 	m.merge(extra, true)

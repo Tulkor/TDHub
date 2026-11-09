@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name lichtpfad)
+## Modi: kern
 ## Lichtpfad (path_lights.gd): Lichter im Abstand von 0,5 s entlang der Gegnerwege, Farben je Modus oder Map,
 ## Umschalter im HUD (GemTD-Familie und Shopping Maul), gespeichert in Display.path_lights.
 

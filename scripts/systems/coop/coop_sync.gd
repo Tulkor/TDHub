@@ -8,9 +8,9 @@ extends Node
 ##                vom Host wird ins eigene Spiel übernommen, so laufen Anzeige und Regeln (welche Optionen ein
 ##                Tower hat) mit demselben Code wie solo. Gegner laufen wie beim Zuschauen auf dem gemeldeten
 ##                Weg weiter (enemy.gd → _remote_step).
-##   Andere Modi auf game.gd (eeveTD) hängen sich mit eigenen Methoden an, falls vorhanden:
-##                coop_commands() weitere erlaubte Befehle, new_tower() Tower-Klasse für Mitspieler,
-##                coop_snapshot()/apply_coop_snapshot(d) eigener Stand (unter "mode"), coop_stats()/apply_coop_stats(d)
+##   Erlaubte Befehle und der Modus-Stand (unter "mode") kommen vom System coop (coop.gd, Werte in data/modes.json
+##                → system_cfg.coop). Modi auf game.gd hängen sich außerdem mit eigenen Methoden an, falls vorhanden:
+##                new_tower() Tower-Klasse für Mitspieler, coop_stats()/apply_coop_stats(d)
 ##                was sich laufend ändert und nicht als neuer Stand zählt (unter "mstats", wie "tstats"),
 ##                coop_fast()/apply_coop_fast(d) was mit den Gegnern 15 Mal pro Sekunde mitgeht (unter "m", z. B.
 ##                Geschosse in YouTD).
@@ -19,9 +19,6 @@ const STATE_INTERVAL := 1.0
 const CHECK_INTERVAL := 0.05
 const ENEMY_INTERVAL := 1.0 / 15.0
 const MAX_BEAMS := 64
-## Befehle, die ein Mitspieler schicken darf (siehe game.gd → execute)
-const COMMANDS := ["place", "remove_rocks", "replace_rocks", "take_back", "option", "move_trap", "speed", "rogue_pick",
-	"swap", "extra_chance"]
 
 var game  # game.gd
 var host := true
@@ -80,8 +77,7 @@ func _process(delta: float) -> void:
 
 ## Befehl eines Mitspielers (Spielernummer p). Nur bekannte Befehle, die Spielernummer setzt der Host.
 func receive(p: int, cmd: Dictionary) -> bool:
-	var allowed: Array = COMMANDS + (game.coop_commands() if game.has_method("coop_commands") else [])
-	if not allowed.has(str(cmd.get("type", ""))):
+	if not game.systems.coop.commands().has(str(cmd.get("type", ""))):
 		return false
 	cmd.player = p
 	return game.execute(cmd)
@@ -93,7 +89,7 @@ func _on_net_command(peer: int, cmd: Dictionary) -> void:
 		receive(p, cmd)
 
 
-## Wer die Verbindung verliert oder das Spiel verlässt, hält die Runde nicht auf (game.gd → set_player_away).
+## Wer die Verbindung verliert oder das Spiel verlässt, hält die Runde nicht auf (System coop → set_away).
 ## Wer noch lädt, gilt als da.
 func _update_away() -> void:
 	var here := {0: true}
@@ -105,7 +101,7 @@ func _update_away() -> void:
 		if in_game or not _seen.has(p):
 			here[p] = true
 	for i in game.players.size():
-		game.set_player_away(i, not here.has(i))
+		game.systems.coop.set_away(i, not here.has(i))
 
 
 ## Schusslinie für die Mitspieler merken (game.gd → add_beam).
@@ -145,6 +141,7 @@ func snapshot() -> Dictionary:
 		"ts": Engine.time_scale,
 		"setup": game.setup_done,
 		"difficulty": Session.difficulty,
+		"ascension": game.ascension,
 		"score_mode": game.score_mode,
 		"foreign_build": game.foreign_build,
 		"players": ps,
@@ -154,8 +151,7 @@ func snapshot() -> Dictionary:
 	}
 	if game.rogue != null:
 		s.rogue = game.rogue.to_dict()
-	if game.has_method("coop_snapshot"):
-		s.mode = game.coop_snapshot()
+	s.mode = game.systems.coop.snapshot()
 	if game.has_method("coop_stats"):
 		s.mstats = game.coop_stats()
 	return s
@@ -267,11 +263,12 @@ func apply_state(s: Dictionary) -> void:
 	g.leaks_per_wave = s.get("leaks", {})
 	if s.has("rogue"):
 		g.enable_rogue().from_dict(s.rogue)
-	if s.has("mode") and g.has_method("apply_coop_snapshot"):
-		g.apply_coop_snapshot(s.mode)
+	if s.has("mode"):
+		g.systems.coop.apply(s.mode)
 	if s.has("mstats") and g.has_method("apply_coop_stats"):
 		g.apply_coop_stats(s.mstats)
 	g.foreign_build = bool(s.get("foreign_build", false))
+	g.ascension = int(s.get("ascension", g.ascension))
 	if s.get("setup", true) and not g.setup_done:
 		Session.difficulty = int(s.get("difficulty", Session.difficulty))
 		Session.score_mode = bool(s.get("score_mode", false))

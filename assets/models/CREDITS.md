@@ -54,6 +54,8 @@ Von Lukas hochgeladen, Lizenztexte in `licenses/`. Verwendet in `scripts/map/eev
 - `nature/hp_*.glb`: "HandPainted Plants 2" von Nobiax / Yughues, CC0 (Pflanzen-Karten mit Alpha, Textur über das Feld
   `textur` in `tools/modelle/auswahl.json`).
 
+- `scenery/tiere/deer.glb`, `stag.glb`, `fox.glb` (laufen im Hauptmenü hinten vorbei): "Ultimate Animated Animal Pack"
+  von Quaternius, CC0, https://quaternius.com/packs/ultimateanimatedanimals.html (`licenses/pakete/quaternius_cc0.txt`)
 - `scenery/mine_*.glb` (Bergwerk mit Lore unterhalb des Friedhofs): "Free Mine Assets Pack", CC0, OpenGameArt
   (https://opengameart.org/content/free-mine-assets-pack; das Zip selbst enthält keinen Lizenztext, Lizenz laut Lukas
   und Seite CC0). Umgewandelt mit `tools/modelle/mine_umwandeln.py`: Materialien neu aufgebaut, Schienen flach gelegt,
@@ -170,3 +172,6 @@ CC0: `waage` (YouTD Scales), `it` (YouTD It), `rakete` (YouTD Pocket Rocket), `p
 `blitzfalle` (eeveTD Blitzfalle), `zapfsaeule` und `bohrturm` (Shopping Maul Arol Tankstelle), `trapez`
 und `steinschleuder` (Randgruppen TD), `buehne` (Randgruppen Bühnennebel, darauf ein Nebeleffekt: `fog` in
 `data/tower_models.json`, `scripts/game/fog_fx.gd`).
+
+## Heldenmodelle `heroes/` (eigene, CC0, 2026-11-07)
+Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/helden_bau.py` (Blender), keine fremden Vorlagen.

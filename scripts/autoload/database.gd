@@ -29,6 +29,8 @@ var roguelike: Dictionary = {}
 var roguelike_enemies: Dictionary = {}
 ## Level und EP der Tower in allen Modi (res://data/leveling.json), siehe leveling.gd.
 var leveling: Dictionary = {}
+## Aufstiegsstufen nach der höchsten Schwierigkeit, je Modus (res://data/ascension.json), siehe ascension.gd.
+var ascension: Dictionary = {}
 ## TD-Modi aus data/modes.json, in der Reihenfolge der Datei (siehe mode()).
 var modes: Array = []
 
@@ -56,6 +58,8 @@ func reload() -> void:
 	var lv = load_json(RES_DATA + "leveling.json")
 	leveling = lv if typeof(lv) == TYPE_DICTIONARY else {}
 	Leveling.reset()
+	var asc = load_json(RES_DATA + "ascension.json")
+	ascension = asc if typeof(asc) == TYPE_DICTIONARY else {}
 	var m = load_json(RES_DATA + "modes.json")
 	modes = m.get("modes", []) if typeof(m) == TYPE_DICTIONARY else []
 	if modes.is_empty():

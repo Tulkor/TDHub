@@ -4,8 +4,10 @@
 #   schnell (Standard): Prüfskripte (Tower-Tabelle, Texte, Maps, Werkzeuge) und alle Tests unter tests/
 #                       außer den langen ("## Lauf: fest": Balance, Tempo, späte Wellen)
 #   alle:               dazu die langen
-#   geaendert:          nur die Tests, die zu den geänderten Dateien gegenüber origin/main passen
-#                       (plus Prüfskripte); unbekannte Code-Änderungen -> schnell
+#   geaendert [--basis=REF] [--ohne-fest] [--erklaeren]:
+#                       nur die Tests der Modi, deren Dateien sich gegenüber origin/main (oder REF) geändert
+#                       haben, plus Prüfskripte; gemeinsamer Code -> schnell. Regeln: tests/bereiche.json,
+#                       Modus je Test: "## Modi: …" im Testkopf. Warum welcher Test: --erklaeren
 #   <name>:             einzelne Tests, z. B. tools/run_tests.sh smoke koop
 # Pro Test eine Zeile mit Dauer. "⚠" darunter = Godot meldet Fehler, obwohl der Test grün ist
 # (ERROR/WARNING außerhalb von NOISE/EXPECTED); das sind meist echte, nur unbemerkte Fehler.
@@ -106,22 +108,24 @@ for f in sys.argv[1:]: ast.parse(open(f, encoding="utf-8").read(), f)' $py || ba
   return $bad
 }
 
-# Tests finden sich selbst: jede tests/<stamm>_test.tscn ist ein Test. Die zweite Zeile der .gd sagt, wie er läuft:
+# Tests finden sich selbst: jede tests/<stamm>_test.tscn ist ein Test (auch in Unterordnern, z. B. tests/systems/). Die zweite Zeile der .gd sagt, wie er läuft:
 #   ## Lauf: einzeln|paar|trio|fest [Argumente] [(Name kurzname)]
 # paar = Host + Client, trio = Host + a + b, fest = feste Bildrate, nur in "alle". Ohne Zeile: einzeln.
 # Ein neuer Test braucht also keinen Eintrag hier.
 test_info() {  # stamm -> ART ARGS NAME
   local line
   line=$(sed -n '2,6{s/^## Lauf: *//p}' "tests/$1_test.gd" 2>/dev/null | head -n1)
-  NAME=$1
+  NAME=${1##*/}
   if [[ $line =~ \(Name\ ([a-z_]+)\) ]]; then NAME=${BASH_REMATCH[1]}; line=${line%%(*}; fi
   read -r ART ARGS <<<"${line:-einzeln}"
 }
 
+test_files() { find tests -name '*_test.tscn' | sort; }
+
 all_tests() {  # Kurznamen aller Tests; $1 = "ohne_fest" lässt die langen Balance-Läufe weg
   local f stem
-  for f in tests/*_test.tscn; do
-    stem=$(basename "$f" _test.tscn); test_info "$stem"
+  for f in $(test_files); do
+    stem=${f#tests/}; stem=${stem%_test.tscn}; test_info "$stem"
     [ "${1:-}" = ohne_fest ] && [ "$ART" = fest ] && continue
     echo "$NAME"
   done
@@ -130,8 +134,8 @@ all_tests() {  # Kurznamen aller Tests; $1 = "ohne_fest" lässt die langen Balan
 resolve() {  # Kurzname oder Stamm -> STEM (leer, wenn unbekannt)
   local f stem
   STEM=""
-  for f in tests/*_test.tscn; do
-    stem=$(basename "$f" _test.tscn); test_info "$stem"
+  for f in $(test_files); do
+    stem=${f#tests/}; stem=${stem%_test.tscn}; test_info "$stem"
     if [ "$1" = "$stem" ] || [ "$1" = "$NAME" ]; then STEM=$stem; return; fi
   done
 }
@@ -143,6 +147,8 @@ do_test() {
     maps)    run_check maps python3 tools/map_check.py --kurz ;;
     marken)  run_check marken python3 tools/wc3/maul_namen.py --pruefe ;;
     werkzeuge) run_check werkzeuge check_tools ;;
+    auswahl) run_check auswahl python3 tools/test_auswahl.py --pruefen ;;
+    systeme_pruefen) run_check systeme_pruefen python3 tools/systeme.py pruefen ;;
     balanceeditor) run_check balanceeditor node tools/balance_editor/pruefen.mjs ;;
     htmleditor) run_check htmleditor node tools/html_editor/pruefen.mjs ;;
     *)
@@ -161,56 +167,20 @@ do_test() {
 
 tools/godot_import.sh "$LOG_DIR/import.log"
 
-# Tests passend zu den geänderten Dateien (Commits seit origin/main und ungespeicherte Änderungen).
-pick_changed() {
-  local base files f n t=" tabelle ui maps marken werkzeuge skripte "
-  base=$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD)
-  files=$( { git diff --name-only "$base"; git ls-files --others --exclude-standard; } | sort -u)
-  for f in $files; do
-    case $f in
-      tests/*_test.*)
-        n=$(basename "$f"); resolve "${n%_test.*}"
-        [ -z "$STEM" ] || { test_info "$STEM"; t+="$NAME "; } ;;
-      tests/lib/*) t+="towgemtd toweeve towrg towmaul " ;;
-      tools/*.gd|tools/*.tscn) ;;  # werden von "skripte" geladen
-      tools/relay/*) t+="relay " ;;
-      tools/balance_editor/*|tools/balance_anwenden.py) t+="balanceeditor " ;;
-      tools/html_editor/*) t+="htmleditor " ;;
-      tools/*|docs/*|*.md|data/i18n/*) ;;
-      data/sfx.json|assets/sounds/*|scripts/autoload/sfx.gd) t+="sound smoke " ;;
-      data/fx/*|assets/fx/*|assets/shaders/fx_*|scripts/game/fx_*|scripts/game/effects.gd) t+="smoke geschosse treffer eeve maul youtd " ;;
-      scripts/maul/*|data/maul/*|scenes/maul*) t+="maul towmaul " ;;
-      scripts/game/tower.gd|scripts/game/enemy.gd|scripts/game/abilities.gd) t+="faehigkeiten geschosse treffer smoke eeve " ;;
-      scripts/game/eeve*|data/eeve.json|data/eeve_items.json|data/*/eeve_*|scenes/eeve*|scripts/ui/item_icon.gd) t+="eeve eeveitems faehigkeiten toweeve " ;;
-      scripts/game/rg_*|data/randgruppen.json|data/*/rg_*|data/maps/randgruppen.json|scenes/rg_*) t+="randgruppen towrg " ;;
-      scripts/youtd/*|data/youtd/*|data/maps/youtd.json|scenes/youtd*) t+="youtd ytfaehig ytitems ytkoop " ;;
-      scripts/ui/lobby*) t+="lobby gemischt " ;;
-      scripts/net/*|scripts/autoload/net.gd) t+="netz sitzung koop lobby gemischt relay " ;;
-      scripts/game/rogue*|data/roguelike.json) t+="roguelike smoke " ;;
-      scripts/game/profile.gd|scripts/game/run_stats.gd|scripts/ui/profile_panel.gd) t+="profil smoke eeve maul youtd " ;;
-      scripts/game/save_game.gd|scripts/game/run_history.gd|scripts/autoload/session.gd) t+="smoke sitzung " ;;
-      data/towers/*) t+="smoke towgemtd toweeve towrg " ;;
-      data/enemies/*|data/waves/*|data/balance.json|data/maps/*) t+="smoke " ;;
-      scripts/map/path_lights.gd) t+="lichtpfad smoke " ;;
-      scripts/ui/*|scripts/game/hud.gd|scripts/game/*panel*|scripts/editor/*) t+="smoke " ;;
-      *.gd|*.tscn|*.tres|*.gdshader|project.godot|data/*) echo "schnell"; return ;;
-    esac
-  done
-  echo "$t" | tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' '
-}
-
 MODE=${1:-schnell}
 if [ "$MODE" = geaendert ]; then
-  MODE=$(pick_changed)
+  # Zuordnung Dateien -> Modi -> Tests: tests/bereiche.json und "## Modi:" im Testkopf (tools/test_auswahl.py)
+  shift
+  MODE=$(python3 tools/test_auswahl.py "$@") || { echo "Testauswahl fehlgeschlagen"; exit 2; }
   echo "Geänderte Dateien -> Tests: $MODE"
   # shellcheck disable=SC2086
   set -- $MODE
 fi
 case $MODE in
   # shellcheck disable=SC2046
-  schnell) set -- tabelle ui maps marken werkzeuge $(all_tests ohne_fest) ;;
+  schnell) set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen $(all_tests ohne_fest) ;;
   # shellcheck disable=SC2046
-  alle)    set -- tabelle ui maps marken werkzeuge $(all_tests) ;;
+  alle)    set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen $(all_tests) ;;
 esac
 # Prüfskripte, Smoke und die Host/Client-Paare (eigene Ports) laufen parallel, Balance-Läufe danach einzeln.
 PAR=(); SEQ=(); declare -A WEIGHT

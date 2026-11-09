@@ -18,9 +18,11 @@ THEMEN = {
     "eeve": r"eeve",
     "randgruppen": r"randgruppen|/rg_|\brg_",
     "heroes": r"scripts/heroes/|/hd_|heroes",
+    "survivors": r"survivors|scripts/survivors/|/sv_",
     "netz": r"scripts/net/|net\.gd|coop|lobby|gemischt|sitzung_test|relay",
-    "gemtd": r"scripts/game/(game|tower|enemy|abilities|effects|fx_|rogue|player_state|run_stats|save_game|profile)"
+    "gemtd": r"scripts/game/(game|tower|enemy|abilities|effects|fx_|rogue|player_state|run_stats|profile)"
              r"|scripts/ui/hud|scripts/map/|roguelike|profile",
+    "systeme": r"scripts/systems/|tools/systeme\.py|tests/systems/",
     "werkzeuge": r"build_windows|release|screenshot\.(sh|gd)|tools/(fx|modelle|wc3|balance_editor|html_editor)/"
                  r"|balance_bericht|tower_tabelle|pruefe_ui|map_check|tests/\w+_test\.gd",
 }

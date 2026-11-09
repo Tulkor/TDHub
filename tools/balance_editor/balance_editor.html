@@ -243,6 +243,7 @@ const MODES = [
   { id: "eeve", name: "eeveTD" },
   { id: "maul", name: "Shopping Maul" },
   { id: "level", name: "Level & EP" },
+  { id: "asc", name: "Aufstieg" },
 ];
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 const ELEMENTS = { nature: "Natur", fire: "Feuer", water: "Wasser", earth: "Erde", storm: "Sturm", magic: "Magie", "": "Grundtürme, Dual-Tower, Fallen" };
@@ -276,6 +277,7 @@ function enemyName(id) { const f = FILES[enemyFile(id)]; return f ? f.cur.name :
 function entries(mode, kind) {
   if (mode === "rogue") mode = "gemtd";
   const out = [];
+  if (mode === "asc") return Object.keys(ASC_MODES).map((m) => ({ key: m, label: ASC_MODES[m] + ((FILES[ASC_FILE] && (FILES[ASC_FILE].cur.modes || {})[m]) ? "" : " (wie GemTD)"), group: "" }));
   if (mode === "level") {
     const f = FILES[LEVEL_FILE]; if (!f) return out;
     if (kind === "modes") return [{ key: "modes", label: "Modus → Profil", group: "" }];
@@ -600,7 +602,7 @@ function viewMaulLevel(i) {
 
 // ---------------------------------------------------------------- Zeichnen
 let rendering = false;
-// ---- Level & EP (data/leveling.json, scripts/game/leveling.gd)
+// ---- Level & EP (data/leveling.json, scripts/systems/leveling/leveling.gd)
 const LEVEL_FILE = "data/leveling.json";
 const CURVE_TYPES = { konstant: "Konstant (jede Stufe base)", linear: "Linear (base + step × (Level − 1))", exponentiell: "Exponentiell (base × growth^(Level − 1))", formel: "Eigene Formel", tabelle: "Tabelle (EP je Stufe)" };
 const CURVE_FORMULAS = { konstant: "base", linear: "base + step * (level - 1)", exponentiell: "base * pow(growth, level - 1)" };
@@ -773,6 +775,102 @@ function viewLevelProfile(id) {
   return out;
 }
 
+// ---- Aufstieg (data/ascension.json, scripts/systems/difficulty/ascension.gd)
+const ASC_FILE = "data/ascension.json";
+const ASC_MODES = { gemtd: "GemTD", roguelike: "GemTD Roguelike", eeve: "eeveTD", maul: "Shopping Maul", randgruppen: "Randgruppen TD", youtd: "YouTD" };
+const ASC_STATS = { hp: "Gegner-Leben", speed: "Gegner-Tempo", armor: "Gegner-Rüstung" };
+const ASC_LABELS = { max_level: "Höchste Stufe (0 = ohne Ende)", every: "alle … Stufen", from: "ab Stufe", percent: "Prozent je Mal (+ %)", add: "Wert je Mal (+)" };
+const ascDiffNames = (m) => ((EMBED && EMBED.difficulties) || {})[m === "roguelike" ? "gemtd" : m] || [];
+// Wie Ascension.times() / mods() im Spiel
+function ascTimes(r, lv) {
+  const every = Math.max(Math.floor(Number(r.every) || 1), 1), from = Math.max(Math.floor(Number(r.from !== undefined ? r.from : every)) || 1, 1);
+  return lv < from ? 0 : Math.floor((lv - from) / every) + 1;
+}
+function ascMods(cfg, lv) {
+  const m = { hp: [1, 0], speed: [1, 0], armor: [1, 0], flags: [] };
+  for (const r of cfg.rules || []) {
+    const n = ascTimes(r, lv); if (!n) continue;
+    if ((r.type || "stat") === "stat" && m[r.stat]) { m[r.stat][0] += (Number(r.percent) || 0) * n / 100; m[r.stat][1] += (Number(r.add) || 0) * n; }
+    else if (r.type === "flag") m.flags.push(r.text || r.flag);
+  }
+  return m;
+}
+function ascRuleCard(cfg, base, i) {
+  const f = FILES[ASC_FILE], r = cfg.rules[i], path = base.concat("rules", i);
+  const orig = getAt(f.orig, path), type = r.type || "stat";
+  const card = el("div", { class: "card" + (same(r, orig) ? "" : " changed") });
+  const sel = el("select", { onchange: (ev) => {
+    const v = ev.target.value;
+    if (v === "flag") cfg.rules[i] = { type: "flag", every: r.every || 5, flag: "neu", text: "Sonderregel" };
+    else { cfg.rules[i] = { type: "stat", stat: v, every: r.every || 1, percent: 5.0 }; markFloat(cfg.rules[i], "percent"); }
+    render();
+  } },
+    el("optgroup", { label: "Wert (Zahl)" }, Object.entries(ASC_STATS).map(([s, n]) => el("option", { value: s, selected: type === "stat" && r.stat === s }, n))),
+    el("optgroup", { label: "Sonderregel (vorbereitet)" }, el("option", { value: "flag", selected: type === "flag" }, "Schalter (flag) mit Text")));
+  card.append(el("div", { class: "row", style: "margin-bottom:8px" }, el("span", { class: "muted small" }, "REGEL " + (i + 1)), sel,
+    el("span", { class: "spacer" }), el("button", { class: "btn", title: "Regel entfernen", onclick: () => { cfg.rules.splice(i, 1); render(); } }, "✕")));
+  const keys = type === "stat" ? ["every", "from", "percent", "add"] : ["every", "from"];
+  const have = keys.filter((k) => k in r), miss = keys.filter((k) => !(k in r));
+  card.append(el("div", { class: "stats" }, have.map((k) => statField(ASC_LABELS[k] || k, { file: ASC_FILE, path: path.concat(k) }))));
+  if (miss.length) card.append(el("div", { class: "row", style: "margin-top:8px" }, miss.map((k) => el("button", { class: "btn", onclick: () => {
+    r[k] = k === "from" ? (r.every || 1) : k === "every" ? 1 : 1.0; if (k === "percent" || k === "add") markFloat(r, k); render(); } }, "+ " + ASC_LABELS[k]))));
+  if (type === "flag") {
+    for (const [k, lbl] of [["flag", "Name des Schalters (fragt der Modus mit Ascension.flag() ab)"], ["text", "Anzeige im Startfenster"]])
+      card.append(el("div", { class: "stat", style: "margin-top:8px" }, el("div", { class: "lbl" }, lbl),
+        el("input", { type: "text", value: r[k] || "", style: "width:100%", onchange: (ev) => { r[k] = ev.target.value; render(); } })));
+  } else card.append(el("div", { class: "note" }, "Wirkt ab Stufe " + (r.from !== undefined ? r.from : (r.every || 1)) + " alle " + (r.every || 1) + " Stufen einmal; mehrere Male zählen zusammen (5 % je Stufe = +50 % auf Stufe 10)."));
+  return card;
+}
+function viewAscension(m) {
+  const f = FILES[ASC_FILE];
+  $("sub").replaceChildren();
+  if (!f) return el("div", { class: "empty" }, "data/ascension.json fehlt (älterer Stand).");
+  const modes = f.cur.modes = f.cur.modes || {};
+  const out = el("div", {});
+  if (!modes[m]) {
+    out.append(el("div", { class: "empty" }, (ASC_MODES[m] || m) + " hat keine eigenen Regeln" + (m === "roguelike" ? " und nutzt die von GemTD. " : ". "),
+      el("button", { class: "btn", onclick: () => { modes[m] = clone(modes.gemtd || { choices: [0, 1, 2], max_level: 0, rules: [] }); render(); } }, "Eigene Regeln anlegen")));
+    return out;
+  }
+  const cfg = modes[m], base = ["modes", m], names = ascDiffNames(m);
+  out.append(el("div", { class: "note" }, "Aufstiegsstufen +1, +2, … nach der höchsten angebotenen Schwierigkeit. Wer sie auf der höchsten freigeschalteten Stufe gewinnt, schaltet die nächste frei (je Modus im Spielerprofil)."));
+  // Angebotene Schwierigkeiten
+  const ch = el("div", { class: "panel", style: "margin:16px 0 0" }, el("h2", {}, "Schwierigkeiten im Startfenster"));
+  const list = cfg.choices || [];
+  const count = Math.max(names.length, ...list.map((i) => i + 1), 3);
+  ch.append(el("div", { class: "row" + (same(list, getAt(f.orig, base.concat("choices"))) ? "" : " changed") }, Array.from({ length: count }, (_, i) =>
+    el("label", { class: "btn" + (list.includes(i) ? " on" : ""), style: "cursor:pointer" },
+      el("input", { type: "checkbox", checked: list.includes(i), style: "margin-right:6px", onchange: (ev) => {
+        const s = new Set(cfg.choices || []); if (ev.target.checked) s.add(i); else s.delete(i);
+        cfg.choices = [...s].sort((a, b) => a - b); render(); } }),
+      (names[i] || "Stufe " + i) + " (" + i + ")"))));
+  ch.append(el("div", { class: "note" }, "Die letzte gewählte ist die Grundlage für den Aufstieg" + (list.length ? ": " + (names[list[list.length - 1]] || list[list.length - 1]) : "") + "."));
+  ch.append(el("div", { class: "stats", style: "margin-top:8px" }, statField(ASC_LABELS.max_level, { file: ASC_FILE, path: base.concat("max_level") })));
+  out.append(ch);
+  // Regeln
+  const rp = el("div", { class: "panel", style: "margin:16px 0 0" }, el("h2", {}, "Regeln"));
+  cfg.rules = cfg.rules || [];
+  cfg.rules.forEach((_, i) => rp.append(ascRuleCard(cfg, base, i)));
+  rp.append(el("div", { class: "row" },
+    el("button", { class: "btn", onclick: () => { const r = { type: "stat", stat: "hp", every: 1, percent: 5.0 }; markFloat(r, "percent"); cfg.rules.push(r); render(); } }, "+ Wert"),
+    el("button", { class: "btn", onclick: () => { cfg.rules.push({ type: "flag", every: 5, flag: "neu", text: "Sonderregel" }); render(); } }, "+ Sonderregel"),
+    el("span", { class: "spacer" }),
+    el("button", { class: "btn", title: "Regeln und Höchststufe dieses Modus in alle anderen Modi kopieren (Schwierigkeiten bleiben)", onclick: () => {
+      if (!confirm("Regeln von " + (ASC_MODES[m] || m) + " in alle anderen Modi kopieren?")) return;
+      for (const k of Object.keys(modes)) if (k !== m) { modes[k].rules = clone(cfg.rules); modes[k].max_level = cfg.max_level; }
+      render(); } }, "In alle Modi kopieren")));
+  out.append(rp);
+  // Vorschau
+  const shown = cfg.max_level > 0 ? Math.min(cfg.max_level, 30) : 20;
+  const fmt = (v) => { const p = Math.round((v[0] - 1) * 1000) / 10, parts = []; if (p) parts.push("+" + p + " %"); if (v[1]) parts.push("+" + Math.round(v[1] * 100) / 100); return parts.join(" ") || "–"; };
+  const rows = [];
+  for (let lv = 1; lv <= shown; lv++) { const x = ascMods(cfg, lv); rows.push(el("tr", {}, el("td", {}, "+" + lv), el("td", {}, fmt(x.hp)), el("td", {}, fmt(x.speed)), el("td", {}, fmt(x.armor)), el("td", {}, x.flags.join(", ")))); }
+  out.append(el("div", { class: "panel", style: "margin:16px 0 0" }, el("h2", {}, "Vorschau"),
+    el("div", { class: "note" }, "Auf die Werte der höchsten Schwierigkeit, so rechnet das Spiel (Leben und Tempo × Faktor + Wert, Rüstung ebenso)."),
+    el("table", { class: "level-table" }, el("tr", {}, ["Stufe", "Leben", "Tempo", "Rüstung", "Sonderregeln"].map((h) => el("th", {}, h))), rows)));
+  return out;
+}
+
 function render() {
   // Ein Eingabefeld meldet beim Entfernen (blur) noch "change": dann danach neu zeichnen statt mittendrin.
   if (rendering) { queueMicrotask(render); return; }
@@ -781,13 +879,13 @@ function render() {
 }
 function draw() {
   const changes = allChanges();
-  const perMode = { gemtd: 0, rogue: 0, eeve: 0, maul: 0, level: 0 };
+  const perMode = { gemtd: 0, rogue: 0, eeve: 0, maul: 0, level: 0, asc: 0 };
   for (const c of changes) perMode[modeOf(c.datei)]++;
   $("tabs").replaceChildren(...MODES.map((m) => el("div", {
     class: "tab" + (m.id === state.mode ? " on" : ""), onclick: () => { state.mode = m.id; state.tier = 0; remember(); render(); },
   }, m.name, perMode[m.id] ? el("span", { class: "badge" }, perMode[m.id]) : null)));
   $("kind").replaceChildren(
-    ...(state.mode === "level" ? [["profile", "Profile"], ["modes", "Modi"]] : [["enemies", "Enemies"], ["tower", "Tower"]].concat(state.mode === "eeve" ? [["items", "Items"]] : [])).map(([k, n]) => el("button", {
+    ...(state.mode === "asc" ? [["asc", "Modi"]] : state.mode === "level" ? [["profile", "Profile"], ["modes", "Modi"]] : [["enemies", "Enemies"], ["tower", "Tower"]].concat(state.mode === "eeve" ? [["items", "Items"]] : [])).map(([k, n]) => el("button", {
       class: "btn" + (state.kind === k ? " on" : ""), onclick: () => { state.kind = k; state.tier = 0; remember(); render(); },
     }, n)));
   $("pct").replaceChildren(el("span", { class: "muted small" }, "SCHRITT"),
@@ -799,6 +897,8 @@ function draw() {
   if (state.kind === "items" && state.mode !== "eeve") state.kind = "tower";
   if (state.mode === "level" && !["profile", "modes"].includes(state.kind)) state.kind = "profile";
   if (state.mode !== "level" && ["profile", "modes"].includes(state.kind)) state.kind = "tower";
+  if (state.mode === "asc") state.kind = "asc";
+  else if (state.kind === "asc") state.kind = "tower";
   const list = entries(state.mode, state.kind);
   const k = state.mode + "/" + state.kind;
   if (!list.some((e) => e.key === state.sel[k])) state.sel[k] = list.length ? list[0].key : undefined;
@@ -813,6 +913,7 @@ function draw() {
   let view;
   if (!Object.keys(FILES).length) view = el("div", { class: "empty" }, "Keine Daten geladen. „Ordner öffnen“ und den Repo-Ordner wählen.");
   else if (key === undefined) view = el("div", { class: "empty" }, "Keine Einträge.");
+  else if (state.mode === "asc") view = viewAscension(key);
   else if (state.mode === "level") view = state.kind === "modes" ? viewLevelModes() : viewLevelProfile(key);
   else if (state.kind === "items") view = viewEeveItem(key);
   else if (state.kind === "tower") view = state.mode === "maul" ? viewMaulTower(key) : viewTowerFile(key);
@@ -832,6 +933,7 @@ function draw() {
 }
 function modeOf(p) {
   if (p === LEVEL_FILE) return "level";
+  if (p === ASC_FILE) return "asc";
   if (p === ROGUE_FILE) return "rogue";
   if (p === ITEMS_FILE) return "eeve";
   if (p.startsWith("data/maul/")) return "maul";
@@ -848,6 +950,7 @@ function changeLabel(c) {
   else if (c.datei === ITEMS_FILE) { name = "Marktplatz"; }
   else if (c.datei === LEVEL_FILE && rest[0] === "profiles") { name = "Level-Profil " + rest[1]; rest = rest.slice(2); }
   else if (c.datei === LEVEL_FILE) { name = "Level: Modi"; rest = rest.slice(1); }
+  else if (c.datei === ASC_FILE && rest[0] === "modes") { name = "Aufstieg " + (ASC_MODES[rest[1]] || rest[1]); rest = rest.slice(2); }
   else if (c.datei === ROGUE_FILE && rest[0] === "enemies") { name = enemyName(rest[1]) + " (Roguelike)"; rest = rest.slice(2); }
   else if (rest[0] === "waves") { name = "Welle " + (rest[1] + 1); rest = rest.slice(2); }
   else if (rest[0] === "tiers") { name += " " + ((root.tiers[rest[1]] || {}).name || "Stufe " + (ROMAN[rest[1]] || rest[1] + 1)); rest = rest.slice(2); }
@@ -874,7 +977,7 @@ function renderChanges(changes) {
 }
 
 // ---------------------------------------------------------------- Laden und Speichern
-const WANTED = (p) => /^data\/(towers|enemies)\/[^/]+\.json$/.test(p) || ["data/waves/classic.json", "data/maul/shops.json", "data/maul/waves.json", ROGUE_FILE, ITEMS_FILE, LEVEL_FILE].includes(p);
+const WANTED = (p) => /^data\/(towers|enemies)\/[^/]+\.json$/.test(p) || ["data/waves/classic.json", "data/maul/shops.json", "data/maul/waves.json", ROGUE_FILE, ITEMS_FILE, LEVEL_FILE, ASC_FILE].includes(p);
 
 // Liest die Fähigkeiten-Liste aus scripts/game/abilities.gd (Zeilen wie "splash": {"label": …, "params": {…}},)
 function parseAbilitiesGd(text) {
@@ -906,7 +1009,7 @@ async function openFolder() {
         if (fh.kind === "file" && WANTED(p)) texts[p] = await (await fh.getFile()).text();
       }
     }
-    for (const f of [ROGUE_FILE, ITEMS_FILE])
+    for (const f of [ROGUE_FILE, ITEMS_FILE, LEVEL_FILE, ASC_FILE])
       try { texts[f] = await (await (await data.getFileHandle(f.split("/")[1])).getFile()).text(); } catch (e) { /* ältere Stände ohne diese Datei */ }
     if (!Object.keys(texts).length) throw new Error("Im gewählten Ordner liegt kein data/towers. Bitte den Repo-Ordner (oder seinen data-Ordner) wählen.");
     if (allChanges().length && !confirm("Ungespeicherte Änderungen verwerfen und Daten aus dem Ordner laden?")) return;

@@ -9,13 +9,14 @@ var difficulty := 2
 var field := 0
 var _diff_text: Label
 var _field_text: Label
+var _asc: AscensionPicker
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.get_theme()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	difficulty = game.difficulty
+	difficulty = Ascension.snap("eeve", game.difficulty, game.difficulty_count())
 	field = game.field_type
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -45,13 +46,16 @@ func _ready() -> void:
 	v.add_child(grid)
 	var group := ButtonGroup.new()
 	var diffs: Array = game.rules.get("difficulties", [])
-	for i in diffs.size():
-		var idx := i
+	for i in Ascension.choices("eeve", diffs.size()):
+		var idx: int = i
 		_toggle(str(diffs[i].name), grid, group, i == difficulty, func():
 			difficulty = idx
+			_asc.set_difficulty(idx)
 			_update_text())
 	_diff_text = UiUtil.wrap_label("", v, 590)
 	_diff_text.add_theme_color_override("font_color", UiTheme.DIM)
+	_asc = AscensionPicker.new().setup("eeve", diffs.size(), difficulty, int(Session.ascension_choice.get("eeve", 0)), not game.mirror, false, 590)
+	v.add_child(_asc)
 
 	UiTheme.caption("Feld", v)
 	var h := HBoxContainer.new()
@@ -73,8 +77,12 @@ func _ready() -> void:
 			b.disabled = true
 		var wait := UiUtil.wrap_label("Der Host wählt Schwierigkeit und Feld, gleich geht es los …", v, 590)
 		wait.add_theme_color_override("font_color", UiTheme.CYAN)
+		SetupPanel.bottom_row(game, v)
 		return
-	var go := UiUtil.button("Los geht's", v, func(): game.submit({"type": "setup", "difficulty": difficulty, "field": field}))
+	var go := UiUtil.button("Los geht's", SetupPanel.bottom_row(game, v), func():
+		Session.ascension_choice["eeve"] = _asc.level
+		game.submit({"type": "setup", "difficulty": difficulty, "field": field, "ascension": _asc.chosen()}))
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.custom_minimum_size.y = 50
 	go.add_theme_font_size_override("font_size", 20)
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)

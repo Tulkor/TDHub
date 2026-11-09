@@ -8,6 +8,9 @@ extends Node3D
 
 enum Phase { BUILD, CHOOSE, WAVE, GAME_OVER, VICTORY }
 
+## Gemeinsame Spielsysteme des Modus (scripts/systems/, data/modes.json → systems), angelegt in _init.
+var systems := {}
+
 const NO_CELL := Vector2i(-1, -1)
 
 var map: MapData
@@ -75,6 +78,10 @@ var wave_index := 0
 var lives := 50
 ## Punkte-Modus (Session.score_mode): statt Leben zählen Punkte, das Spiel endet erst nach der letzten Welle.
 var score_mode := false
+## Aufstiegsstufe (+1, +2, …) auf der höchsten Schwierigkeit, siehe ascension.gd; wählt der Host vor Runde 1.
+var ascension := 0
+## Nach dem Run neu freigeschaltete Stufe (0 = keine), fürs Ende-Fenster.
+var ascension_unlocked := 0
 ## Option „Überall bauen“ (Host, Startfenster): in Karten mit Gebieten auch in fremden Gebieten bauen
 var foreign_build := false
 var score := 0.0
@@ -106,6 +113,11 @@ var run_stats := RunStats.new()  ## Statistik fürs Profil (profile.gd)
 var debug_used := false   ## Debug-Menü geöffnet: der Run zählt nicht für Summen und Rekorde im Profil, keine EP
 var profile_time := 0      ## Sekunden dieses Runs, die schon im Profil stehen (Verlassen und später Laden)
 var _saves_at_start := 0
+var _speed_applied := false   ## Session.speed einmal nach den Einstellungen vor Runde 1 gesetzt
+var auto_wave := false        ## Schalter „Auto“: nächste Welle ohne Pause (Session.auto_wave je Modus)
+var _hover_tower: Tower = null
+var _pause_input: PauseInput = null
+var _hover_time := 0.0
 var spawn_timer := 0.0
 var debug_tower := ""
 var rng := RandomNumberGenerator.new()
@@ -123,11 +135,15 @@ var setup_done := true
 var rogue: Rogue = null
 var net_panel: NetPanel = null
 var _next_enemy_id := 1
-var _cover: Array = []     ## is_covered: [Tower, größte Reichweite] dieses Bilds
-var _cover_frame := -1
-var _cover_sig := 0        ## ändert sich, wenn Tower dazukommen, wegfallen oder ihre Reichweite ändern
-var _free_cache := {}      ## free_stretch: Bahn/Flieger → {path, sig, list}
-var _probe: Enemy = null   ## Messpunkt für free_stretch
+
+
+func _init() -> void:
+	SystemHost.attach(self, system_mode())
+
+
+## Modus-ID in data/modes.json, deren Systeme dieses Spiel bekommt (eeveTD, Randgruppen, YouTD überschreiben).
+func system_mode() -> String:
+	return "gemtd"
 
 
 func _ready() -> void:
@@ -170,10 +186,13 @@ func _ready() -> void:
 
 	hud = Hud.new()
 	add_child(hud)
-	_setup_inv_drop()
+	if systems.has("inventory"):
+		inv_drop = systems.inventory.setup_drop()
 	hud.option_chosen.connect(_on_option_chosen)
 	hud.preview_range_requested.connect(func(r): if selected != null and is_instance_valid(selected): selected.show_preview_range(r))
 	hud.round_gem_selected.connect(func(i): if i < round_towers.size(): _select(round_towers[i]))
+	hud.next_gem_requested.connect(select_next_gem)
+	hud.pause_toggled.connect(_on_pause_toggled)
 	hud.extra_chance_requested.connect(func(): hud.extra_chance_panel.open(extra_chance_cfg(), gold, pl(local_player).extra_chance))
 	hud.extra_chance_panel.chosen.connect(func(id): submit({"type": "extra_chance", "id": id}))
 	hud.speed_selected.connect(func(f): submit({"type": "speed", "factor": f}))
@@ -244,14 +263,19 @@ func _ready() -> void:
 		net_panel.avoid = hud.bottom
 		add_child(net_panel)
 		hud.tower_list.limits.append(net_panel.panel)
+	# Einzelspiel: Pause (Taste P) und, wo es Pausen zwischen den Wellen gibt, der Schalter „Auto“
+	hud.pause_button.visible = solo()
+	auto_wave = Session.auto_wave_on() and solo()
+	if has_auto_wave() and solo():
+		hud.add_auto_toggle(auto_wave, set_auto_wave)
+	_pause_input = PauseInput.new()
+	_pause_input.on_event = func(e): if hud.user_paused: paused_input(e)
+	add_child(_pause_input)
 
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 	record_profile_abort()
-	if _probe != null:
-		_probe.free()
-		_probe = null
 	get_tree().auto_accept_quit = true
 	if Net.game == self:
 		Net.game = null
@@ -287,25 +311,29 @@ func save_mode() -> String:
 	return "single"
 
 
-## Einzelspiel speichern; dieselbe Partie überschreibt ihren Spielstand.
+## Haken des Systems save: unter welchem Modus der Spielstand liegt (Spiel laden startet ihn wieder).
+func save_kind() -> String:
+	return Session.game_kind
+
+
+## Weiterleitung → System  save
+func autosave() -> bool:
+	return systems.save.autosave()
+
+
+## Weiterleitung → System  save
+func drop_autosave() -> void:
+	systems.save.drop_autosave()
+
+
+## Weiterleitung → System  save
 func save_game() -> bool:
-	var st := SaveGame.capture(self)
-	if st.is_empty():
-		return false
-	if Session.save_id == "":
-		Session.save_id = SaveGame.new_id()
-	return SaveGame.write({"id": Session.save_id, "kind": "single", "mode": Session.game_kind, "meta": SaveGame.meta_for(self), "state": st})
+	return systems.save.save_game()
 
 
-## Koop (Host): das gemeinsame Feld mit allen Spielern speichern, Spielernummern bleiben an den Spieler-IDs.
+## Weiterleitung → System  save
 func save_coop() -> bool:
-	var st := SaveGame.capture(self)
-	if st.is_empty():
-		return false
-	var names: Array = players.map(func(p): return p.name)
-	return SaveGame.write({"id": str(Net.session.get("id", SaveGame.new_id())), "kind": "coop", "mode": Session.game_kind,
-		"meta": SaveGame.meta_for(self, {"players": names}), "map": map.to_dict(), "host_uid": Net.uid,
-		"coop": Net.session.get("coop", []), "state": st})
+	return systems.save.save_coop()
 
 
 ## Partie verlassen (quit: Fenster schließen), vorher auf Wunsch speichern.
@@ -420,18 +448,19 @@ func has_path_lights() -> bool:
 	return true
 
 
-## Lichtpfad ein/aus (Knopf im HUD, Taste L); bleibt gespeichert. Solange er läuft, ohne Wegpunkte am Boden.
+## Weiterleitung → System  build
 func set_path_lights(on: bool) -> void:
-	Display.set_path_lights(on)
-	path_lights.visible = on
-	board.set_path_dots(not on)
+	systems.build.set_path_lights(on)
 
 
+## Weiterleitung → System  build
 func set_show_all_paths(on: bool) -> void:
-	show_all_paths = on
-	if hud.paths_button != null:
-		hud.paths_button.set_pressed_no_signal(on)
-	board.set_marker_lanes([] if on else _own_lanes())
+	systems.build.set_show_all_paths(on)
+
+
+## Haken des Systems build: „alle Wege“ umgeschaltet.
+func show_paths() -> void:
+	board.set_marker_lanes([] if show_all_paths else _own_lanes())
 	_update_paths()
 
 
@@ -440,45 +469,15 @@ func active_lanes() -> Array:
 	return range(map.lane_count()).filter(func(i): return map.lane_player(i) < players.size())
 
 
-# --- Inventar: Items auf Tower in der Welt ziehen (Modi mit Items überschreiben inv_drop_*) ---
+# --- Inventar: Items auf Tower in der Welt ziehen (System inventory, Modi mit Items) ---
 
 var inv_drop: InvWorldDrop
-
-
-func _setup_inv_drop() -> void:
-	inv_drop = InvWorldDrop.new()
-	inv_drop.tower_at = func():
-		var a: Vector2i = occupied.get(board.mouse_cell(camera_rig.camera), NO_CELL)
-		return towers.get(a)
-	inv_drop.reason = inv_drop_reason
-	inv_drop.hint = inv_drop_hint
-	inv_drop.drop = inv_drop_on_tower
-	inv_drop.mark = func(t, ok: bool):
-		board.hover_cell = t.cell if t != null else NO_CELL
-		board.hover_size = Board3D.TOWER_CELLS
-		board.hover_ok = ok
-		board.refresh_hover()
-	inv_drop.tell = func(text: String): hud.show_message(text)
-	add_child(inv_drop)
-
-
-## Warum Tower t das gezogene Item (data aus InvSlot) nicht nimmt; "" = nimmt es.
-func inv_drop_reason(_t: Tower, _data: Dictionary) -> String:
-	return tr("Dieser Tower hat kein Inventar")
-
-
-## Schild an der Maus, wenn Tower t das Item nimmt.
-func inv_drop_hint(_t: Tower, _data: Dictionary) -> String:
-	return "+ " + tr("Einlegen")
-
-
-func inv_drop_on_tower(_t: Tower, _data: Dictionary) -> void:
-	pass
 
 
 # --- Eingabe -----------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	_ux_tick()
 	if phase < Phase.GAME_OVER:
 		play_time += delta / maxf(Engine.time_scale, 0.001)
 	_update_hover()
@@ -491,7 +490,94 @@ func _process(delta: float) -> void:
 		_process_wave(delta)
 
 
+## Einmal pro Bild (auch aus youtd_game.gd): gemerktes Tempo nach den Einstellungen vor Runde 1 setzen,
+## Auto-Start der nächsten Welle.
+func _ux_tick() -> void:
+	if setup_done and not _speed_applied:
+		_speed_applied = true
+		if solo() and phase < Phase.GAME_OVER:
+			Engine.time_scale = Session.speed
+	if auto_wave and setup_done and solo() and phase < Phase.GAME_OVER and auto_wave_due():
+		next_wave_now()
+
+
+## Einzelspiel ohne Netz und ohne Koop: nur dort gibt es Pause, Auto-Start und gemerktes Tempo.
+func solo() -> bool:
+	return not Net.is_active() and coop == null and not mirror and players.size() <= 1
+
+
+# --- Auto-Start der nächsten Welle (Schalter „Auto“ neben dem Tempo) -------------------------
+
+## Hat der Modus Pausen zwischen den Wellen, die man mit N abkürzen kann? (System waves, modes.json)
+func has_auto_wave() -> bool:
+	return systems.waves.has_auto()
+
+
+## Soll die nächste Welle jetzt automatisch starten (Auto an)?
+func auto_wave_due() -> bool:
+	return systems.waves.auto_due()
+
+
+## Nächste Welle sofort (wie Taste N).
+func next_wave_now() -> void:
+	systems.waves.next_now()
+
+
+func set_auto_wave(on: bool) -> void:
+	auto_wave = on
+	Session.auto_wave[Session.game_kind] = on
+	Session.save_last()
+
+
+# --- Hover: Reichweite und Kurzinfo ohne Klick ----------------------------------------------
+
+const HOVER_DELAY := 0.3
+
+
+## Tower unter der Maus nach kurzer Zeit: Reichweitenring und kleine Karte an der Maus.
+func _update_tower_hover(delta: float) -> void:
+	var t: Tower = null
+	if inv_drop == null or not inv_drop.active():
+		var c := board.mouse_cell(camera_rig.camera)
+		var a: Vector2i = occupied.get(c, NO_CELL)
+		t = towers.get(a, null)
+		if t == null:
+			t = traps.get(trap_cells.get(c, NO_CELL), null)
+	if t != null and (t == selected or not is_instance_valid(t)):
+		t = null
+	var vp := get_viewport()
+	if t != null and vp != null and vp.gui_get_hovered_control() != null:
+		t = null  # Maus über einem Fenster
+	if t != _hover_tower:
+		if _hover_tower != null and is_instance_valid(_hover_tower):
+			_hover_tower.set_hovered(false)
+		_hover_tower = t
+		_hover_time = 0.0
+		hud.show_hover_card("", Vector2.ZERO)
+	if t == null:
+		return
+	_hover_time += delta / maxf(Engine.time_scale, 0.001)
+	if _hover_time >= HOVER_DELAY and not t.hovered:
+		t.set_hovered(true)
+		hud.show_hover_card(hover_text(t), vp.get_mouse_position())
+
+
+## Kurzinfo für die Karte an der Maus: Name, Untertitel (Art · Ziele), Reichweite und Schaden, Kills.
+func hover_text(t: Tower) -> String:
+	var st: Dictionary = t.view() if t.has_method("view") else TowerStats.view(t)
+	var lines := [t.label(), str(st.get("subtitle", ""))]
+	var parts := []
+	for tile in st.get("tiles", []):
+		if str(tile.get("key", "")) in ["range", "damage"]:
+			parts.append("%s %s" % [tile.caption, tile.value])
+	if not parts.is_empty():
+		lines.append(" · ".join(parts))
+	lines.append(tr("Kills %d") % t.kills)
+	return "\n".join(lines.filter(func(l): return l != ""))
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	if inv_drop != null and inv_drop.active():
 		return  # beim Ziehen eines Items markiert inv_drop den Tower unter der Maus
 	var c := NO_CELL
@@ -515,7 +601,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# Linke Maustaste: Klick beim Loslassen, Ziehen spannt einen Auswahlrahmen für Steine auf (wie in RTS-Spielen)
 	if event is InputEventMouseMotion and _left_down and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
-		if not _dragging and event.position.distance_to(_press_pos) >= DRAG_THRESHOLD and moving == null:
+		if not _dragging and event.position.distance_to(_press_pos) >= DRAG_THRESHOLD and moving == null \
+				and systems.controls.box_select():
 			_dragging = true
 		if _dragging:
 			hud.show_drag_box(Rect2(_press_pos, Vector2.ZERO).expand(event.position))
@@ -722,24 +809,14 @@ func take_foreign_build(cmd: Dictionary) -> void:
 		Session.foreign_build = foreign_build
 
 
-## any_zone: Zonen der Maul-Maps nicht beachten (zufällige Steine beim Start)
+## Weiterleitung → System  build (any_zone: Zonen nicht beachten, zufällige Steine beim Start)
 func can_place(a: Vector2i, any_zone := false) -> bool:
-	var cells := Board3D.footprint(a)
-	for c in cells:
-		if not map.is_buildable(c) or occupied.has(c) or not (any_zone or may_build_for(c)):
-			return false
-	return not pathfinder.would_block_cells(cells)
+	return systems.build.can_place(a, any_zone)
 
 
-## Belegt oder räumt die Felder eines Towers/Steins. solid: blockiert er Gegner?
+## Weiterleitung → System  build
 func _occupy(a: Vector2i, on: bool, solid: bool) -> void:
-	var cells := Board3D.footprint(a)
-	for c in cells:
-		if on:
-			occupied[c] = a
-		else:
-			occupied.erase(c)
-	pathfinder.set_solid_cells(cells, on and solid)
+	systems.build.occupy(a, on, solid)
 
 
 func _select(t: Tower, rock := NO_CELL) -> void:
@@ -1244,14 +1321,16 @@ func _finish_round() -> void:
 		_refresh_hud()
 
 
-## Koop (Host): Spieler p ist weg (away) oder wieder da. Wer geht, hält die Runde nicht auf: seine gesetzten
-## Gems bleiben, behalten wird der erste, der Rest wird zu Steinen. Wer ohne gesetzte Gems geht und noch in der
-## Bauphase zurückkommt, setzt gleich mit, sonst ab der nächsten Runde.
+## Weiterleitung → System  coop
 func set_player_away(p: int, away: bool) -> void:
-	if p < 0 or p >= players.size() or players[p].away == away:
-		return
+	systems.coop.set_away(p, away)
+
+
+## Haken des Systems coop (Host): Spieler p ist weg (away) oder wieder da. Wer geht, hält die Runde nicht auf: seine
+## gesetzten Gems bleiben, behalten wird der erste, der Rest wird zu Steinen. Wer ohne gesetzte Gems geht und noch in
+## der Bauphase zurückkommt, setzt gleich mit, sonst ab der nächsten Runde.
+func on_player_away(p: int, away: bool) -> void:
 	var ps: PlayerState = players[p]
-	ps.away = away
 	if phase > Phase.CHOOSE:
 		return
 	acting = p
@@ -1327,6 +1406,7 @@ func _execute(cmd: Dictionary) -> bool:
 			take_foreign_build(cmd)
 			if Session.rogue:
 				enable_rogue()
+			take_ascension(cmd)
 			setup_done = true
 			_refresh_hud()
 			return true
@@ -1343,11 +1423,7 @@ func _execute(cmd: Dictionary) -> bool:
 			_refresh_hud()
 			return true
 		"speed":
-			var f := float(cmd.get("factor", 1.0))
-			if not f in [1.0, 2.0, 4.0]:
-				return false
-			Engine.time_scale = f
-			return true
+			return systems.controls.set_speed(float(cmd.get("factor", 1.0)))
 		"option":
 			var t := tower_from_ref(cmd.get("tower", {}))
 			var opts := tower_options(t)
@@ -1452,31 +1528,15 @@ func next_chance_wave() -> int:
 	return int(levels[chance_level + 1].get("wave", 1))
 
 
-## Anteil des Golds aus Kills und Fähigkeiten in dieser Welle: gold_income_factor, ab gold_income_ramp
-## linear steigend bis to_factor in Welle to_wave, danach gleichbleibend.
+## Anteil des Golds aus Kills und Fähigkeiten in dieser Welle (System economy; GemTD: data/balance.json
+## gold_income_factor, ab gold_income_ramp steigend; eeveTD/Randgruppen 1.0 über modes.json).
 func gold_income_factor(wave: int) -> float:
-	var start := float(Database.balance.get("gold_income_factor", 1.0))
-	var ramp: Dictionary = Database.balance.get("gold_income_ramp", {})
-	if ramp.is_empty():
-		return start
-	var a := int(ramp.get("from_wave", 1))
-	var b := int(ramp.get("to_wave", a))
-	var t := clampf(float(wave - a) / maxf(b - a, 1), 0.0, 1.0)
-	return lerpf(start, float(ramp.get("to_factor", start)), t)
+	return systems.economy.income_factor(wave)
 
 
-## Gold aus Kills und Fähigkeiten, gekürzt um gold_income_factor (Reste werden gesammelt).
-## p: Spieler, der das Gold bekommt; -1 = gleichmäßig auf alle verteilt (z. B. Kill ohne bekannten Tower).
+## Gold aus Kills und Fähigkeiten, gekürzt um gold_income_factor (Reste werden gesammelt), System economy.
 func earn_gold(amount: float, p := -1) -> void:
-	if p < 0 or p >= players.size():
-		for i in players.size():
-			earn_gold(amount / players.size(), i)
-		return
-	var ps: PlayerState = players[p]
-	ps.gold_frac += amount * gold_income_factor(current_wave())
-	var whole := floori(ps.gold_frac)
-	ps.gold += whole
-	ps.gold_frac -= whole
+	systems.economy.earn(amount, p)
 
 
 func current_wave() -> int:
@@ -1484,7 +1544,7 @@ func current_wave() -> int:
 
 
 func add_gold(amount: int, p := -1) -> void:
-	earn_gold(amount, p)
+	systems.economy.earn(amount, p)
 	_refresh_hud()
 
 
@@ -1568,18 +1628,8 @@ static func group_queue(g: Dictionary) -> Array:
 
 
 func _process_wave(delta: float) -> void:
-	spawn_timer -= delta
-	while spawn_timer <= 0.0 and not spawn_queue.is_empty():
-		var g: Dictionary = spawn_queue.pop_front()
-		var before := enemies.size()
-		_spawn_enemy(g)
-		# Der Gegner war schon -spawn_timer Sekunden vor Bildende fällig: diese Zeit nachlaufen, sonst
-		# hängen die Abstände der Gegner vom Bildraster ab (bei 4× bis zu ein Bild, mit Schnelllauf ×8).
-		var late := -spawn_timer
-		if late > 0.0:
-			for i in range(before, enemies.size()):
-				enemies[i]._process(late)
-		spawn_timer += float(g.get("interval", 1.0))
+	# Spawn-Warteschlange im System waves (holt verspätete Gegner nach, damit die Abstände nicht vom Bildraster abhängen)
+	spawn_timer = systems.waves.drain(spawn_queue, spawn_timer, delta, _spawn_new, func(g): return float(g.get("interval", 1.0)))
 	if spawn_queue.is_empty() and enemies.is_empty() and phase == Phase.WAVE:
 		run_stats.wave_done(all_towers(), wave_index + 1, int(leaks_per_wave.get(wave_index, 0)), int(wave_live.killed))
 		wave_index += 1
@@ -1588,9 +1638,17 @@ func _process_wave(delta: float) -> void:
 			_finish(Phase.VICTORY)
 		else:
 			_enter_build()
+			autosave.call_deferred()
 
 
 ## Gegner der Gruppe g erscheinen an jeder aktiven Bahn (lane < 0) oder nur an Bahn lane.
+## Gruppe g spawnen und die neuen Gegner zurückgeben (für waves.drain).
+func _spawn_new(g: Dictionary) -> Array:
+	var before := enemies.size()
+	_spawn_enemy(g)
+	return enemies.slice(before)
+
+
 func _spawn_enemy(g: Dictionary, lane := -1) -> void:
 	var def: Dictionary = enemy_def(str(g.get("enemy", "")))
 	if def.is_empty():
@@ -1606,6 +1664,7 @@ func _spawn_enemy(g: Dictionary, lane := -1) -> void:
 		var lp: Dictionary = lane_paths[i]
 		e.setup(self, def, g, lp.air if def.get("flying", false) else lp.ground)
 		_apply_enemy_difficulty(e, g)
+		_apply_ascension(e)
 		setup_score(e, g)
 		# Eine Welle ist gleich viele Punkte wert, egal an wie vielen Bahnen sie läuft
 		e.score_value /= lanes.size()
@@ -1619,138 +1678,64 @@ func _apply_enemy_difficulty(e: Enemy, _g: Dictionary) -> void:
 	e.apply_difficulty(Session.difficulty_factor())
 
 
-## Ist der Gegner in Reichweite eines Towers, der ihn angreifen oder mit einer Aura treffen kann?
-## Wirkt noch Gift, zählt das auch: sonst liefe er mit dem Gift schneller ins Ziel als ohne Schnelllauf.
+## Aufstiegsstufe auf einen neuen Gegner anwenden (nach der Schwierigkeit), System difficulty.
+func _apply_ascension(e: Enemy) -> void:
+	systems.difficulty.apply_ascension(e)
+
+
+## Was die gewählte Aufstiegsstufe ändert (ascension.gd), einmal je Run ausgerechnet.
+func ascension_mods() -> Dictionary:
+	return systems.difficulty.ascension_mods()
+
+
+## Index der gewählten Schwierigkeit in der Liste des Modus (System difficulty, Quelle je Modus in modes.json).
+func difficulty_index() -> int:
+	return systems.difficulty.index()
+
+
+## Name der gewählten Schwierigkeit mit Aufstiegsstufe, z. B. „Schwer +3“.
+func difficulty_label() -> String:
+	return systems.difficulty.label()
+
+
+## Anzahl der Schwierigkeiten des Modus.
+func difficulty_count() -> int:
+	return systems.difficulty.count()
+
+
+## Aufstiegsstufe aus dem Setup-Befehl übernehmen: nur auf der höchsten Schwierigkeit, höchstens max_level.
+func take_ascension(cmd: Dictionary) -> void:
+	systems.difficulty.take_ascension(int(cmd.get("ascension", 0)))
+
+
+## Die gewählte Schwierigkeit als Daten (eeveTD, Randgruppen, YouTD: Eintrag aus rules.difficulties).
+func diff_rules() -> Dictionary:
+	return systems.difficulty.current()
+
+
+## Weiterleitung → System  build
 func is_covered(e: Enemy) -> bool:
-	if e.poison_time > 0.0:
-		return true
-	_refresh_cover()
-	for c in _cover:
-		var t: Tower = c[0]
-		if not is_instance_valid(t) or e.pos.distance_squared_to(t.pos) > c[1] * c[1]:
-			continue
-		if t.can_attack() and t.can_target(e) and t.in_range(e):
-			return true
-		var aura := t.enemy_aura_radius(e)
-		if aura > 0.0 and e.pos.distance_to(t.pos) <= aura:
-			return true
-	return false
+	return systems.build.is_covered(e)
 
 
-## Einmal pro Bild: Tower, die überhaupt etwas erreichen, mit ihrer größten Reichweite.
-func _refresh_cover() -> void:
-	var frame := Engine.get_process_frames()
-	if frame == _cover_frame:
-		return
-	_cover_frame = frame
-	_cover = []
-	var sig := []
-	for t in all_towers():
-		var reach := maxf(t.range_cells() if t.can_attack() else 0.0, t._aura_radius())
-		if t.can_attack() and t.stats.has("range_air"):
-			reach = maxf(reach, float(t.stats.range_air) * (1.0 + t.rogue_range))
-		if reach > 0.0:
-			_cover.append([t, reach + 1.5])
-			sig.append([t.pos, reach, t.target_mode(), t.can_attack()])
-	_cover_sig = hash(sig)
-
-
-## Für Mitspieler: das Stück, auf dem der Gegner schnell läuft oder als Nächstes laufen wird, als [von, bis] in
-## zurückgelegter Strecke, oder [-1, -1]. Damit sagen sie voraus, wo er abbremst, statt bis zur
-## nächsten Meldung mit 8× weiterzulaufen. Solange Gift wirkt, beginnt das Stück erst danach.
+## Weiterleitung → System  build
 func free_stretch(e: Enemy) -> Array:
-	if idle_speed_factor() <= 1.0:
-		return [-1.0, -1.0]
-	_refresh_cover()
-	var key := "%d/%d" % [e.lane, int(e.flying)]
-	var cached: Dictionary = _free_cache.get(key, {})
-	if cached.is_empty() or cached.sig != _cover_sig or not is_same(cached.path, e.path):
-		cached = {"path": e.path, "sig": _cover_sig, "list": _free_stretches(e.path, e.flying)}
-		_free_cache[key] = cached
-	# Das Stück, auf dem er gerade ist, ab seinem echten Anfang: der Mitspieler liegt oft knapp
-	# dahinter und soll dort nicht normal schnell laufen.
-	var from := e.traveled
-	var poisoned := e.poison_time > 0.0
-	if poisoned:
-		from += e.base_speed() * e.poison_time
-	for st in cached.list:
-		if st[1] > from:
-			return [maxf(st[0], from) if poisoned else st[0], st[1]]
-	return [-1.0, -1.0]
+	return systems.build.free_stretch(e)
 
 
-const COVER_SAMPLE := 0.25
-
-
-## Stücke des Wegs ohne Tower in Reichweite, als [von, bis] in Strecke ab dem Start.
-func _free_stretches(path: Array, flying: bool) -> Array:
-	if _probe == null:
-		_probe = Enemy.new()
-	_probe.flying = flying
-	_probe.poison_time = 0.0
-	var out := []
-	var start := -1.0
-	var done := 0.0
-	for i in range(1, path.size()):
-		var a: Vector2 = path[i - 1]
-		var b: Vector2 = path[i]
-		var seg := a.distance_to(b)
-		var n := maxi(ceili(seg / COVER_SAMPLE), 1)
-		for k in range(0 if i == 1 else 1, n + 1):
-			var s := seg * k / n
-			var free := not _probe_covered(a, b, seg, s)
-			if free and start < 0.0:
-				start = done + _cover_edge(a, b, seg, maxf(s - seg / n, 0.0), s, false)
-			elif not free and start >= 0.0:
-				out.append([start, done + _cover_edge(a, b, seg, maxf(s - seg / n, 0.0), s, true)])
-				start = -1.0
-		done += seg
-	if start >= 0.0:
-		out.append([start, done])
-	return out
-
-
-func _probe_covered(a: Vector2, b: Vector2, seg: float, s: float) -> bool:
-	_probe.pos = a.lerp(b, s / seg) if seg > 0.0 else b
-	return is_covered(_probe)
-
-
-## Rand zwischen lo und hi auf dem Abschnitt a–b genauer suchen: dort wechselt is_covered auf covered_at_hi.
-func _cover_edge(a: Vector2, b: Vector2, seg: float, lo: float, hi: float, covered_at_hi: bool) -> float:
-	for i in 5:
-		var mid := (lo + hi) / 2.0
-		if _probe_covered(a, b, seg, mid) == covered_at_hi:
-			hi = mid
-		else:
-			lo = mid
-	return hi
-
-
-## Tempo-Faktor für Gegner, die gerade kein Tower erreicht.
+## Weiterleitung → System  build
 func idle_speed_factor() -> float:
-	return maxf(float(Database.balance.get("idle_speed_factor", 1.0)), 1.0)
+	return systems.build.idle_speed_factor()
 
 
+## Weiterleitung → System  targeting
 func find_targets(t: Tower, count: int) -> Array:
-	if count == 1:
-		# häufigster Fall ohne Lambda, Zwischenliste und Sortieren: der am weitesten gelaufene Gegner in Reichweite
-		var best = null
-		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
-				best = e
-		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
-	list.sort_custom(func(a, b): return a.traveled > b.traveled)
-	return list.slice(0, count)
+	return systems.targeting.find_targets(t, count)
 
 
+## Weiterleitung → System  targeting
 func enemies_in_radius(p: Vector2, radius: float) -> Array:
-	var out := []
-	var r2 := radius * radius
-	for e in enemies:
-		if not e.dead and e.pos.distance_squared_to(p) <= r2:
-			out.append(e)
-	return out
+	return systems.targeting.enemies_in_radius(p, radius)
 
 
 ## fx: Schuss-/Treffer-Effekt, siehe effects.gd
@@ -1919,6 +1904,7 @@ func _remove_enemy(e: Enemy) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	RunHistory.record(RunHistory.entry_from(self, p == Phase.VICTORY))
 	record_profile(p == Phase.VICTORY)
 	Engine.time_scale = 1.0
@@ -1933,11 +1919,8 @@ func record_profile(victory: bool) -> Dictionary:
 	info.erase("top")
 	info.coop = coop != null
 	info.players = players.size()
-	info.debug = debug_run()
-	info.time_counted = profile_time
-	info.merge(profile_extra(), true)
-	profile_time = roundi(play_time)
-	return Profile.record_run(profile_mode(), info, run_stats.result(all_towers().filter(func(t): return not t.is_new)))
+	return systems.run_record.finish(info, run_stats.result(all_towers().filter(func(t): return not t.is_new)),
+		{"difficulty": difficulty_index(), "ascension": ascension})
 
 
 ## Hilft hier eine Debug-Hilfe? Dann gibt der Run keine EP und zählt nicht für Siege und Rekorde (nur die
@@ -1948,16 +1931,11 @@ func debug_run() -> bool:
 
 ## Spiel verlassen, bevor der Run zu Ende ist: Zeit ins Profil, ohne Speichern auch als abgebrochen.
 func record_profile_abort() -> void:
-	if phase >= Phase.GAME_OVER or roundi(play_time) - profile_time < 10:
+	if phase >= Phase.GAME_OVER:
 		return
 	var info := RunHistory.entry_from(self, false)
 	info.erase("top")
-	info.debug = debug_run()
-	info.time_counted = profile_time
-	info.saved = SaveGame.writes > _saves_at_start
-	info.merge(profile_extra(), true)
-	Profile.record_abort(profile_mode(), info)
-	profile_time = roundi(play_time)
+	systems.run_record.abort(info, {"difficulty": difficulty_index(), "ascension": ascension})
 
 
 ## Modus im Profil (eeve_game.gd überschreibt das, die Variante Roguelike zählt eigen).
@@ -2016,6 +1994,7 @@ func _refresh_hud_local() -> void:
 	if not specials.is_empty():
 		shot_text = tr("One-Shot möglich: " if my_stage == Phase.BUILD else "Spezial möglich: ") + ", ".join(specials)
 	hud.set_round_gems(gems if my_stage <= Phase.CHOOSE else [], tr("Hellblauer Rand: Zutat für ") + ", ".join(specials) if not specials.is_empty() else "")
+	hud.set_gem_tags(gem_tags() if my_stage == Phase.CHOOSE else [])
 
 	if phase <= Phase.CHOOSE and my_stage == Phase.WAVE:
 		hud.set_phase(tr("Warten"), tr("Dein Gem ist gewählt. Die Welle startet, sobald alle Mitspieler fertig sind."), "")
@@ -2221,3 +2200,122 @@ func _option_view(t: Tower, o: Dictionary) -> Dictionary:
 		v.preview_range = Tower.ring_radius(Database.tower_tier(o.id, o.tier), trap)
 		v.diff = TowerStats.diff(t, o.id, o.tier)
 	return v
+
+
+# --- GemTD-Auswahlphase: Schilder über den neuen Gems (Lukas 2026-11-03) ---------------------
+
+## Für jeden neuen Gem der Runde die beste Option als kurzes Schild: Spezial-Tower (pink), Kombinieren (grün),
+## Zutat eines angepinnten Rezepts (gold), sonst nur der Name (grau).
+func gem_tags() -> Array:
+	var out := []
+	if round_towers.size() < 2:
+		return out
+	for i in round_towers.size():
+		var t: Tower = round_towers[i]
+		if not is_instance_valid(t):
+			continue
+		var tag := {"tower": t, "index": i, "text": t.label(), "style": "keep"}
+		var best_same := 0
+		for o in choice_options(t):
+			if _is_special_option(t, o):
+				tag.text = "★ " + Database.tower_label(o.id, o.tier)
+				tag.style = "special"
+				break
+			if int(o.get("same", 0)) > best_same:
+				best_same = int(o.same)
+				tag.text = "▲ " + Database.tower_label(o.id, o.tier)
+				tag.style = "combine"
+		if tag.style == "keep":
+			for sid in Session.pinned_recipes:
+				var def: Dictionary = Database.towers.get(sid, {})
+				if def.get("recipe", []).any(func(ing): return _ingredient_matches(ing, t)):
+					tag.text = "◆ " + Database.tower_label(sid, 0)
+					tag.style = "pinned"
+					break
+		out.append(tag)
+	return out
+
+
+## Tab: nächster neuer Gem der Runde auswählen.
+func select_next_gem() -> void:
+	var list := round_towers.filter(func(t): return is_instance_valid(t))
+	if list.is_empty():
+		return
+	var i := list.find(selected)
+	_select(list[(i + 1) % list.size()])
+
+
+# --- Pause (Taste P, nur Einzelspiel) ------------------------------------------------------
+
+## Pausiert (SceneTree.paused) laufen nur Oberfläche, Kamera und PauseInput: Tower lassen sich auswählen und
+## ansehen, die Welt steht.
+func _on_pause_toggled(on: bool) -> void:
+	camera_rig.process_mode = Node.PROCESS_MODE_ALWAYS if on else Node.PROCESS_MODE_INHERIT
+	hud.show_hover_card("", Vector2.ZERO)
+
+
+## Klick während der Pause: nur auswählen (Tower, Stein), nichts bauen.
+func paused_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and not event.pressed):
+		return
+	if event.button_index == MOUSE_BUTTON_LEFT:
+		var c := board.mouse_cell(camera_rig.camera)
+		var a: Vector2i = occupied.get(c, NO_CELL)
+		var trap: Tower = traps.get(trap_cells.get(c, NO_CELL), null)
+		if towers.has(a):
+			_select(towers[a])
+		elif trap != null:
+			_select(trap)
+		elif rocks.has(a):
+			_select(null, a)
+		else:
+			_select(null)
+	elif event.button_index == MOUSE_BUTTON_RIGHT and not camera_rig.right_dragged:
+		_select(null)
+
+
+# --- Warnung vor Luftwellen (Lukas 2026-11-03) ---------------------------------------------
+
+const AIR_WARN_SHARE := 0.35  ## weniger als dieser Anteil des Flugwegs in Reichweite eines Luft-Towers: Warnung
+
+
+## Anteil des Flugwegs (erste Bahn), den mindestens ein Tower erreicht, der Luft trifft (0..1).
+func air_cover_share() -> float:
+	if air_path.size() < 2:
+		return 1.0
+	var key := [systems.build.cover_signature(), air_path.size()]
+	if _air_share_key == key:
+		return _air_share
+	var total := 0.0
+	for i in range(1, air_path.size()):
+		total += air_path[i - 1].distance_to(air_path[i])
+	var free := 0.0
+	for st in systems.build.free_stretches(Array(air_path), true):
+		free += float(st[1]) - float(st[0])
+	_air_share_key = key
+	_air_share = clampf(1.0 - free / maxf(total, 0.001), 0.0, 1.0)
+	return _air_share
+
+
+var _air_share := 1.0
+var _air_share_key := []
+
+
+## Warnung unter einer Zeile der Wellenliste (hud.set_waves): nur für die nächste, noch nicht laufende Welle.
+func wave_warning(number: int, type: String) -> String:
+	if phase >= Phase.GAME_OVER or is_wave_running() or number != wave_index + 1:
+		return ""
+	return air_warning(type)
+
+
+## Text, wenn die Welle Flieger hat und man kaum vorbereitet ist ("" = keine Warnung).
+func air_warning(type: String) -> String:
+	if not type in ["Flieger", "Gemischt"]:
+		return ""
+	var air_towers := own_towers().filter(func(t): return is_instance_valid(t) and not t.is_new and t.can_attack() and t.target_mode() != "ground")
+	if air_towers.is_empty():
+		return tr("⚠ Kein Tower trifft Luft")
+	var share := air_cover_share()
+	if share < AIR_WARN_SHARE:
+		return tr("⚠ Nur %d %% des Flugwegs abgedeckt") % roundi(share * 100.0)
+	return ""

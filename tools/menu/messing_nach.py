@@ -8,7 +8,7 @@ d = Path(sys.argv[1])
 k = Image.open(d / "kante_h.png").convert("RGBA")
 w, h = k.size
 k = k.crop((w // 2, 0, w // 2 + 1, h)).resize((64, h))
-k = k.resize((64, 20), Image.LANCZOS)
+k = k.resize((64, 40), Image.LANCZOS)
 k.save(d / "kante_h.png")
 k.rotate(90, expand=True).save(d / "kante_v.png")
 f = Image.open(d / "knopf_rahmen.png").convert("RGBA")

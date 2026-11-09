@@ -70,6 +70,10 @@ var items_panel: EeveItemsPanel
 var market_panel: EeveMarketPanel
 
 
+func system_mode() -> String:
+	return "eevetd"
+
+
 func _ready() -> void:
 	# Stil „Druidenhain“ für die ganze Oberfläche von eeveTD, vor dem Bau des HUD in game.gd
 	UiTheme.use_skin(UiTheme.DRUID)
@@ -89,6 +93,8 @@ func _ready() -> void:
 			p.gold = int(rules.get("start_gold", 200))
 		level_pause = float(rules.get("first_pause", 45))
 	scenery = EeveScenery.add_to(self)
+	# Tageszeit läuft (Lukas 2026-11-09): Start kurz vor Sonnenuntergang, mit „Tag“ in der Wahl zur Mittagszeit
+	scenery.start_cycle(DayCycle.START if FieldStyle.night else DayCycle.DAY_HOUR)
 	bonus_view = EeveBonusTiles.new()
 	add_child(bonus_view)
 	bonus_view.show_tiles(bonus_tiles)
@@ -138,8 +144,10 @@ func _setup_debug() -> void:
 	for n in [1, 5]:
 		hud.debug_button_in(row, "+%d" % n, func(): _debug_add("points", n))
 	row = hud.add_debug_row("Tageszeit")
-	hud.debug_button_in(row, "Tag", func(): scenery.set_night(false))
-	hud.debug_button_in(row, "Nacht", func(): scenery.set_night(true))
+	for t in [["Morgen", 6.4], ["Tag", DayCycle.DAY_HOUR], ["Abend", 18.9], ["Nacht", DayCycle.NIGHT_HOUR]]:
+		hud.debug_button_in(row, t[0], func(): scenery.cycle.set_hour(t[1]))
+	var fast := hud.debug_button_in(row, "×30", func(): scenery.cycle.speed = 30.0 if scenery.cycle.speed < 2.0 else 1.0)
+	fast.tooltip_text = "Tageszeit 30-mal so schnell (nochmal: normal)"
 	row = hud.add_debug_row("Elemente")
 	var all := hud.debug_button_in(row, tr("Alle auf %d") % int(rules.get("point_max", 8)), _debug_max_elements)
 	all.tooltip_text = "Alle sechs Elemente auf die höchste Stufe, schaltet alle Tower, Fallen und Dual-Tower frei"
@@ -251,11 +259,6 @@ func _apply_variance() -> void:
 	pass
 
 
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
-
-
 func _make_waves() -> Array:
 	wave_seed = rng.randi()
 	return _waves_from_seed()
@@ -285,6 +288,7 @@ func _execute(cmd: Dictionary) -> bool:
 			if setup_done or acting != 0:
 				return false
 			_apply_setup(int(cmd.get("difficulty", 2)), int(cmd.get("field", 0)))
+			take_ascension(cmd)
 			return true
 		"build":
 			return build_barricade(cmd.get("cell", NO_CELL))
@@ -590,10 +594,6 @@ func _entangle(e: Enemy, towers: Array, duration: float) -> bool:
 	return true
 
 
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
-
-
 func _note(text: String, p := -1) -> void:
 	var lines: Array = ep(p).log
 	lines.append(text)
@@ -635,6 +635,7 @@ func on_enemy_killed(e: Enemy) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	var won := p == Phase.VICTORY
 	record_profile(won)
 	Engine.time_scale = 1.0
@@ -674,7 +675,12 @@ func profile_extra() -> Dictionary:
 # --- Koop (coop_sync.gd) -------------------------------------------------------------
 
 ## Befehle, die Mitspieler zusätzlich zu denen von GemTD schicken dürfen.
-# --- Inventar: Items auf Tower in der Welt ziehen (InvWorldDrop in game.gd) ---
+# --- Inventar: Items auf Tower in der Welt ziehen (System inventory) ---
+
+func item_slots(t: Tower) -> int:
+	return EeveItems.slots(t)
+
+
 
 func inv_drop_reason(t: Tower, data: Dictionary) -> String:
 	return eitems.move_reason(data.get("from", {}), {"tower": tower_ref(t), "slot": -1})
@@ -686,15 +692,7 @@ func inv_drop_hint(t: Tower, data: Dictionary) -> String:
 	var i := int(from.get("stash", -1))
 	if i >= 0 and i < inv.size() and EeveItems.is_consumable(inv[i]):
 		return "+ " + tr("%s benutzen (wird verbraucht)") % EeveItems.item_name(inv[i])
-	return "+ " + tr("Einlegen · %d frei") % (EeveItems.slots(t) - t.items.size())
-
-
-func inv_drop_on_tower(t: Tower, data: Dictionary) -> void:
-	submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": tower_ref(t), "slot": -1}})
-
-
-func coop_commands() -> Array:
-	return ["build", "trap", "element", "start_level", "item_use", "item_move", "item_sell", "market_buy", "market_upgrade"]
+	return systems.inventory.free_hint(t)
 
 
 ## Mitspieler legen Tower vom Host als EeveTower an.
@@ -702,41 +700,21 @@ func new_tower() -> Tower:
 	return EeveTower.new()
 
 
-## Was eeveTD über den Stand von GemTD hinaus an die Mitspieler schickt. Die Pause in ganzen Sekunden,
-## damit sich der Stand nicht jedes Bild ändert.
-func coop_snapshot() -> Dictionary:
-	var spent := {}
+## Was eeveTD über GemTD und system_cfg.coop (modes.json) hinaus an die Mitspieler schickt.
+func coop_extra() -> Dictionary:
 	var titems := {}
 	for t in all_towers():
-		var key := "%d,%d,%s" % [t.cell.x, t.cell.y, t.is_trap()]
-		spent[key] = int(t.get_meta("spent", 0))
 		if t is EeveTower and (not t.items.is_empty() or t.extra_slots > 0):
-			titems[key] = _tower_items(t)
-	return {"difficulty": difficulty, "field": field_type, "seed": wave_seed, "pause": ceili(maxf(level_pause, 0.0)),
-		"ready": ready_players.keys(), "players": eeve_players.duplicate(true), "spent": spent,
-		"tiles": _tiles_to_list(bonus_tiles), "score": eeve_score.duplicate(), "items": titems}
+			titems[systems.coop.tower_key(t)] = _tower_items(t)
+	return {"tiles": _tiles_to_list(bonus_tiles), "score": eeve_score.duplicate(), "items": titems}
 
 
-func apply_coop_snapshot(d: Dictionary) -> void:
-	var regen := int(d.get("seed", wave_seed)) != wave_seed or int(d.get("difficulty", difficulty)) != difficulty
-	difficulty = int(d.get("difficulty", difficulty))
-	field_type = int(d.get("field", field_type))
-	wave_seed = int(d.get("seed", wave_seed))
-	if regen:
+func coop_applied(d: Dictionary, changed: Array) -> void:
+	if changed.has("seed") or changed.has("difficulty"):
 		waves = _waves_from_seed()
-	level_pause = float(d.get("pause", level_pause))
-	ready_players = {}
-	for p in d.get("ready", []):
-		ready_players[int(p)] = true
-	var ps: Array = d.get("players", [])
-	if not ps.is_empty():
-		eeve_players = ps
-	var spent: Dictionary = d.get("spent", {})
 	var titems: Dictionary = d.get("items", {})
 	for t in all_towers():
-		var key := "%d,%d,%s" % [t.cell.x, t.cell.y, t.is_trap()]
-		t.set_meta("spent", int(spent.get(key, 0)))
-		_set_tower_items(t, titems.get(key, {}))
+		_set_tower_items(t, titems.get(systems.coop.tower_key(t), {}))
 	if d.has("score"):
 		eeve_score = {"creeps": float(d.score.get("creeps", 0.0)), "challenges": float(d.score.get("challenges", 0.0))}
 	var tiles := _tiles_from_list(d.get("tiles", []))
@@ -1024,8 +1002,8 @@ func build_trap(id: String, a: Vector2i) -> bool:
 	_register(t)
 	run_stats.built(t, "trap", wave_index + 1)
 	_update_auras()
-	if acting == local_player:
-		placing_trap = ""
+	if acting == local_player and (not Input.is_key_pressed(KEY_SHIFT) or trap_reason(id) != ""):
+		placing_trap = ""  # mit gedrückter Umschalttaste bleibt die Falle gewählt (wie in Shopping Maul)
 		board.hover_cell = NO_CELL
 	_refresh_hud()
 	return true
@@ -1138,7 +1116,13 @@ func _apply_option(t: Tower, o: Dictionary) -> bool:
 
 # --- Eingabe -----------------------------------------------------------------------
 
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
+	var r := Tower.ring_radius(Database.tower_tier(placing_trap, 0), true) if placing_trap != "" else 0.0
+	if r != board.hover_range:
+		board.hover_range = r
+		board.refresh_hover()
 	if placing_trap != "":
 		var a := board.mouse_anchor(camera_rig.camera, Board3D.TRAP_CELLS)
 		if a != board.hover_cell or board.hover_size != Board3D.TRAP_CELLS:
@@ -1195,11 +1179,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			placing_trap = ""
 			_refresh_hud()
 			return
+	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_RIGHT \
+			and placing_trap != "" and not camera_rig.right_dragged:
+		placing_trap = ""
+		_refresh_hud()
+		return
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 func _on_option_chosen(index: int) -> void:

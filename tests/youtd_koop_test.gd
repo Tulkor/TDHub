@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name ytkoop)
+## Modi: youtd
 ## YouTD: Spielstand (Speichern mitten in der Welle, Laden in ein neues Spiel) und Koop ohne Netz (Host und Mitspieler
 ## als zwei Spiele, Befehle und Stand laufen direkt wie über ENet): eigener Weg und eigenes Gebiet je Spieler,
 ## gemeinsames Portal und gemeinsamer Wellen-Timer. Start: godot --headless --path . res://tests/youtd_koop_test.tscn

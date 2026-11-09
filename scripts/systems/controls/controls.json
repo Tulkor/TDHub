@@ -1,0 +1,5 @@
+{
+	"_info": "Basiswerte für Eingabe und Tempo. box_select: Ziehen mit der linken Maustaste spannt einen Auswahlrahmen auf (GemTD: Steine), sonst kein Rahmen. speeds: erlaubte Spieltempi (Tasten 1/2/3, im Koop für alle). Ein Modus überschreibt sie in data/modes.json unter system_cfg.controls; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"box_select": true,
+	"speeds": [1.0, 2.0, 4.0]
+}

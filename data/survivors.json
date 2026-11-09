@@ -1,0 +1,208 @@
+{
+	"_info": "Tower Survivors (Arbeitstitel): ein Turm als Waffenplattform in der Mitte, Gegner kommen von allen Seiten. Waffen kaufen und auf Montageplätze setzen (gleiche Waffe nochmal kaufen = Stufe hoch), Upgrades, alle 5 Wellen ein Bonus. Waffenmodelle sind Bausteine (model: s = box|cyl|cone|sphere, size, p = Position, r = Drehung in Grad, c = type|dark|light|glow), Lauf zeigt nach -Z. kind: bullet (Geschoss), lob (Bogen mit Fläche), beam (sofort, chain = Sprünge), line (durchschlagender Strahl), cone (Kegel, tickt), nova (Ring um den Turm). Werte je Stufe: damage * (1 + level_damage * (Stufe-1)).",
+	"arena": {"radius": 24.0, "spawn_radius": 25.0, "tower_radius": 6.2},
+	"start": {"gold": 120, "hp": 600, "armor": 2, "regen": 3.0, "income": 2.0, "slots": 3, "max_slots": 6, "weapon": "mg"},
+	"waves": {"count": 30, "duration": 30.0, "spawn_time": 24.0, "hp_growth": 1.085, "budget_base": 14, "budget_growth": 1.09, "boss_every": 10, "perk_every": 5, "wave_bonus": 30, "wave_bonus_growth": 8},
+	"difficulties": [
+		{"name": "Einfach", "hp": 0.75, "dps": 0.8, "score": 0.8},
+		{"name": "Mittel", "hp": 1.0, "dps": 1.0, "score": 1.0},
+		{"name": "Schwer", "hp": 1.3, "dps": 1.25, "score": 1.3}
+	],
+	"level_damage": 0.6,
+	"level_range": 0.04,
+	"max_level": 5,
+	"sell_factor": 0.5,
+	"shop": {"offers": 4, "reroll_base": 10, "reroll_step": 6},
+	"damage_types": {
+		"phys": {"name": "Physisch", "color": "d9dde6"},
+		"fire": {"name": "Feuer", "color": "ff7a2e"},
+		"frost": {"name": "Frost", "color": "7fd8ff"},
+		"shock": {"name": "Blitz", "color": "ffe14d"},
+		"poison": {"name": "Gift", "color": "7be05a"}
+	},
+	"rarities": {
+		"common": {"name": "Gewöhnlich", "color": "a9b0bf", "price": 50, "weight": 100, "weight_per_wave": -2.5},
+		"rare": {"name": "Selten", "color": "3d8bff", "price": 120, "weight": 30, "weight_per_wave": 2.0},
+		"epic": {"name": "Episch", "color": "b84dff", "price": 260, "weight": 4, "weight_per_wave": 1.5, "from_wave": 3},
+		"legendary": {"name": "Legendär", "color": "ff9a1f", "price": 520, "weight": 0, "weight_per_wave": 0.8, "from_wave": 8}
+	},
+	"weapons": [
+		{"id": "mg", "name": "Maschinengewehr", "rarity": "common", "type": "phys", "kind": "bullet", "damage": 6, "cooldown": 0.28, "range": 9.0, "speed": 26,
+			"desc": "Schnelle Einzelschüsse.",
+			"model": [
+				{"s": "box", "size": [0.5, 0.35, 0.6], "p": [0, 0.25, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.06, 0.9], "p": [-0.1, 0.28, -0.6], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.06, 0.9], "p": [0.1, 0.28, -0.6], "r": [90, 0, 0], "c": "type"},
+				{"s": "box", "size": [0.2, 0.18, 0.3], "p": [0.32, 0.2, 0.05], "c": "light"}
+			]},
+		{"id": "kanone", "name": "Kanone", "rarity": "common", "type": "phys", "kind": "bullet", "damage": 24, "cooldown": 1.15, "range": 10.0, "speed": 18, "splash": 1.2,
+			"desc": "Schwere Kugel mit kleiner Fläche.",
+			"model": [
+				{"s": "sphere", "size": [0.38], "p": [0, 0.3, 0.05], "c": "dark"},
+				{"s": "cyl", "size": [0.15, 1.0], "p": [0, 0.32, -0.55], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.2, 0.18], "p": [0, 0.32, -1.02], "r": [90, 0, 0], "c": "dark"}
+			]},
+		{"id": "flammer", "name": "Flammenwerfer", "rarity": "common", "type": "fire", "kind": "cone", "damage": 4, "cooldown": 0.25, "range": 5.5, "angle": 40, "burn": {"dps": 4, "time": 2.0},
+			"desc": "Kegel aus Feuer, setzt in Brand.",
+			"model": [
+				{"s": "cyl", "size": [0.22, 0.6], "p": [0.18, 0.3, 0.1], "c": "type"},
+				{"s": "cyl", "size": [0.22, 0.6], "p": [-0.18, 0.3, 0.1], "c": "type"},
+				{"s": "box", "size": [0.25, 0.2, 0.6], "p": [0, 0.3, -0.35], "c": "dark"},
+				{"s": "cone", "size": [0.16, 0.3], "p": [0, 0.3, -0.75], "r": [-90, 0, 0], "c": "glow"}
+			]},
+		{"id": "giftspritze", "name": "Giftspritze", "rarity": "common", "type": "poison", "kind": "bullet", "damage": 4, "cooldown": 0.6, "range": 8.5, "speed": 16, "poison": {"dps": 9, "time": 3.0},
+			"desc": "Vergiftet, Gift stapelt nicht, frischt aber auf.",
+			"model": [
+				{"s": "sphere", "size": [0.3], "p": [0, 0.45, 0.15], "c": "glow"},
+				{"s": "box", "size": [0.3, 0.25, 0.5], "p": [0, 0.2, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.05, 0.7], "p": [0, 0.22, -0.55], "r": [90, 0, 0], "c": "type"}
+			]},
+		{"id": "eisnadel", "name": "Eisnadler", "rarity": "common", "type": "frost", "kind": "bullet", "damage": 9, "cooldown": 0.55, "range": 9.0, "speed": 24, "slow": {"pct": 25, "time": 1.5},
+			"desc": "Verlangsamt das Ziel.",
+			"model": [
+				{"s": "box", "size": [0.4, 0.3, 0.5], "p": [0, 0.22, 0], "c": "dark"},
+				{"s": "cone", "size": [0.12, 0.9], "p": [0, 0.25, -0.6], "r": [-90, 0, 0], "c": "type"},
+				{"s": "box", "size": [0.08, 0.4, 0.08], "p": [0, 0.55, 0.1], "c": "glow"}
+			]},
+		{"id": "moerser", "name": "Mörser", "rarity": "rare", "type": "phys", "kind": "lob", "damage": 42, "cooldown": 2.2, "range": 13.0, "speed": 10, "splash": 2.2,
+			"desc": "Granaten im hohen Bogen, große Fläche.",
+			"model": [
+				{"s": "cyl", "size": [0.4, 0.3], "p": [0, 0.15, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.22, 0.8], "p": [0, 0.5, -0.2], "r": [45, 0, 0], "c": "type"},
+				{"s": "box", "size": [0.6, 0.1, 0.12], "p": [0, 0.35, 0.05], "c": "light"}
+			]},
+		{"id": "tesla", "name": "Teslaspule", "rarity": "rare", "type": "shock", "kind": "beam", "damage": 18, "cooldown": 0.95, "range": 8.0, "chain": 3,
+			"desc": "Blitz springt auf 3 weitere Gegner.",
+			"model": [
+				{"s": "cyl", "size": [0.25, 0.5], "p": [0, 0.25, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.08, 0.6], "p": [0, 0.75, 0], "c": "light"},
+				{"s": "sphere", "size": [0.22], "p": [0, 1.1, 0], "c": "glow"},
+				{"s": "cyl", "size": [0.3, 0.05], "p": [0, 0.6, 0], "c": "type"},
+				{"s": "cyl", "size": [0.24, 0.05], "p": [0, 0.8, 0], "c": "type"}
+			]},
+		{"id": "raketen", "name": "Raketenkasten", "rarity": "rare", "type": "fire", "kind": "bullet", "damage": 14, "cooldown": 1.6, "range": 11.0, "speed": 14, "shots": 3, "splash": 1.0,
+			"desc": "Drei Raketen auf verschiedene Ziele.",
+			"model": [
+				{"s": "box", "size": [0.7, 0.5, 0.6], "p": [0, 0.35, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [-0.2, 0.45, -0.31], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [0, 0.45, -0.31], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [0.2, 0.45, -0.31], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [-0.2, 0.25, -0.31], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [0, 0.25, -0.31], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.09, 0.15], "p": [0.2, 0.25, -0.31], "r": [90, 0, 0], "c": "type"}
+			]},
+		{"id": "frostring", "name": "Frostring", "rarity": "rare", "type": "frost", "kind": "nova", "damage": 12, "cooldown": 2.0, "range": 5.5, "slow": {"pct": 40, "time": 2.0},
+			"desc": "Kälte-Welle rund um den Turm.",
+			"model": [
+				{"s": "cyl", "size": [0.35, 0.2], "p": [0, 0.1, 0], "c": "dark"},
+				{"s": "cone", "size": [0.25, 0.7], "p": [0, 0.55, 0], "c": "type"},
+				{"s": "cyl", "size": [0.4, 0.04], "p": [0, 0.35, 0], "c": "glow"}
+			]},
+		{"id": "schrot", "name": "Schrotflinte", "rarity": "rare", "type": "phys", "kind": "bullet", "damage": 8, "cooldown": 1.0, "range": 6.5, "speed": 22, "shots": 6, "spread": 30,
+			"desc": "Sechs Kugeln im Fächer.",
+			"model": [
+				{"s": "box", "size": [0.4, 0.3, 0.55], "p": [0, 0.25, 0], "c": "dark"},
+				{"s": "box", "size": [0.4, 0.14, 0.6], "p": [0, 0.3, -0.55], "c": "type"},
+				{"s": "box", "size": [0.12, 0.25, 0.12], "p": [0, 0.08, 0.22], "c": "light"}
+			]},
+		{"id": "laser", "name": "Laserlanze", "rarity": "epic", "type": "fire", "kind": "line", "damage": 55, "cooldown": 1.4, "range": 14.0,
+			"desc": "Strahl durch alle Gegner in einer Linie.",
+			"model": [
+				{"s": "box", "size": [0.45, 0.4, 0.7], "p": [0, 0.3, 0.05], "c": "dark"},
+				{"s": "box", "size": [0.12, 0.12, 1.2], "p": [0, 0.35, -0.8], "c": "type"},
+				{"s": "box", "size": [0.18, 0.18, 0.1], "p": [0, 0.35, -1.42], "c": "glow"},
+				{"s": "box", "size": [0.5, 0.06, 0.3], "p": [0, 0.55, -0.4], "c": "light"}
+			]},
+		{"id": "seuche", "name": "Seuchenwerfer", "rarity": "epic", "type": "poison", "kind": "lob", "damage": 20, "cooldown": 2.4, "range": 12.0, "speed": 9, "splash": 2.4, "poison": {"dps": 28, "time": 4.0},
+			"desc": "Giftwolke vergiftet alle in der Fläche.",
+			"model": [
+				{"s": "sphere", "size": [0.35], "p": [0.25, 0.55, 0.2], "c": "glow"},
+				{"s": "sphere", "size": [0.35], "p": [-0.25, 0.55, 0.2], "c": "glow"},
+				{"s": "cyl", "size": [0.35, 0.3], "p": [0, 0.15, 0], "c": "dark"},
+				{"s": "cyl", "size": [0.18, 0.7], "p": [0, 0.45, -0.35], "r": [55, 0, 0], "c": "type"}
+			]},
+		{"id": "gewitter", "name": "Gewitterturm", "rarity": "epic", "type": "shock", "kind": "beam", "damage": 34, "cooldown": 1.2, "range": 10.0, "chain": 6,
+			"desc": "Blitz springt auf 6 weitere Gegner.",
+			"model": [
+				{"s": "cyl", "size": [0.3, 0.3], "p": [0, 0.15, 0], "c": "dark"},
+				{"s": "box", "size": [0.12, 1.2, 0.12], "p": [0, 0.9, 0], "c": "light"},
+				{"s": "sphere", "size": [0.3], "p": [0, 1.6, 0], "c": "glow"},
+				{"s": "box", "size": [0.7, 0.06, 0.06], "p": [0, 1.2, 0], "c": "type"},
+				{"s": "box", "size": [0.06, 0.06, 0.7], "p": [0, 1.0, 0], "c": "type"}
+			]},
+		{"id": "schiene", "name": "Schienenkanone", "rarity": "epic", "type": "phys", "kind": "line", "damage": 130, "cooldown": 2.7, "range": 16.0,
+			"desc": "Durchschlägt alles in einer langen Linie.",
+			"model": [
+				{"s": "box", "size": [0.4, 0.35, 0.6], "p": [0, 0.28, 0.1], "c": "dark"},
+				{"s": "box", "size": [0.08, 0.1, 1.6], "p": [-0.13, 0.3, -0.85], "c": "type"},
+				{"s": "box", "size": [0.08, 0.1, 1.6], "p": [0.13, 0.3, -0.85], "c": "type"},
+				{"s": "box", "size": [0.1, 0.06, 1.4], "p": [0, 0.3, -0.75], "c": "glow"}
+			]},
+		{"id": "froststurm", "name": "Froststurm", "rarity": "legendary", "type": "frost", "kind": "nova", "damage": 45, "cooldown": 1.5, "range": 7.5, "slow": {"pct": 55, "time": 2.5},
+			"desc": "Großer Eisring, stark verlangsamt.",
+			"model": [
+				{"s": "cyl", "size": [0.4, 0.25], "p": [0, 0.12, 0], "c": "dark"},
+				{"s": "cone", "size": [0.18, 0.8], "p": [0.18, 0.6, 0], "r": [0, 0, -15], "c": "type"},
+				{"s": "cone", "size": [0.18, 0.8], "p": [-0.18, 0.6, 0], "r": [0, 0, 15], "c": "type"},
+				{"s": "cone", "size": [0.2, 1.0], "p": [0, 0.75, 0], "c": "glow"}
+			]},
+		{"id": "sturm", "name": "Sturmgeschütz", "rarity": "legendary", "type": "shock", "kind": "bullet", "damage": 16, "cooldown": 0.16, "range": 10.0, "speed": 30, "chain": 2,
+			"desc": "Schnellfeuer, jeder Treffer springt weiter.",
+			"model": [
+				{"s": "box", "size": [0.55, 0.4, 0.6], "p": [0, 0.3, 0.05], "c": "dark"},
+				{"s": "cyl", "size": [0.22, 0.9], "p": [0, 0.32, -0.65], "r": [90, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.25, 0.08], "p": [0, 0.32, -0.4], "r": [90, 0, 0], "c": "glow"},
+				{"s": "cyl", "size": [0.25, 0.08], "p": [0, 0.32, -0.8], "r": [90, 0, 0], "c": "glow"}
+			]},
+		{"id": "plasma", "name": "Plasmawerfer", "rarity": "legendary", "type": "fire", "kind": "lob", "damage": 150, "cooldown": 2.6, "range": 14.0, "speed": 11, "splash": 3.2, "burn": {"dps": 30, "time": 3.0},
+			"desc": "Plasmakugel mit riesiger Brandfläche.",
+			"model": [
+				{"s": "sphere", "size": [0.45], "p": [0, 0.45, 0.1], "c": "glow"},
+				{"s": "cyl", "size": [0.3, 0.9], "p": [0, 0.55, -0.5], "r": [60, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.45, 0.25], "p": [0, 0.12, 0], "c": "dark"}
+			]},
+		{"id": "orbital", "name": "Orbitalzeiger", "rarity": "legendary", "type": "phys", "kind": "beam", "damage": 260, "cooldown": 3.0, "range": 20.0, "splash": 2.5,
+			"desc": "Markiert ein Ziel, ein Schlag von oben trifft die Fläche.",
+			"model": [
+				{"s": "box", "size": [0.35, 0.35, 0.35], "p": [0, 0.2, 0], "c": "dark"},
+				{"s": "cone", "size": [0.4, 0.4], "p": [0, 0.6, 0], "r": [180, 0, 0], "c": "type"},
+				{"s": "cyl", "size": [0.04, 0.9], "p": [0, 1.0, 0], "c": "light"},
+				{"s": "sphere", "size": [0.12], "p": [0, 1.5, 0], "c": "glow"}
+			]}
+	],
+	"upgrades": [
+		{"id": "income", "name": "Einkommen", "desc": "+1 Gold pro Sekunde", "stat": "income", "add": 1.0, "cost": 60, "growth": 1.45, "max": 12},
+		{"id": "damage", "name": "Schaden", "desc": "+8 % Schaden aller Waffen", "stat": "damage", "add": 0.08, "cost": 80, "growth": 1.38, "max": 20},
+		{"id": "rate", "name": "Feuerrate", "desc": "+6 % Angriffstempo", "stat": "rate", "add": 0.06, "cost": 90, "growth": 1.4, "max": 15},
+		{"id": "range", "name": "Reichweite", "desc": "+6 % Reichweite", "stat": "range", "add": 0.06, "cost": 80, "growth": 1.5, "max": 8},
+		{"id": "hull", "name": "Hülle", "desc": "+80 Leben (und heilt sie)", "stat": "max_hp", "add": 80, "cost": 50, "growth": 1.3, "max": 25},
+		{"id": "armor", "name": "Panzerung", "desc": "+3 Rüstung", "stat": "armor", "add": 3, "cost": 60, "growth": 1.35, "max": 20},
+		{"id": "repair", "name": "Reparatur", "desc": "+2 Leben pro Sekunde", "stat": "regen", "add": 2.0, "cost": 70, "growth": 1.4, "max": 15},
+		{"id": "thorns", "name": "Dornen", "desc": "+20 % Nahkampfschaden zurück", "stat": "thorns", "add": 0.2, "cost": 70, "growth": 1.42, "max": 15},
+		{"id": "slot", "name": "Montageplatz", "desc": "Ein weiterer Platz für eine Waffe", "stat": "slots", "add": 1, "costs": [150, 320, 600], "max": 3}
+	],
+	"perks": [
+		{"id": "ueberladung", "name": "Überladung", "desc": "+15 % Schaden aller Waffen", "stat": "damage", "add": 0.15},
+		{"id": "schnelllader", "name": "Schnelllader", "desc": "+12 % Angriffstempo", "stat": "rate", "add": 0.12},
+		{"id": "goldader", "name": "Goldader", "desc": "+40 % Gold aus Kills", "stat": "kill_gold", "add": 0.4},
+		{"id": "stahlhaut", "name": "Stahlhaut", "desc": "+6 Rüstung", "stat": "armor", "add": 6},
+		{"id": "vampir", "name": "Saugende Munition", "desc": "1 % des Schadens heilt den Turm", "stat": "lifesteal", "add": 0.01},
+		{"id": "kette", "name": "Kettenreaktion", "desc": "Blitze springen 2 Gegner weiter", "stat": "chain", "add": 2},
+		{"id": "brand", "name": "Brandbeschleuniger", "desc": "Brennen und Gift +50 %", "stat": "dot", "add": 0.5},
+		{"id": "kaelte", "name": "Kältefront", "desc": "Verlangsamung +15 Prozentpunkte", "stat": "slow", "add": 15},
+		{"id": "zusatzlauf", "name": "Zusatzlauf", "desc": "Geschosswaffen feuern 1 Geschoss mehr", "stat": "shots", "add": 1},
+		{"id": "notreparatur", "name": "Notreparatur", "desc": "+25 % Leben und volle Heilung", "stat": "max_hp_pct", "add": 0.25},
+		{"id": "rabatt", "name": "Rabattmarke", "desc": "Waffen im Laden 15 % billiger", "stat": "discount", "add": 0.15},
+		{"id": "sprengkopf", "name": "Sprengköpfe", "desc": "Flächen +30 % größer", "stat": "splash", "add": 0.3}
+	],
+	"enemies": [
+		{"id": "laeufer", "name": "Läufer", "shape": "box", "size": 0.65, "color": "c84040", "hp": 34, "speed": 2.3, "dps": 6, "armor": 0, "gold": 2, "cost": 1, "weight": 10, "from_wave": 1},
+		{"id": "schwarm", "name": "Schwärmer", "shape": "pyramid", "size": 0.45, "color": "e0a030", "hp": 12, "speed": 3.6, "dps": 3, "armor": 0, "gold": 1, "cost": 0.5, "weight": 8, "from_wave": 2, "group": 5},
+		{"id": "brocken", "name": "Brocken", "shape": "box", "size": 1.15, "color": "8a5a3a", "hp": 170, "speed": 1.3, "dps": 18, "armor": 5, "gold": 7, "cost": 5, "weight": 4, "from_wave": 4, "resist": {"phys": 0.3}},
+		{"id": "flieger", "name": "Flieger", "shape": "sphere", "size": 0.5, "color": "5fa0ff", "hp": 40, "speed": 2.8, "dps": 6, "armor": 0, "gold": 3, "cost": 1.5, "weight": 5, "from_wave": 6, "fly": true, "resist": {"poison": 0.5}},
+		{"id": "glutling", "name": "Glutling", "shape": "box", "size": 0.7, "color": "ff5a1f", "hp": 60, "speed": 2.4, "dps": 9, "armor": 2, "gold": 4, "cost": 2, "weight": 4, "from_wave": 8, "resist": {"fire": 0.6, "frost": -0.4}},
+		{"id": "frostling", "name": "Frostling", "shape": "box", "size": 0.7, "color": "a8e8ff", "hp": 60, "speed": 2.4, "dps": 9, "armor": 2, "gold": 4, "cost": 2, "weight": 4, "from_wave": 12, "resist": {"frost": 0.6, "fire": -0.4}, "slow_immune": true},
+		{"id": "panzer", "name": "Panzerkäfer", "shape": "box", "size": 0.95, "color": "6a6f7a", "hp": 120, "speed": 1.8, "dps": 14, "armor": 14, "gold": 6, "cost": 4, "weight": 3, "from_wave": 14, "resist": {"phys": 0.4, "shock": -0.3}},
+		{"id": "koloss", "name": "Koloss", "shape": "box", "size": 2.3, "color": "6b1f8f", "hp": 1200, "speed": 0.9, "dps": 26, "armor": 10, "gold": 150, "boss": true}
+	]
+}

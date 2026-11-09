@@ -82,6 +82,10 @@ var _coop_count := 0         ## Spieler im Koop (0 = solo)
 var _player_cfg := {}        ## Host: Baumeister und Weisheit der Mitspieler (Befehl player_setup)
 
 
+func system_mode() -> String:
+	return "youtd"
+
+
 func _ready() -> void:
 	UiTheme.use_skin(UiTheme.DRUID)
 	FieldStyle.night = true
@@ -93,6 +97,7 @@ func _ready() -> void:
 	if map == null:
 		return
 	scenery = EeveScenery.add_to(self)
+	scenery.start_cycle()
 	world = YtWorld.new()
 	board.add_child(world)
 	if mirror:
@@ -160,11 +165,6 @@ func wave_count() -> int:
 	return int((rules.get("lengths", []) as Array)[length_index].get("waves", 120))
 
 
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
-
-
 # --- Einstellungen ---------------------------------------------------------------
 
 func _make_setup_panel() -> Control:
@@ -193,20 +193,16 @@ func save_mode() -> String:
 
 # --- Koop (coop_sync.gd, youtd_coop.gd) ------------------------------------------------
 
-func coop_commands() -> Array:
-	return ["research", "roll", "build", "item_put", "item_take", "item_move", "item_use", "item_lock", "transmute", "oil_merge", "tower_merge",
-			"next_wave", "player_setup"]
-
-
 func new_tower() -> Tower:
 	return YoutdTower.new()
 
 
-func coop_snapshot() -> Dictionary:
+## Stand für Mitspieler (Haken des Systems coop, Befehle in modes.json → system_cfg.coop).
+func coop_extra() -> Dictionary:
 	return YoutdCoop.snapshot(self)
 
 
-func apply_coop_snapshot(d: Dictionary) -> void:
+func coop_applied(d: Dictionary, _changed: Array) -> void:
 	var prev = YtWorld.use(self)
 	YoutdCoop.apply(self, d)
 	YtWorld.use(prev)
@@ -314,6 +310,7 @@ func _apply_setup(cmd: Dictionary) -> void:
 	mode_index = clampi(int(cmd.get("mode", 0)), 0, (rules.get("modes", []) as Array).size() - 1)
 	length_index = clampi(int(cmd.get("length", 1)), 0, (rules.get("lengths", []) as Array).size() - 1)
 	difficulty = clampi(int(cmd.get("difficulty", 2)), 0, (rules.get("difficulties", []) as Array).size() - 1)
+	take_ascension(cmd)
 	wave_seed = int(cmd.get("seed", rng.randi()))
 	wave_rng.seed = wave_seed
 	YtGlobals.synced_rng.seed = wave_seed * 17 + 3
@@ -536,26 +533,16 @@ func can_place_for(a: Vector2i, pid: int) -> bool:
 	return ok
 
 
-func can_place(a: Vector2i, any_zone := false) -> bool:
+## Haken des Systems build: nur nach dem Setup und vor Spielende.
+func build_rule(a: Vector2i) -> bool:
 	if not setup_done or phase >= Phase.GAME_OVER:
 		return false
-	for c in Board3D.footprint(a):
-		if not map.is_buildable(c) or occupied.has(c) or not (any_zone or may_build_for(c)):
-			return false
 	# Maverick: Tower dürfen nicht direkt nebeneinander stehen
 	if not yp().get_builder().get_allow_adjacent_towers():
 		for c in Board3D.footprint(a - Vector2i.ONE, 4):
 			if occupied.has(c):
 				return false
 	return true
-
-
-func _occupy(a: Vector2i, on: bool, _solid: bool) -> void:
-	for c in Board3D.footprint(a):
-		if on:
-			occupied[c] = a
-		else:
-			occupied.erase(c)
 
 
 func build_tower(id: String, a: Vector2i) -> bool:
@@ -910,6 +897,7 @@ func is_wave_running() -> bool:
 
 
 func _process(delta: float) -> void:
+	_ux_tick()
 	if phase < Phase.GAME_OVER:
 		play_time += delta / maxf(Engine.time_scale, 0.001)
 	_update_hover()
@@ -952,6 +940,8 @@ static func alive_key(lane: int, level: int) -> String:
 func _start_next_wave() -> void:
 	if next_wave > max_wave():
 		return
+	if next_wave > 1:
+		autosave()  # Stand vor der Welle: „Weiterspielen“ im Hub setzt hier fort
 	var w: Dictionary = waves[next_wave - 1]
 	wave_index = next_wave - 1
 	for lane in wave_lanes():
@@ -982,7 +972,14 @@ func _spawn_youtd(w: Dictionary, size_id: String, lane := 0) -> void:
 	_next_enemy_id += 1
 	board.add_child(e)
 	var lp: Dictionary = lane_paths[lane_index(lane)]
-	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, 1.0, -1.0, lane)
+	var hp_factor := 1.0
+	if ascension > 0:
+		# Aufstieg: Leben und Rüstung der Welle (Kinder aus Eigenschaften erben die Leben ihrer Eltern)
+		var m := ascension_mods()
+		w = w.duplicate()
+		w.armor = float(w.armor) * float(m.armor) + float(m.armor_add)
+		hp_factor = float(m.hp)
+	e.setup_youtd(self, w, size_id, lp.air if size_id == "air" else lp.ground, hp_factor, -1.0, lane)
 	e.final_boss = int(w.level) == max_wave() and size_id.contains("boss")
 	enemies.append(e)
 	if e.boss:
@@ -1018,10 +1015,6 @@ func queued_hp() -> float:
 		for i in range(int(s.index), (w.creeps as Array).size()):
 			total += float(w.hp) * float(rules.get("sizes", {}).get(str(w.creeps[i]), {}).get("hp", 1.0))
 	return total
-
-
-func idle_speed_factor() -> float:
-	return 1.0
 
 
 ## Punkte für einen Gegner (Creep.get_score): Schadensanteil × (Welle/8 + 1) × Schwierigkeit × Modus × Länge × Größe.
@@ -1147,6 +1140,7 @@ func _finish(p: Phase) -> void:
 	if phase >= Phase.GAME_OVER:
 		return
 	phase = p
+	drop_autosave()
 	if not debug_run():
 		xp_result = YoutdProgress.record(my_score(), waves_done, p == Phase.VICTORY, enemies_killed)
 	record_profile(p == Phase.VICTORY)
@@ -1330,13 +1324,25 @@ func pick_item(i: int) -> void:
 	_refresh_hud()
 
 
+## Auto: sobald die letzte Welle weg ist (Timer läuft), sofort die nächste.
+## Haken für das System waves (auto.due leer): Auto startet, wenn das Feld leer ist und die Pause läuft.
+func auto_wave_rule() -> bool:
+	return next_wave > 1 and next_wave <= max_wave() and alive.is_empty() and next_wave_in > 0.0
+
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	var c := NO_CELL
 	if setup_done and phase < Phase.GAME_OVER and (build_id != "" or debug_tower != "") and not occupied.has(board.mouse_cell(camera_rig.camera)):
 		c = board.mouse_anchor(camera_rig.camera)
-	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS:
+	# Reichweite des Towers, der gesetzt wird, als Ring um die Bauvorschau (Lukas 2026-11-03)
+	var r := 0.0
+	if build_id != "" and debug_tower == "":
+		r = YoutdData.units(float(YoutdData.tower(build_id).get("range", 0)) + YtConstants.RANGE_CHECK_BONUS_FOR_TOWERS)
+	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS or r != board.hover_range:
 		board.hover_cell = c
 		board.hover_size = Board3D.TOWER_CELLS
+		board.hover_range = r
 		board.hover_ok = can_place(c) and (debug_tower != "" or build_reason(build_id) == "")
 		board.refresh_hover()
 
@@ -1380,9 +1386,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 # --- Anzeige -----------------------------------------------------------------------
@@ -1521,12 +1524,7 @@ func inv_drop_hint(t: Tower, data: Dictionary) -> String:
 	var it := _drag_item(data)
 	if it != null and it.is_oil():
 		return "+ " + tr("Öl anwenden (wird verbraucht)")
-	var yt := t as YoutdTower
-	return "+ " + tr("Einlegen · %d frei") % (yt.slots() - yt.items.size())
-
-
-func inv_drop_on_tower(t: Tower, data: Dictionary) -> void:
-	submit({"type": "item_move", "from": data.get("from", {}), "to": {"tower": tower_ref(t), "slot": -1}})
+	return systems.inventory.free_hint(t)
 
 
 func _option_view(_t: Tower, o: Dictionary) -> Dictionary:

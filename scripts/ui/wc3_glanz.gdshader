@@ -12,6 +12,7 @@ void fragment() {
 	float band = smoothstep(0.12, 0.0, abs(pos - sweep));
 	// helle Stellen des Renders (Kanten, Wölbungen) glänzen stärker
 	float lum = dot(c.rgb, vec3(0.3, 0.55, 0.15));
-	c.rgb += vec3(1.0, 0.86, 0.6) * band * strength * (0.4 + lum);
+	// nur Messing glänzt: dunkle Schatten (lum ~ 0) bleiben dunkel
+	c.rgb += vec3(1.0, 0.86, 0.6) * band * strength * lum * 1.6;
 	COLOR = c;
 }

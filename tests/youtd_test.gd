@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln
+## Modi: youtd
 ## YouTD: Daten, Wellen, Würfeln und ein kurzes Spiel (Element erforschen, würfeln, bauen, Welle 1, aufwerten, Items,
 ## Spieler-XP am Ende). Start: godot --headless --path . res://tests/youtd_test.tscn (oder tools/run_tests.sh youtd)
 

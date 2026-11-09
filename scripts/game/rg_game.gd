@@ -14,6 +14,7 @@ const LANE_GAP := 0.45  ## Sekunden zwischen zwei Runden von Gegnern; eine Runde
 
 var rules: Dictionary = {}
 var difficulty := 2         ## Index in rules.difficulties
+var _setup_cmd := {}        ## Setup-Befehl, der gerade ausgeführt wird (Aufstiegsstufe des Hosts)
 var level_pause := 0.0      ## Sekunden bis zum nächsten Level (nur Phase BUILD)
 var share_gold := false     ## Option „Geldteilen“ (Host): Kopfgeld jedes Kills gleich an alle
 var placing := ""           ## Tower, der gerade gesetzt wird (Knopf in der Seitenleiste), "" = keiner
@@ -27,6 +28,10 @@ var lumber: int:
 var rg_panel: RgPanel
 var _outline_timer := 0.0
 var _vandal_race := ""   ## Rasse, für die die Verschmierungen zuletzt gezeichnet wurden
+
+
+func system_mode() -> String:
+	return "randgruppen"
 
 
 func _ready() -> void:
@@ -135,11 +140,6 @@ func start_gold() -> int:
 	return int(rules.get("start_gold", 550)) - int(rules.get("builder_cost", 500))
 
 
-func diff_rules() -> Dictionary:
-	var list: Array = rules.get("difficulties", [{}])
-	return list[clampi(difficulty, 0, list.size() - 1)]
-
-
 func _apply_lives() -> void:
 	lives = int(diff_rules().get("lives", 25))
 
@@ -211,6 +211,7 @@ func _execute(cmd: Dictionary) -> bool:
 			take_foreign_build(cmd)
 			if acting == 0 and cmd.has("share"):
 				share_gold = bool(cmd.share)
+			_setup_cmd = cmd
 			return _apply_setup(str(cmd.get("race", "")), int(cmd.get("difficulty", difficulty)))
 		"build":
 			return build_tower(str(cmd.get("id", "")), cmd.get("cell", NO_CELL))
@@ -246,6 +247,7 @@ func _apply_setup(race_id: String, diff: int) -> bool:
 	rp().chosen = true
 	if acting == 0:
 		difficulty = clampi(diff, 0, (rules.get("difficulties", []) as Array).size() - 1)
+		take_ascension(_setup_cmd)
 		_apply_lives()
 	if acting == local_player:
 		Session.rg_choice = {"race": race_id, "difficulty": difficulty, "share": share_gold}
@@ -270,8 +272,8 @@ func _all_players(f: Callable) -> bool:
 	return true
 
 
-func set_player_away(p: int, away: bool) -> void:
-	super.set_player_away(p, away)
+func on_player_away(p: int, away: bool) -> void:
+	super.on_player_away(p, away)
 	if not mirror:
 		_check_setup()
 
@@ -372,10 +374,6 @@ func is_final_boss_wave() -> bool:
 	return false
 
 
-func gold_income_factor(_wave: int) -> float:
-	return 1.0
-
-
 ## Geldteilen: das Kopfgeld geht an alle zu gleichen Teilen (earn_gold ohne Spieler teilt mit Bruchteilen).
 func on_enemy_killed(e: Enemy) -> void:
 	if share_gold:
@@ -392,6 +390,7 @@ func _note(text: String, p := -1) -> void:
 
 func _finish(p: Phase) -> void:
 	phase = p
+	drop_autosave()
 	record_profile(p == Phase.VICTORY)
 	Engine.time_scale = 1.0
 	hud.show_game_over(p == Phase.VICTORY, mini(wave_index + 1, waves.size()), waves.size(), lives, enemies_killed, path_length,
@@ -495,13 +494,17 @@ func _select_rocks(list: Array, t: Tower = null) -> void:
 
 # --- Eingabe -------------------------------------------------------------------------------
 
+
 func _update_hover() -> void:
+	_update_tower_hover(get_process_delta_time())
 	var c := NO_CELL
 	if placing != "" and setup_done and phase < Phase.GAME_OVER:
 		c = board.mouse_anchor(camera_rig.camera, Board3D.TOWER_CELLS)
-	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS:
+	var r := Tower.ring_radius(Database.tower_tier(placing, 0), false) if placing != "" else 0.0
+	if c != board.hover_cell or board.hover_size != Board3D.TOWER_CELLS or r != board.hover_range:
 		board.hover_cell = c
 		board.hover_size = Board3D.TOWER_CELLS
+		board.hover_range = r
 		board.hover_ok = can_build_tower(placing, c)
 		board.refresh_hover()
 
@@ -543,9 +546,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_refresh_hud()
 	super._unhandled_input(event)
 
-
-func _box_select(_r: Rect2, _add := false) -> void:
-	pass
 
 
 func _on_option_chosen(index: int) -> void:
@@ -642,30 +642,7 @@ func load_extra(d: Dictionary, made: Array) -> void:
 
 # --- Koop (coop_sync.gd): alle auf der einen Karte, jeder in seiner Zone, der Host rechnet ----------------------
 
-## Befehle, die Mitspieler zusätzlich zu denen von GemTD schicken dürfen.
-func coop_commands() -> Array:
-	return ["setup", "build", "start_level"]
-
-
-## Was Randgruppen TD über den Stand von GemTD hinaus schickt. Die Pause in ganzen Sekunden, damit sich der Stand
-## nicht jedes Bild ändert.
-func coop_snapshot() -> Dictionary:
-	var spent := {}
-	for t in all_towers():
-		spent["%d,%d" % [t.cell.x, t.cell.y]] = int(t.get_meta("spent", 0))
-	return {"difficulty": difficulty, "pause": ceili(maxf(level_pause, 0.0)), "players": rg_players.duplicate(true),
-		"spent": spent, "share": share_gold}
-
-
-func apply_coop_snapshot(d: Dictionary) -> void:
-	difficulty = int(d.get("difficulty", difficulty))
-	share_gold = bool(d.get("share", share_gold))
-	level_pause = float(d.get("pause", level_pause))
-	var ps: Array = d.get("players", [])
-	if not ps.is_empty():
-		rg_players = ps
-	var spent: Dictionary = d.get("spent", {})
-	for t in all_towers():
-		t.set_meta("spent", int(spent.get("%d,%d" % [t.cell.x, t.cell.y], 0)))
+## Stand für Mitspieler: modes.json → system_cfg.coop (System coop). Danach die Anzeige nachziehen.
+func coop_applied(_d: Dictionary, _changed: Array) -> void:
 	if rg_panel != null:
 		rg_panel.refresh()

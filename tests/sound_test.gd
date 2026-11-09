@@ -1,5 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name sound)
+## Modi: kern
 ## Sounds (sfx.gd, data/sfx.json): alle Dateien laden, jeder Tower hat einen Schuss-Sound, die acht
 ## Grund-Gems klingen verschieden, Drosselung bei vielen gleichen Schüssen, Ambiente an/aus.
 

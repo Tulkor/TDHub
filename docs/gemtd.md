@@ -98,7 +98,7 @@ Jede Gegnermeldung nennt das Wegstück, auf dem der Gegner im Schnelllauf ist (`
 Sendezeit; so bremst er beim Mitspieler am selben Rand und verspätete Meldungen ziehen ihn nicht zurück.
 Koop: nur der Host rechnet. Jede Spieleraktion ist ein Befehl (`game.gd` → `submit`/`execute`, Tower über ihren Platz
 benannt); Mitspieler schicken ihn an den Host, der ihn mit ihrer Spielernummer prüft und ausführt.
-`scripts/net/coop_sync.gd` schickt den Stand (Tower, Steine, Spieler, Phase) bei jeder Änderung und Gegner etwa
+`scripts/systems/coop/coop_sync.gd` schickt den Stand (Tower, Steine, Spieler, Phase) bei jeder Änderung und Gegner etwa
 15 Mal pro Sekunde; beim Mitspieler läuft dasselbe Spiel mit `mirror = true`, ohne eigene Simulation.
 Was jedem Spieler gehört, steht in `scripts/game/player_state.gd`.
 
@@ -128,7 +128,7 @@ die Mitspieler treten bei und spielen dort weiter, wo sie waren. Erkannt werden 
 (`user://settings.cfg`), notfalls am Namen. Ein Koop-Spielstand enthält das gemeinsame Feld mit allen Spielern,
 beim Laden bekommt jeder seine alte Spielernummer zurück.
 
-Die Dateien liegen in `user://saves/*.gtd`, binär und mit AES-256 verschlüsselt samt Prüfsumme (`scripts/game/save_game.gd`).
+Die Dateien liegen in `user://saves/*.gtd`, binär und mit AES-256 verschlüsselt samt Prüfsumme (`scripts/systems/save/save_game.gd`).
 Eine veränderte Datei lässt sich nicht mehr laden. Der Schlüssel steckt im Spiel, gegen gezieltes Auslesen schützt das nicht,
 gegen einfaches Ändern schon.
 
