@@ -1,0 +1,21 @@
+{
+	"_info": "Visuelles Wasser ohne Kollision. water_regions()-Haken > regions (Modus) > MapData.water. Modus-Defaults/Styles haben Vorrang vor Kartenmaterialien.",
+	"enabled": true,
+	"regions": null,
+	"max_bodies": 64,
+	"max_quality": 2,
+	"gravity": 9.8,
+	"depth": true,
+	"refraction": true,
+	"geometry": {"step": 0.5, "max_segments": 2048},
+	"defaults": {
+		"shallow_color": "#258c96b8", "deep_color": "#07364de6", "foam_color": "#d9f5f0d9",
+		"speed": 0.65, "tiling": 0.7, "normal_strength": 0.7, "wave_height": 0.025,
+		"foam_strength": 0.65, "foam_width": 0.16, "depth_distance": 1.8, "refraction": 0.012, "roughness": 0.16
+	},
+	"styles": {
+		"pool": {"speed": 0.18},
+		"river": {"speed": 0.65},
+		"waterfall": {"speed": 1.0, "tiling": 0.9, "foam_strength": 0.85, "normal_strength": 0.5}
+	}
+}
