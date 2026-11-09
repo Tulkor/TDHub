@@ -48,7 +48,7 @@ float water_open(vec3 p, out float merged) {
 		vec2 q = abs(vec2(dot(v, d), dot(v, vec2(-d.y, d.x)))) - open_b[i].xy;
 		float dist = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0);
 		open = max(open, 1.0 - smoothstep(-0.02, 0.1, dist));
-		merged = max(merged, open_b[i].w * (1.0 - smoothstep(-0.9, -0.1, dist)));
+		merged = max(merged, open_b[i].w * (1.0 - smoothstep(-0.08, 0.0, dist)));  // knapp hinter dem Rand weg: keine doppelt dunkle Überlappung
 	}
 	return open;
 }

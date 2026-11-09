@@ -35,9 +35,29 @@ func rebuild() -> void:
 	if regions == null:
 		var map_data = game.get("map") if "map" in game else null
 		regions = map_data.water if map_data is MapData else []
+	regions = route(regions)
 	var errors := set_regions(regions)
 	if not errors.is_empty():
 		push_warning("Wasser: " + "; ".join(errors))
+
+
+## Läufe („kind": "stream") suchen sich ihren Weg selbst (WaterRoute). Gelände kommt vom Haken
+## water_terrain() (z. B. Höhenfeld bei Survivors), sonst aus der Kachelkarte; water_avoid() liefert
+## zusätzliche Hindernisfelder (Tower, Gegnerweg). Gerechnet wird beim Aufbau, nicht laufend.
+func route(regions: Variant) -> Variant:
+	if not regions is Array or not regions.any(func(r): return r is Dictionary and str(r.get("kind", "")) == "stream"):
+		return regions
+	var terrain = hook("water_terrain", [], null)
+	if not terrain is WaterRoute.Terrain:
+		var map_data = game.get("map") if "map" in game else null
+		if not map_data is MapData:
+			push_warning("Wasser: Läufe brauchen eine Karte oder water_terrain()")
+			return regions.filter(func(r): return not (r is Dictionary and str(r.get("kind", "")) == "stream"))
+		terrain = WaterRoute.map_terrain(map_data, hook("water_avoid", [], []))
+	var result := WaterRoute.expand(regions, terrain)
+	if not result.errors.is_empty():
+		push_warning("Wasser: " + "; ".join(result.errors))
+	return result.regions
 
 
 static func validate_regions(regions: Variant, geometry: Dictionary = {}, max_bodies := 64) -> PackedStringArray:

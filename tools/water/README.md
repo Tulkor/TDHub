@@ -11,7 +11,7 @@ jeweiligen Modus festgelegt. Gelände wird nicht automatisch ausgehoben.
 Optionales Feld `water` im Karten-JSON; `MapData` erhält es beim Speichern,
 Duplizieren, Laden und damit auch in map-basierten Spielständen.
 Die eigene Maul-Kartenklasse übernimmt es ebenfalls. Der HTML-Karteneditor
-erhält die Daten beim Laden/Speichern; ein Wasser-Malwerkzeug ist nicht enthalten.
+erhält die Daten beim Laden/Speichern; der Godot-Map-Editor setzt Wasserläufe (siehe unten).
 
 ```json
 "water": [
@@ -70,6 +70,31 @@ Leichtes Strömungsmodell (`WaterSystem._connect_flow`, `WaterBody._fall_mesh`):
   ihn ab.
 Wasser über einem tieferen Boden platzieren und Ufer mit Gelände/Modellen
 abdecken; überlappende transparente Wasserflächen möglichst vermeiden.
+
+## Wasserläufe: Wasser sucht sich den Weg selbst
+
+Statt jeden Punkt vorzugeben, reicht ein Lauf (`scripts/systems/water/water_route.gd`,
+`WaterRoute`). Beim Aufbau wird er zu `river`/`waterfall`/`pool` aufgelöst:
+
+```json
+{"kind": "stream", "id": "Bach", "source": [1, 13], "dir": [1, 0], "width": 1.5,
+ "via": [[8, 10]], "end": [30, 20], "length": 40}
+```
+
+- `source` [x, z] (Pflicht), `dir` Startrichtung, `width` Breite, `via` Wegpunkte (höchstens 16),
+  `end` feste Mündung (dann kein freier Lauf), `length` Höchstlänge des freien Laufs.
+- Höhengelände (`Terrain.hilly`, z. B. Survivors über den Haken `water_terrain()`): fließt nur
+  bergab, steile Stufen werden Wasserfälle, Mulden füllen sich bis zum Überlauf zum Becken, kleine
+  Senken aus Geländerauschen werden durchflossen.
+- Kachelkarten: `#`, `_` und Sperrzonen sind Hindernisse, dazu der Haken `water_avoid()` (GemTD:
+  Gegnerwege, Tower und Steine). Das Wasser hält Abstand je nach Breite, kehrt nach dem Ausweichen
+  zur Startrichtung zurück und endet am Kartenrand, in einem anderen Lauf (Zusammenfluss) oder in
+  einer Sackgasse als kleiner See. Gerechnet wird beim Aufbau, nicht laufend.
+- `WaterRoute.channel_depth(regions, x, z)` sagt, wie tief Spiele mit eigenem Höhengelände das
+  Flussbett graben sollten; ohne Tiefe schäumt ein flacher Wasserfilm überall.
+- Map-Editor: Werkzeug „Wasserlauf“ (Taste 7) und Tab „Wasser“; Vorschau mit echtem Wasser.
+- Prüfen: `tools/run_tests.sh wasserlauf`; Bilder: `tools/water/route_shot.tscn` (Editor) und
+  `tools/water/route_hills.tscn` (Gelände) über `tools/render_windows.ps1`.
 
 ## Modus-Regeln und API
 

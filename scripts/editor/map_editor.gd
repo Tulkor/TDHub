@@ -3,7 +3,7 @@ extends Node3D
 
 const PANEL_WIDTH := 340.0
 
-enum Tool { BLOCKED, WALK_ONLY, FLOOR, SPAWN, GOAL, CHECKPOINT }
+enum Tool { BLOCKED, WALK_ONLY, FLOOR, SPAWN, GOAL, CHECKPOINT, WATER }
 const TOOL_NAMES := {
 	Tool.BLOCKED: "Blockiert (#)",
 	Tool.WALK_ONLY: "Nur Weg (_)",
@@ -11,6 +11,7 @@ const TOOL_NAMES := {
 	Tool.SPAWN: "Spawn setzen",
 	Tool.GOAL: "Ziel setzen",
 	Tool.CHECKPOINT: "Checkpoint +/−",
+	Tool.WATER: "Wasserlauf",
 }
 
 var map: MapData
@@ -35,6 +36,7 @@ var seed_spin: SpinBox
 var load_option: OptionButton
 var map_entries: Array = []
 var status_label: Label
+var water_tool: MapWaterEditor
 
 
 func _ready() -> void:
@@ -67,6 +69,7 @@ var TOOL_COLORS := {  ## var, weil die UiTheme-Farben static var sind
 	Tool.SPAWN: UiTheme.HAVE,
 	Tool.GOAL: UiTheme.MISSING,
 	Tool.CHECKPOINT: UiTheme.GOLD,
+	Tool.WATER: UiTheme.CYAN,
 }
 const BRUSHES := [1, 2, 4, 8]
 
@@ -284,6 +287,10 @@ func _build_ui() -> void:
 	vh.add_theme_font_size_override("font_size", 13)
 	vh.add_theme_color_override("font_color", UiTheme.MUTED)
 
+	water_tool = MapWaterEditor.new()
+	add_child(water_tool)
+	water_tool.setup(self, tabs)
+
 	# Statuszeile unten
 	var bar := _panel(root, 8, UiTheme.BAR)
 	bar.anchor_top = 1.0
@@ -342,6 +349,8 @@ func _sync_fields() -> void:
 
 func _set_map(m: MapData) -> void:
 	map = m
+	if water_tool != null:
+		water_tool.selected = -1
 	board.map = m
 	_sync_fields()
 	_layout()
@@ -405,7 +414,7 @@ static func _valid_id(s: String) -> bool:
 # --- Malen -------------------------------------------------------------------
 
 func _is_point_tool() -> bool:
-	return tool == Tool.SPAWN or tool == Tool.GOAL or tool == Tool.CHECKPOINT
+	return tool == Tool.SPAWN or tool == Tool.GOAL or tool == Tool.CHECKPOINT or tool == Tool.WATER
 
 
 func _process(_delta: float) -> void:
@@ -420,7 +429,7 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode >= KEY_1 and event.keycode <= KEY_6:
+		if event.keycode >= KEY_1 and event.keycode <= KEY_7:
 			tool = TOOL_NAMES.keys()[event.keycode - KEY_1]
 			tool_buttons[tool].button_pressed = true
 		elif event.keycode == KEY_F5:
@@ -444,6 +453,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _apply(is_click: bool) -> void:
 	var c := board.mouse_cell(camera_rig.camera)
+	if tool == Tool.WATER:
+		if is_click:
+			if painting == 2:
+				water_tool.undo_point()
+			else:
+				water_tool.click(c, Input.is_key_pressed(KEY_SHIFT))
+		return
 	if painting == 2:
 		var idx := map.checkpoints.find(c)
 		if idx >= 0 and is_click:
@@ -491,6 +507,11 @@ func _paint(t: String) -> bool:
 	return changed
 
 
+## Haken des Wassersystems: Läufe aufgelöst, für die Vorschau im Editor.
+func water_regions() -> Variant:
+	return water_tool.regions() if water_tool != null else null
+
+
 func pathfinder_path() -> Array[Vector2i]:
 	return Pathfinder.new(map).compute_path()
 
@@ -510,3 +531,5 @@ func _on_map_changed() -> void:
 		path_label.add_theme_color_override("font_color", UiTheme.HAVE)
 	_touch()
 	board.rebuild()
+	if water_tool != null:
+		water_tool.refresh()

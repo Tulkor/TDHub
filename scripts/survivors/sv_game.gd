@@ -68,6 +68,17 @@ func system_mode() -> String:
 	return "survivors"
 
 
+## Haken des Wassersystems: Wasserläufe fließen auf dem Höhenfeld der Eisfläche bergab, nicht ins Turmloch.
+func water_terrain() -> WaterRoute.Terrain:
+	if land == null:
+		return null
+	var t := WaterRoute.Terrain.new()
+	t.bounds = Rect2(-SvWorld.ICE_R, -SvWorld.ICE_R, SvWorld.ICE_R * 2.0, SvWorld.ICE_R * 2.0)
+	t.step = 1.0
+	t.hilly = true
+	t.height = land.height_at
+	t.blocked_at = func(x: float, z: float) -> bool: return Vector2(x, z).length() < SvWorld.HOLE_R + 1.0
+	return t
 
 
 func _init() -> void:

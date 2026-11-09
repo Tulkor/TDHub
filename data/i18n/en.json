@@ -1,4 +1,12 @@
 {
+	"Wasserlauf": "Watercourse",
+	"Neuer Lauf": "New course",
+	"(neuer Lauf)": "(new course)",
+	"Richtung °": "Direction °",
+	"Länge (0 = bis Rand, Mulde oder Sackgasse)": "Length (0 = to edge, hollow or dead end)",
+	"Höchstens %d Wegpunkte.": "At most %d waypoints.",
+	"Klick auf die Karte setzt die Quelle.": "Click the map to set the source.",
+	"Werkzeug Wasserlauf (Taste 7): erster Klick setzt die Quelle, weitere Klicks Wegpunkte, Umschalt+Klick die Mündung. Rechtsklick nimmt den letzten Punkt zurück. Den Rest des Weges sucht sich das Wasser selbst: es weicht Felsen, Sperrzonen und dem Gegnerweg aus, auf Gelände fließt es bergab.": "Watercourse tool (key 7): first click sets the source, further clicks add waypoints, Shift+click sets the mouth. Right-click removes the last point. The water finds the rest of its way itself: it avoids rocks, no-build zones and the enemy path, and flows downhill on terrain.",
 	"Spielen": "Play",
 	"Spielen: %s": "Play: %s",
 	"Gems setzen, kombinieren, Labyrinth bauen": "Place gems, combine them, build the maze",

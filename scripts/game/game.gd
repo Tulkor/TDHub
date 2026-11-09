@@ -405,6 +405,18 @@ func _apply_variance() -> void:
 			placed += 1
 
 
+## Haken des Wassersystems: Wasserläufe meiden Gegnerwege sowie belegte Felder (Tower, Steine).
+func water_avoid() -> Array:
+	var out := []
+	for i in map.lane_count():
+		out.append_array(pathfinder.compute_path(i))
+	for y in map.height:
+		for x in map.width:
+			if pathfinder.astar.is_point_solid(Vector2i(x, y)):
+				out.append(Vector2i(x, y))
+	return out
+
+
 func _update_paths() -> void:
 	lane_paths = []
 	path_length = 0

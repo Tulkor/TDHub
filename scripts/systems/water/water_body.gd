@@ -162,7 +162,8 @@ func set_open_neighbors(boxes: Array) -> void:
 		var c: Vector2 = (box.c as Vector2) - here
 		open_a.append(Vector4(c.x, c.y, box.dir.x, box.dir.y))
 		# Ein Fluss, der in ein Becken mündet, blendet dort aus: keine doppelt dunkle Überlappung.
-		var fade := 1.0 if box.get("pool", false) and str(definition.kind) == "river" else 0.0
+		# Ebenso ein Nebenfluss (`_joins` von WaterRoute) im Fluss, in den er mündet.
+		var fade := 1.0 if str(definition.kind) == "river" and (box.get("pool", false) or definition.get("_joins", false)) else 0.0
 		open_b.append(Vector4(box.h.x, box.h.y, float(box.y) - position.y, fade))
 	if material != null:
 		_apply_open()
