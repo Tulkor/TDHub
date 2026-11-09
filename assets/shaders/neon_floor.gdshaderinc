@@ -64,6 +64,12 @@ uniform float tint_shade = 0.8;
 // 1: Stich auf den Boden (Shopping Maul); tint_lines 1: Gitterlinien und Ränder ganz in der Stichfarbe (GemTD-Maul-Karten)
 uniform float tint_floor = 1.0;
 uniform float tint_lines = 0.0;
+/// Glühen wie die Pilze im Pilzhof: weiter, gesättigter Schein um Hauptlinien und Ränder, während der Kern
+/// blass bis weiß bleibt (0 = aus). glow_width = Abklingweite in Einheiten, glow_sat = wie stark die Farbe
+/// des Scheins zur reinen Farbe hin gezogen wird (1 = schwächster Kanal ganz heraus)
+uniform float glow_halo = 0.0;
+uniform float glow_width = 0.22;
+uniform float glow_sat = 0.8;
 
 #ifdef LIT
 /// Nur beleuchtetes Feld: Helligkeit der Fläche vor dem Licht (das Licht hellt sie wieder auf)
@@ -102,6 +108,21 @@ vec4 tube(float d, float width, vec3 col, float energy, float aa) {
 	vec3 c = mix(col, vec3(1.0), core_ * core_white / 0.7) * energy;
 	float a = max(body, halo);
 	return vec4(mix(col * energy * 0.6, c, body), a);
+}
+
+// Gesättigte Fassung einer Farbe: schwächsten Kanal abziehen, Helligkeit des stärksten behalten
+vec3 saturate_col(vec3 c, float k) {
+	float lo = min(c.r, min(c.g, c.b));
+	float hi = max(c.r, max(c.g, c.b));
+	vec3 s = c - lo * k;
+	return s * hi / max(max(s.r, max(s.g, s.b)), 0.001);
+}
+
+// Weiter, gesättigter Schein (glow_halo) auf col legen; d = Abstand zur Linie
+void glow(inout vec3 col, inout float alpha, float d, vec3 lc, float energy) {
+	float g = exp(-d / glow_width) * glow_halo;
+	col = mix(col, saturate_col(lc, glow_sat) * energy, g);
+	alpha = max(alpha, g);
 }
 
 float is_zone(ivec2 c) {
@@ -202,6 +223,9 @@ void fragment() {
 			if (major_double > 0.5) {
 				dmm = abs(dmm - line_width * 3.0);
 			}
+			if (glow_halo > 0.0) {
+				glow(col, alpha, dmm, lc, line_energy * major_energy);
+			}
 			vec4 m = tube(dmm, line_width * 1.2, lc, line_energy * major_energy, aa);
 			m.a *= major_alpha;
 			col = mix(col, m.rgb, m.a);
@@ -257,6 +281,9 @@ void fragment() {
 		if (is_blocked(c + ivec2(1, 0)) > 0.5) de = min(de, 1.0 - f.x);
 		if (is_blocked(c + ivec2(0, -1)) > 0.5) de = min(de, f.y);
 		if (is_blocked(c + ivec2(0, 1)) > 0.5) de = min(de, 1.0 - f.y);
+		if (glow_halo > 0.0) {
+			glow(col, alpha, de * cell, ec, edge_energy * 0.6);
+		}
 		vec4 e = tube(de * cell, line_width * 1.6, ec, edge_energy, aa);
 		col = mix(col, e.rgb, e.a);
 		alpha = max(alpha, e.a);

@@ -346,6 +346,16 @@ static func add_environment(parent: Node, look: Dictionary = {}, filter := true)
 		fill.light_specular = 0.25
 		fill.shadow_enabled = false
 		parent.add_child(fill)
+	# Schein des leuchtenden Bodens: Licht von unten in der Linienfarbe, ohne Schatten
+	if look.under_energy > 0.0:
+		var under := DirectionalLight3D.new()
+		under.name = "FloorGlow"
+		under.rotation = Vector3(deg_to_rad(look.under_pitch), deg_to_rad(look.sun_yaw + 90.0), 0)
+		under.light_color = look.under * tint
+		under.light_energy = look.under_energy
+		under.light_specular = 0.4
+		under.shadow_enabled = false
+		parent.add_child(under)
 	_add_outline(parent, look)
 	_add_post(parent, look)
 	if filter:

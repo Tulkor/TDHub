@@ -94,6 +94,8 @@ var _ground_mat: ShaderMaterial
 var _floor: MeshInstance3D
 ## Spiegelung auf dem Feld (FieldStyle "reflect"), gleiche Fläche wie _floor
 var _reflect: MeshInstance3D
+## Farbiger Dunst knapp über dem Feld (FieldStyle "haze", ab Grafik Mittel)
+var _haze: MeshInstance3D
 var _floor_mat: ShaderMaterial
 var _cliffs: MeshInstance3D  ## Felswände der Schlucht (nur mit path_depth > 0)
 var _rocks: Array = []  ## je Variante ein MultiMeshInstance3D
@@ -205,6 +207,21 @@ func _ready() -> void:
 		_reflect.material_override = rm
 		_reflect.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_reflect)
+	var haze: Dictionary = style.get("haze", {})
+	if not haze.is_empty() and Display.quality >= Display.MEDIUM:
+		var hm := ShaderMaterial.new()
+		hm.shader = preload("res://assets/shaders/ground_mist.gdshader")
+		hm.set_shader_parameter("mist_color", haze.color)
+		hm.set_shader_parameter("density", haze.density)
+		hm.set_shader_parameter("scale", haze.scale)
+		hm.set_shader_parameter("edge", 0.08)
+		hm.set_shader_parameter("octaves", 2)
+		hm.render_priority = 1
+		_haze = MeshInstance3D.new()
+		_haze.name = "Haze"
+		_haze.material_override = hm
+		_haze.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_haze)
 	ground_alpha = maxf(ground_alpha, style.ground_alpha)
 	for path in ROCK_MODELS:
 		var m := ModelLoader.mesh_with_transform(path, ROCK_SIZE, true, ROCK_MAX_HEIGHT)
@@ -267,6 +284,8 @@ func _rock_material() -> Material:
 			return m
 	var glass := ShaderMaterial.new()
 	glass.shader = ROCK_SHADER
+	# Schein der Neonlinien auf die unteren Flanken (FieldStyle "rock_glow")
+	glass.set_shader_parameter("floor_glow", float(style.get("rock_glow", 0.0)))
 	return glass
 
 
@@ -391,6 +410,11 @@ func _rebuild_floor() -> void:
 	if _reflect != null:
 		_reflect.mesh = _floor.mesh
 		_reflect.position = _floor.position + Vector3(0, 0.001, 0)
+	if _haze != null:
+		var hp := PlaneMesh.new()
+		hp.size = size
+		_haze.mesh = hp
+		_haze.position = to_3d(size / 2.0, float(style.haze.height))
 	var img := Image.create(map.width, map.height, false, Image.FORMAT_RGBA8)  # RGBA8: L8 mit ungerader Breite wird im GL-Renderer verschoben hochgeladen
 	var origin := Vector2i(map.width, map.height)  # erstes freies Feld (oben links)
 	for y in map.height:
