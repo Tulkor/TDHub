@@ -121,8 +121,11 @@ static func _connect_flow(regions: Array) -> Array:
 		if str(out[k].kind) == "river":
 			var w := float(out[k].get("width", 2.0))
 			var nodes := []
-			for point in out[k].points:
-				nodes.append({"p": WaterBody.vec(point), "w": w, "d": null})
+			# Optionale Richtungen je Punkt ("dirs", z. B. von WaterRoute vor Fallkanten).
+			var given: Array = out[k].get("dirs", [])
+			for n in out[k].points.size():
+				var d = given[n] if given.size() == out[k].points.size() and given[n] != null else null
+				nodes.append({"p": WaterBody.vec(out[k].points[n]), "w": w, "d": null if d == null else Vector3(float(d[0]), 0.0, float(d[1])).normalized()})
 			rivers[k] = nodes
 	for fall in out:
 		if str(fall.kind) != "waterfall":

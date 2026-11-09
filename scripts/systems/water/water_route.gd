@@ -591,7 +591,9 @@ static func _regions(g: _Grid, pieces: Array, spec: Dictionary, width: float) ->
 			bottom = Vector3(top.x + flat.x * reach, bottom.y, top.z + flat.y * reach)
 			pts[f[1]] = bottom
 			if f[0] - s >= 1:
-				add.call("river", {"points": _approach(_sample(pts, s, f[0], width, g.t.step), top, flat, maxf(width, 1.0)), "width": width})
+				var river_pts := _sample(pts, s, f[0], width, g.t.step)
+				var run := _approach(river_pts, top, flat, maxf(width * 1.5, 1.5), width)
+				add.call("river", {"points": run.points, "dirs": run.dirs, "width": width})
 			elif pool_before == null or s > 0:
 				# Fall direkt an der Quelle: kleiner Quelltopf, damit der Fall oben aus Wasser kommt.
 				add.call("pool", _small_pool(pts[f[0]], width))
@@ -623,18 +625,39 @@ static func _downhill(g: _Grid, at: Vector3, fallback: Vector2) -> Vector2:
 
 
 ## Fluss läuft auf den letzten length Einheiten gerade und senkrecht auf die Fallkante zu (top, dir).
-static func _approach(points: Array, top: Vector3, dir: Vector2, length: float) -> Array:
+## Kommt er schräg an, biegt er in einem Bogen von etwa anderthalb Breiten ein; die Fallstelle rückt dafür
+## entlang der Kante (höchstens zwei Breiten). Ergebnis: {points, shift (Verschiebung der Fallstelle)}.
+static func _approach(points: Array, top: Vector3, dir: Vector2, length: float, width: float, shift_top := false) -> Dictionary:
+	var edge := Vector2(top.x, top.z)
+	var perp := Vector2(-dir.y, dir.x)
+	var bend := width * 1.5
 	var out := [points[0]]
 	for k in range(1, points.size() - 1):
 		var p := Vector2(float(points[k][0]), float(points[k][2]))
-		if (Vector2(top.x, top.z) - p).dot(dir) > length * 1.4:
+		if (edge - p).dot(dir) > length + bend:
 			out.append(points[k])
-	var lead := Vector2(top.x, top.z) - dir * length
-	var first := Vector2(float(out[-1][0]), float(out[-1][2]))
-	if first.distance_to(lead) > 0.05 and first.distance_to(Vector2(top.x, top.z)) > length * 0.5:
-		out.append([lead.x, lerpf(float(out[-1][1]), top.y, 0.8), lead.y])
-	out.append([top.x, top.y, top.z])
-	return out
+	var last := Vector2(float(out[-1][0]), float(out[-1][2]))
+	var before := Vector2(float(out[-2][0]), float(out[-2][2])) if out.size() > 1 else last - dir
+	var v := (last - before).normalized() if last.distance_to(before) > 0.001 else dir
+	var along := maxf((edge - last).dot(dir) - length, 0.0)
+	var drift := v.dot(perp) / maxf(v.dot(dir), 0.35) * along * 0.5
+	var lateral := 0.0 if not shift_top else clampf((last - edge).dot(perp) + drift, -width * 1.25, width * 1.25)
+	var shift := perp * lateral
+	var new_top := edge + shift
+	var y0 := float(out[-1][1])
+	if last.distance_to(new_top) > length * 0.6:
+		var lead := new_top - dir * length
+		out.append([lead.x, lerpf(y0, top.y, 0.8), lead.y])
+		# Zweiter Punkt auf der Geraden: das Band ist dort schon ausgerichtet und schließt bündig an den Fall an.
+		var mid := new_top - dir * length * 0.5
+		out.append([mid.x, lerpf(y0, top.y, 0.9), mid.y])
+	out.append([new_top.x, top.y, new_top.y])
+	# Richtungsvorgaben: ab dem Vorlauf exakt senkrecht zur Kante (WaterSystem._connect_flow übernimmt sie),
+	# davor frei, so wird der Bogen weich statt mit Knick am Vorlaufpunkt.
+	var dirs := []
+	for k in out.size():
+		dirs.append([dir.x, dir.y] if k >= out.size() - 3 and k > 0 else null)
+	return {"points": out, "shift": shift, "dirs": dirs}
 
 
 static func _pool_rect(g: _Grid, pool: Dictionary) -> Rect2:
@@ -706,8 +729,10 @@ static func channel_depth(regions: Array, x: float, z: float, depth := 0.35) -> 
 					if (k == 1 and t < 0.0 and at_fall.call(a)) or (k == last and t > 1.0 and at_fall.call(b)):
 						continue
 					var d := p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b))
-					if d < half * 1.25:
-						best = maxf(best, depth * (1.0 - pow(d / (half * 1.25), 2.0)))
+					# Nur unter dem Wasser graben: am Ufer endet das Bett genau auf Geländehöhe, sonst
+					# liegt neben dem Wasser eine abgesenkte Böschung im Schatten und das Wasser wirkt schwebend.
+					if d < half:
+						best = maxf(best, depth * (1.0 - pow(d / half, 2.0)))
 			"pool":
 				var c := Vector2(float(r.center[0]), float(r.center[2]))
 				var h := Vector2(float(r.size[0]), float(r.size[1])) * 0.5

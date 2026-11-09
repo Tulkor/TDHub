@@ -66,7 +66,7 @@ func _ready() -> void:
 	img.save_png(ProjectSettings.globalize_path("res://.godot/wasserlauf-gelaende.png"))
 	print("BILD .godot/wasserlauf-gelaende.png")
 	# Nahaufnahmen: Fallkanten und Beckenausfluss.
-	for shot in [["fall", Vector3(19, 7, 21), Vector3(19, 1.5, 14)], ["becken", Vector3(20, 6, 40), Vector3(20, 0.2, 31)]]:
+	for shot in [["fall", Vector3(19, 7, 21), Vector3(19, 1.5, 14)], ["becken", Vector3(20, 6, 40), Vector3(20, 0.2, 31)], ["kante", Vector3(19, 4.2, 17.5), Vector3(19, 2.6, 13.2)]]:
 		cam.position = shot[1]
 		cam.look_at(shot[2])
 		for i in 5:
