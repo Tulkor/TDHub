@@ -610,4 +610,4 @@ func card() -> Dictionary:
 			frac = held_frac()
 	if left >= 0:
 		line += " · " + tr("%d s") % left
-	return {"title": tr(str(d.name)), "line": line, "frac": frac, "desc": tr(str(d.desc))}
+	return {"title": tr(str(d.name)), "line": line, "frac": frac, "desc": tr(str(d.desc)), "reward": HdReward.text(game, d.get("reward", d.get("each", {})))}

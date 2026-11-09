@@ -14,6 +14,10 @@ var gem_pick := "rubin"
 var _box: VBoxContainer
 var _panel_node: PanelContainer
 var _sig := ""
+var _banner: PanelContainer     ## Ansage eines neuen Ereignisses oben in der Mitte
+var _banner_box: VBoxContainer
+var _banner_t := 0.0
+var _seen_events := 0
 
 
 func _init(g) -> void:
@@ -35,6 +39,55 @@ func _ready() -> void:
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 6)
 	_panel_node.add_child(_box)
+	_banner = PanelContainer.new()
+	_banner.add_theme_stylebox_override("panel", UiTheme.panel(14))
+	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_banner.offset_top = 150
+	_banner.custom_minimum_size.x = 620
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.visible = false
+	add_child(_banner)
+	_banner_box = VBoxContainer.new()
+	_banner_box.add_theme_constant_override("separation", 4)
+	_banner.add_child(_banner_box)
+
+
+func _process(dt: float) -> void:
+	var n: int = game.events.history.size()
+	if n != _seen_events:
+		_seen_events = n
+		if n > 0:
+			_show_banner(str(game.events.history[n - 1][1]))
+	if _banner_t > 0.0:
+		_banner_t -= dt
+		_banner.modulate.a = clampf(_banner_t, 0.0, 1.0)
+		_banner.visible = _banner_t > 0.0
+
+
+## Großes Schild beim Start eines Ereignisses (Mockup bollwerk-events, Bild 1).
+func _show_banner(id: String) -> void:
+	var d: Dictionary = game.events.def(id)
+	if d.is_empty():
+		return
+	for c in _banner_box.get_children():
+		c.queue_free()
+	UiTheme.caption("Ereignis", _banner_box)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	_banner_box.add_child(h)
+	var t := _label(tr(str(d.name)).to_upper(), h, 24, UiTheme.GOLD, true)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if d.has("vorbild"):
+		var tag := _label(tr("Original: %s") % tr(str(d.vorbild)), h, 11, UiTheme.PURPLE_LIGHT)
+		tag.add_theme_stylebox_override("normal", UiTheme.box(Color.TRANSPARENT, UiTheme.PURPLE_LIGHT, 0, 1, 4))
+	var desc := _label(tr(str(d.desc)), _banner_box, 13, UiTheme.MUTED, false, true)
+	desc.custom_minimum_size.x = 590
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_t = 6.0
+	_banner.modulate.a = 1.0
+	_banner.visible = true
 
 
 func _label(text: String, parent: Node, size := 13, color := UiTheme.TEXT, bold := false, wrap := false) -> Label:
@@ -79,7 +132,9 @@ func _signature() -> String:
 	var parts: Array = [z.hero_zone(), shop.gold / 10, shop.wood, shop.marks, str(shop.inv), str(shop.merchant), gem_pick,
 		str(ev.choice.get("id", "")), ceili(float(ev.choice.get("until", 0.0)) - game.play_time), ev.status(),
 		z.arena_wins, z.arena_fight != null, z.lumberjacks, str(z.trial.get("kills", "")), ceili(float(z.trial.get("t", 0.0))),
-		str(z.trial_done), game.wave, game.boss_warned, str(game.final.lines()), _clock_text()]
+		str(z.trial_done), game.wave, game.boss_warned, str(game.final.lines()), _clock_text(), game.event_buffs.size(),
+		game.event_mods.size(), ceili(game.play_time) if not (game.event_buffs.is_empty() and game.event_mods.is_empty()) else 0,
+		str(game.final.run_state()), game.final.boss != null]
 	if z.arena_fight != null:
 		parts.append(roundi(z.arena_fight.hp / z.arena_fight.max_hp * 20.0))
 	return str(parts)
@@ -101,6 +156,7 @@ func refresh(force := false) -> void:
 		_panel_node.visible = true
 		return
 	any = _fill_event() or any
+	any = _fill_buffs(any) or any
 	var zid: String = game.zones.hero_zone()
 	if zid != "":
 		if any:
@@ -153,8 +209,62 @@ func _fill_event() -> bool:
 		var b := _button(tr("Verkauft") if bool(m.get("sold", false)) else tr("%d Gold") % int(m.price), h, shop.can_buy_merchant(i),
 			func(): _say(shop.act({"kind": "merchant", "i": k})))
 		b.custom_minimum_size.x = 92
-	if st != "":
+	var card: Dictionary = ev.kinds.card()
+	if not card.is_empty():
+		_label(str(card.line), _box, 12, UiTheme.TEXT, true, true)
+		if float(card.frac) >= 0.0:
+			_bar(_box, float(card.frac))
+		if str(card.reward) != "":
+			_label(tr("Belohnung: %s") % card.reward, _box, 12, UiTheme.COIN, true, true)
+	elif st != "":
 		_label(st, _box, 12, UiTheme.TEXT, true, true)
+	return true
+
+
+func _bar(parent: Node, frac: float, fill := UiTheme.CYAN) -> void:
+	var b := ProgressBar.new()
+	b.show_percentage = false
+	b.custom_minimum_size = Vector2(310, 12)
+	b.max_value = 1.0
+	b.value = frac
+	b.add_theme_stylebox_override("background", UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER_2, 0, 1, 0))
+	b.add_theme_stylebox_override("fill", UiTheme.box(fill, Color.TRANSPARENT, 0, 0, 0))
+	parent.add_child(b)
+
+
+## Aktive Segen und Zeitgeist-Ereignisse mit Restzeit (Mockup Bild 1, „Aktive Segen“).
+func _fill_buffs(any: bool) -> bool:
+	var rows: Array = []
+	for b in game.event_buffs:
+		if str(b.name) != tr("Endkampf"):
+			rows.append([true, tr(str(b.name)), HdShop.stat_text(b.stats), float(b.until)])
+	for m in game.event_mods:
+		var parts: Array = []
+		var f: Dictionary = m.get("foes", {})
+		for k in f:
+			parts.append(tr({"hp": "Gegner-Leben %+d %%", "damage": "Gegner-Schaden %+d %%", "speed": "Gegner-Tempo %+d %%"}.get(k, k + " %+d %%")) % roundi((float(f[k]) - 1.0) * 100.0))
+		if float(m.get("gold", 1.0)) != 1.0:
+			parts.append(tr("Gold %+d %%") % roundi((float(m.gold) - 1.0) * 100.0))
+		if float(m.get("xp", 1.0)) != 1.0:
+			parts.append(tr("EP %+d %%") % roundi((float(m.xp) - 1.0) * 100.0))
+		rows.append([false, tr(str(m.name)), ", ".join(parts), float(m.until)])
+	if rows.is_empty():
+		return false
+	if any:
+		_sep()
+	UiTheme.caption("Aktive Segen", _box)
+	for r in rows:
+		var left := maxi(0, ceili(float(r[3]) - game.play_time))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_box.add_child(h)
+		_label("▲" if r[0] else "◆", h, 14, UiTheme.CYAN if r[0] else UiTheme.MISSING, true)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		h.add_child(v)
+		_label(str(r[1]), v, 13, UiTheme.TEXT, true)
+		var l := _label("%s · %s" % [r[2], tr("noch %d:%02d") % [left / 60, left % 60]], v, 11, UiTheme.MUTED, false, true)
+		l.custom_minimum_size.x = 280
 	return true
 
 
@@ -167,12 +277,77 @@ func _clock_text() -> String:
 	return tr("Nächstes Ereignis in %d:%02d") % [r / 60, r % 60]
 
 
-## Endgebiet: Challenges, Weckuhr des Verschlingers (vorläufig, Mockup folgt).
+const KIND_TAG := {"echos": "Kampf", "siegel": "Rätsel", "glutpfad": "Ausweichen", "halten": "Halten", "wagnis": "Wagnis"}
+
+
+## Endgebiet (Mockup bollwerk-events, Bild 3): Challenges mit Stand und Belohnung, Weckuhr, Schwächungen.
 func _fill_final() -> void:
+	var f: HdFinal = game.final
+	var ch = game.systems.get("challenges")
 	UiTheme.caption("Endgebiet", _box)
-	var lines: Array = game.final.lines()
-	for i in lines.size():
-		_label(str(lines[i]), _box, 17 if i == 0 else 13, UiTheme.GOLD if i == 0 else UiTheme.TEXT, i == 0, true)
+	_label(tr(str(f.data.name)).to_upper(), _box, 22, UiTheme.GOLD, true)
+	if ch == null:
+		return
+	if ch.boss_started:
+		if f.boss != null and is_instance_valid(f.boss) and not f.boss.dead:
+			_label(tr("Endkampf gegen den Verschlinger"), _box, 14, UiTheme.MISSING, true)
+			_bar(_box, f.boss.hp / f.boss.max_hp, UiTheme.MISSING)
+		_fill_boss_mods(ch)
+		return
+	var left := int(ch.awaken_left())
+	_label(tr("Verschlinger erwacht in %d:%02d") % [left / 60, left % 60], _box, 13, UiTheme.CYAN, true)
+	_label(tr("Löst Challenges, um den Verschlinger zu schwächen, oder geht direkt durch das Tor. Jeder Tod kostet %d Feste-Leben.") % int(f.data.get("death_lives", 3)), _box, 12, UiTheme.MUTED, false, true)
+	var rs: Dictionary = f.run_state()
+	for cd in f.data.list:
+		var id := str(cd.id)
+		var st: String = ch.state_of(id)
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_box.add_child(h)
+		var mark: String = {"done": "✓", "failed": "✗", "active": "▶"}.get(st, "○")
+		var mc: Color = {"done": UiTheme.HAVE, "failed": UiTheme.MISSING, "active": UiTheme.CYAN}.get(st, UiTheme.MUTED)
+		_label(mark, h, 15, mc, true).custom_minimum_size.x = 16
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 1)
+		h.add_child(v)
+		var top := HBoxContainer.new()
+		top.add_theme_constant_override("separation", 6)
+		v.add_child(top)
+		_label(tr(str(cd.name)), top, 13, UiTheme.TEXT, true)
+		var tag := _label(tr(KIND_TAG.get(str(cd.kind), "")).to_upper(), top, 10, UiTheme.PURPLE_LIGHT)
+		tag.add_theme_stylebox_override("normal", UiTheme.box(Color.TRANSPARENT, UiTheme.PURPLE_LIGHT, 0, 1, 3))
+		var rw := tr(str(cd.get("reward", {}).get("text", "")))
+		if st == "failed":
+			rw += " · " + tr("nochmal versuchen")
+		var l := _label(rw, v, 11, UiTheme.MUTED, false, true)
+		l.custom_minimum_size.x = 290
+		if st == "active" and not rs.is_empty():
+			_label(str(rs.text), v, 11, UiTheme.CYAN, true, true).custom_minimum_size.x = 290
+			var b := ProgressBar.new()
+			b.show_percentage = false
+			b.custom_minimum_size = Vector2(290, 10)
+			b.max_value = 1.0
+			b.value = float(rs.frac)
+			b.add_theme_stylebox_override("background", UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER_2, 0, 1, 0))
+			b.add_theme_stylebox_override("fill", UiTheme.box(UiTheme.CYAN, Color.TRANSPARENT, 0, 0, 0))
+			v.add_child(b)
+	_fill_boss_mods(ch)
+	var hint := _label(tr("Zum Endboss: auf das Tor stellen"), _box, 13, UiTheme.GOLD_DARK, true)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.GOLD, UiTheme.GOLD, 0, 0, 8))
+
+
+## Was die geschafften Challenges dem Endkampf bringen.
+func _fill_boss_mods(ch) -> void:
+	var lines: Array = []
+	for cd in game.final.data.list:
+		if ch.state_of(str(cd.id)) == "done":
+			lines.append(tr(str(cd.get("reward", {}).get("text", ""))))
+	if lines.is_empty():
+		return
+	UiTheme.caption("Im Endkampf", _box)
+	for t in lines:
+		_label(t, _box, 12, UiTheme.HAVE, false, true)
 
 
 func _fill_zone(zid: String) -> void:

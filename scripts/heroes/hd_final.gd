@@ -484,6 +484,38 @@ func on_kill(e: HdEnemy) -> bool:
 	return active and (e.zone == "final" or e.zone == "final_run")
 
 
+## Stand der laufenden Challenge für die Anzeige {text, frac} ({} = keine).
+func run_state() -> Dictionary:
+	if run.is_empty():
+		return {}
+	var d: Dictionary = run.def
+	match str(run.kind):
+		"echos":
+			var total := (d.bosses as Array).size()
+			var left := (run.left as Array).size() + (1 if run.get("cur") != null and is_instance_valid(run.cur) and not run.cur.dead else 0)
+			return {"text": tr("Echo %d / %d") % [total - left + 1, total], "frac": float(total - left) / maxf(1.0, total)}
+		"siegel":
+			var cols: Array = []
+			for k in run.order:
+				cols.append(_seal_name(int(k)))
+			return {"text": tr("Siegel %d / %d · Tafel: %s") % [int(run.step), run.stones.size(), " · ".join(cols)], "frac": float(run.step) / maxf(1.0, run.stones.size())}
+		"glutpfad":
+			var dist: float = run.from.distance_to(run.to)
+			var h = game.hero
+			var f := clampf(1.0 - Vector2(h.position.x - run.to.x, h.position.z - run.to.z).length() / maxf(1.0, dist), 0.0, 1.0)
+			return {"text": tr("Treffer %d / %d") % [int(run.hits), int(d.max_hits)], "frac": f}
+		"halten":
+			return {"text": tr("Halten %d / %d s") % [floori(float(run.held)), int(d.time)], "frac": clampf(float(run.held) / float(d.time), 0.0, 1.0)}
+	return {}
+
+
+const SEAL_NAMES := ["Rot", "Blau", "Grün", "Gold", "Violett", "Orange"]
+
+
+func _seal_name(k: int) -> String:
+	return tr(SEAL_NAMES[k % SEAL_NAMES.size()])
+
+
 ## Zeilen für die Seitenleiste.
 func lines() -> Array:
 	var out: Array = []
