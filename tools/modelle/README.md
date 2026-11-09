@@ -46,3 +46,7 @@ aus einfachen Formen mit Skelett (jedes Teil starr an einem Knochen) und Animati
 `death`: `<python mit bpy> -I tools/modelle/helden_bau.py -- assets/models/heroes [--nur=torvik] [--bild=linie.png]
 [--posen=posen.png]` (Vorschau mit Cycles: Aufstellung bzw. je Held eine Reihe Ruhe/Laufen/Angriff/Zauber/Tod).
 Ein neuer Held = eine Funktion in `BAU` plus Eintrag in `STIL`/`animieren`. Im Spiel: `"model"` in `data/heroes_helden.json`.
+
+Bollwerk-Gegner (Moor): `<python mit bpy> -I tools/modelle/bollwerk_figuren.py -- assets/models/heroes/gegner [--nur=grolm]
+[--bogen=bogen.png] [--posen=posen.png] [--gruppe=reihe.png]`. Ein neuer Gegner = Funktion plus Einträge in `FIGUREN` (Höhe = size[1])
+und `STIL` (Angriffsart hieb/beide/wurf/stoss/stab/sprung); im Spiel `"model"` in `data/heroes.json`.

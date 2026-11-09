@@ -1,19 +1,21 @@
-# Bollwerk (Hero Defense): Held Torvik und die Moor-Gegner als eigene Low-Poly-Modelle (eigene Arbeit, CC0).
+# Bollwerk (Hero Defense): die Moor-Gegner als eigene Low-Poly-Modelle (eigene Arbeit, CC0).
 # Jede Figur ist eine Funktion aus einfachen Teilen (Kugel, Zylinder, Kegel, Quader), leicht verbeult für einen
-# handgemachten Look, mit flacher Schattierung. Jedes Teil hängt an einem Knochen (body, head, arm.L …), damit
-# später Skelett und Animationen dazukommen können. Maße in Spieleinheiten, Höhe wie "size" in data/heroes.json.
+# handgemachten Look, mit flacher Schattierung. Jedes Teil hängt starr an einem Knochen (body, head, arm.L …);
+# das Skelett wird aus den Teilen abgeleitet, dazu Animationen idle, run, attack, cast, hit, death.
+# Maße in Spieleinheiten, Höhe = size[1] in data/heroes.json. Heldenmodelle: helden_bau.py.
 # Blender: Z oben, Blick nach -Y (wird im glTF zu +Z, der Blickrichtung in hd_enemy.gd).
 #
 #   <python mit bpy> -I tools/modelle/bollwerk_figuren.py -- <zielordner> [--nur=torvik,grolm] [--bogen=bogen.png]
 #
 # Ohne --bogen nur .glb je Figur; mit --bogen zusätzlich ein Vorschau-Kontaktbogen (Cycles, CPU).
 import bpy, bmesh, sys, os, math, random
-from mathutils import Vector, Euler
+from mathutils import Vector, Euler, Quaternion
 
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 ZIEL = argv[0] if argv else '/tmp/bollwerk'
 NUR = next((a.split('=', 1)[1].split(',') for a in argv if a.startswith('--nur=')), None)
 BOGEN = next((a.split('=', 1)[1] for a in argv if a.startswith('--bogen=')), '')
+POSEN = next((a.split('=', 1)[1] for a in argv if a.startswith('--posen=')), '')
 GRUPPE = next((a.split('=', 1)[1] for a in argv if a.startswith('--gruppe=')), '')
 
 FARBEN = {
@@ -69,7 +71,8 @@ class Figur:
                 v.co += Vector([self.rng.uniform(-beule, beule) for _ in range(3)])
         for p in ob.data.polygons:
             p.use_smooth = False
-        ob['knochen'] = knochen
+        vg = ob.vertex_groups.new(name=knochen)
+        vg.add(list(range(len(ob.data.vertices))), 1.0, 'REPLACE')
         self.teile.append(ob)
         return ob
 
@@ -113,44 +116,6 @@ class Figur:
         ob = bpy.context.object
         ob.name = self.name
         return ob
-
-
-# ---------------------------------------------------------------- Held
-
-def torvik():
-    f = Figur('torvik', 3)
-    # Beine und Stiefel
-    f.paar(f.zyl, 'leder', (0.2, 0, 0.32), 0.15, 0.5, knochen='leg.X', r2=0.12)
-    f.paar(f.quader, 'leder', (0.2, -0.06, 0.07), (0.24, 0.36, 0.14), knochen='leg.X')
-    # Rumpf: Kettenrock, Brustpanzer, Gürtel
-    f.zyl('stahl_dunkel', (0, 0, 0.62), 0.36, 0.32, r2=0.30, seg=10)
-    f.zyl('stahl', (0, 0, 1.0), 0.38, 0.52, r2=0.46, seg=8, beule=0.01)
-    f.zyl('leder', (0, 0, 0.78), 0.39, 0.1, seg=10)
-    f.quader('gold', (0, -0.38, 0.78), (0.16, 0.06, 0.12))
-    # Blitzrune auf der Brust
-    f.quader('blitz', (0, -0.42, 1.08), (0.06, 0.03, 0.22), dreh=(0, 25, 0))
-    # Schultern mit Fell
-    f.paar(f.kugel, 'stahl', (0.5, 0, 1.24), (0.24, 0.24, 0.2), knochen='arm.X', beule=0.01)
-    f.kugel('fell', (0, 0.05, 1.27), (0.45, 0.3, 0.12), beule=0.03)
-    # Umhang hinten
-    f.quader('umhang', (0, 0.36, 0.88), (0.62, 0.06, 0.78), dreh=(-8, 0, 0), beule=0.02)
-    # Arme
-    f.paar(f.zyl, 'haut', (0.56, -0.04, 0.96), 0.1, 0.42, knochen='arm.X', dreh=(0, -12, 0))
-    f.paar(f.zyl, 'leder', (0.6, -0.06, 0.74), 0.12, 0.18, knochen='hand.X')
-    # Kopf: Gesicht, Bart, Flügelhelm
-    f.kugel('haut', (0, -0.02, 1.52), (0.2, 0.2, 0.22), knochen='head')
-    f.kegel('bart', (0, -0.14, 1.36), 0.17, 0.34, dreh=(195, 0, 0), knochen='head', beule=0.02)
-    f.paar(f.quader, 'auge', (0.08, -0.19, 1.56), (0.05, 0.02, 0.025), knochen='head')
-    f.rund('stahl', (0, 0.0, 1.64), (0.23, 0.23, 0.17), knochen='head', seg=10, ringe=5)
-    f.quader('stahl', (0, -0.2, 1.53), (0.04, 0.03, 0.14), knochen='head')
-    f.paar(f.quader, 'weiss', (0.26, 0.05, 1.72), (0.04, 0.22, 0.12), dreh=(0, -35, -20), knochen='head')
-    # Zwei Äxte mit leuchtenden Blitzklingen
-    for s, seite in ((1, 'L'), (-1, 'R')):
-        kn = 'hand.' + seite
-        f.zyl('holz', (0.66 * s, -0.22, 0.74), 0.035, 0.85, dreh=(70, 0, 0), knochen=kn, seg=6)
-        f.quader('blitz', (0.66 * s, -0.56, 0.98), (0.04, 0.2, 0.34), knochen=kn)
-        f.quader('stahl_dunkel', (0.66 * s, -0.46, 0.89), (0.06, 0.08, 0.1), knochen=kn)
-    return f
 
 
 # ---------------------------------------------------------------- Moor-Gegner
@@ -357,7 +322,7 @@ def grolm():
     return f
 
 
-FIGUREN = {'torvik': (torvik, 2.1), 'sumpfling': (sumpfling, 0.9), 'moorklauer': (moorklauer, 1.0),
+FIGUREN = {'sumpfling': (sumpfling, 0.9), 'moorklauer': (moorklauer, 1.0),
            'schlammwerfer': (schlammwerfer, 1.2), 'speerjaeger': (speerjaeger, 1.4), 'giftkroete': (giftkroete, 0.7),
            'moorbrute': (moorbrute, 1.6), 'sumpfhexer': (sumpfhexer, 1.5), 'moorhauptmann': (moorhauptmann, 1.9),
            'grolm': (grolm, 4.2)}
@@ -380,13 +345,250 @@ def bauen(name):
     return ob
 
 
-def exportieren(ob, pfad):
-    bpy.ops.export_scene.gltf(filepath=pfad, export_format='GLB', use_selection=False, export_apply=True,
-                              export_yup=True)
+# ---------------------------------------------------------------- Skelett und Animationen
+
+X, Y, Z = (1, 0, 0), (0, 1, 0), (0, 0, 1)
+# Angriffsart je Figur: hieb (rechts), beide (Doppelschlag), wurf (über Kopf), stoss (Speer rechts),
+# stab (Stab links), sprung (Satz nach vorn). step/swing = Bein/Arm beim Laufen in Grad, bob = Wippen.
+STIL = {
+    'sumpfling': {'angriff': 'beide', 'step': 38, 'swing': 30, 'bob': 0.04},
+    'moorklauer': {'angriff': 'beide', 'step': 22, 'swing': 10, 'bob': 0.02},
+    'schlammwerfer': {'angriff': 'wurf', 'step': 30, 'swing': 22, 'bob': 0.03},
+    'speerjaeger': {'angriff': 'wurf', 'step': 32, 'swing': 18, 'bob': 0.03},
+    'giftkroete': {'angriff': 'sprung', 'step': 0, 'swing': 0, 'bob': 0.0, 'huepfen': 0.18},
+    'moorbrute': {'angriff': 'beide', 'step': 26, 'swing': 20, 'bob': 0.06},
+    'sumpfhexer': {'angriff': 'stab', 'step': 0, 'swing': 10, 'bob': 0.04, 'schweben': True},
+    'moorhauptmann': {'angriff': 'stoss', 'step': 28, 'swing': 12, 'bob': 0.05},
+    'grolm': {'angriff': 'beide', 'step': 22, 'swing': 16, 'bob': 0.12},
+}
+
+
+def _gruppen(ob):
+    """Knochenname -> Liste der Punkte."""
+    namen = {g.index: g.name for g in ob.vertex_groups}
+    out = {}
+    for v in ob.data.vertices:
+        for g in v.groups:
+            out.setdefault(namen[g.group], []).append(v.co.copy())
+    return out
+
+
+def _mitte(pts):
+    return sum(pts, Vector()) / len(pts)
+
+
+def riggen(ob):
+    """Skelett aus den Teilen ableiten: Gelenke an den Rändern der Knochengruppen."""
+    g = _gruppen(ob)
+    H = max(v.co.z for v in ob.data.vertices)
+    knochen = []  # (name, kopf, ende, eltern)
+    beine = [b for b in ('leg.L', 'leg.R') if b in g]
+    huefte = max(max(p.z for p in g[b]) for b in beine) if beine else H * 0.42
+    kb = _mitte(g['body'])
+    knochen.append(('root', Vector((0, 0, 0)), Vector((0, 0, H * 0.15)), None))
+    knochen.append(('body', Vector((0, kb.y, huefte)), Vector((0, kb.y, max(huefte + 0.1, H * 0.8))), 'root'))
+    if 'head' in g:
+        hz = [p.z for p in g['head']]
+        kh = _mitte(g['head'])
+        hals = min(hz) + (max(hz) - min(hz)) * 0.3
+        knochen.append(('head', Vector((0, kh.y * 0.5 + kb.y * 0.5, hals)), Vector((0, kh.y, max(hz))), 'body'))
+    for b in beine:
+        m = _mitte(g[b])
+        knochen.append((b, Vector((m.x, m.y, huefte)), Vector((m.x, m.y, 0.0)), 'root'))
+    for seite in 'LR':
+        arm, hand = 'arm.' + seite, 'hand.' + seite
+        ellbogen = None
+        if arm in g:
+            m = _mitte(g[arm])
+            oben = max(p.z for p in g[arm])
+            unten = min(p.z for p in g[arm])
+            schulter = Vector((m.x * 0.8, m.y, oben))
+            ellbogen = Vector((m.x, m.y, unten if unten < oben - 0.05 else oben - 0.1))
+            knochen.append((arm, schulter, ellbogen, 'body'))
+        if hand in g:
+            m = _mitte(g[hand])
+            kopf = ellbogen if ellbogen is not None else Vector((m.x, m.y, m.z + 0.15))
+            ende = m if (m - kopf).length > 0.02 else kopf + Vector((0, 0, -0.1))
+            knochen.append((hand, kopf, ende, arm if ellbogen is not None else 'body'))
+    arm_d = bpy.data.armatures.new(ob.name + '_rig')
+    rig = bpy.data.objects.new(ob.name + '_rig', arm_d)
+    bpy.context.scene.collection.objects.link(rig)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    for name, kopf, ende, eltern in knochen:
+        eb = arm_d.edit_bones.new(name)
+        eb.head, eb.tail, eb.roll = kopf, ende, 0
+        if eltern:
+            eb.parent = arm_d.edit_bones[eltern]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    # Teile an Knochen ohne eigenes Gelenk (z. B. hand ohne arm) bleiben über ihre Gruppe am nächsten Eltern
+    for vg in ob.vertex_groups:
+        if vg.name not in arm_d.bones:
+            vg.name = 'body'
+    ob.parent = rig
+    mod = ob.modifiers.new('rig', 'ARMATURE')
+    mod.object = rig
+    return rig
+
+
+class Anim:
+    """Wie in helden_bau.py: Drehungen um Weltachsen je Knochen, als NLA-Spur je Animation."""
+
+    def __init__(self, rig):
+        self.rig = rig
+        self.pb = rig.pose.bones
+        for p in self.pb:
+            p.rotation_mode = 'QUATERNION'
+        self.rest = {b.name: b.matrix_local.to_quaternion() for b in rig.data.bones}
+        rig.animation_data_create()
+        self.aktionen = {}
+
+    def key(self, frame, posen, loc=None):
+        for p in self.pb:
+            p.rotation_quaternion = Quaternion()
+            p.location = Vector()
+        for name, rots in posen.items():
+            if name not in self.pb:
+                continue
+            q = Quaternion()
+            for achse, grad in rots:
+                q = Quaternion(Vector(achse), math.radians(grad)) @ q
+            self.pb[name].rotation_quaternion = self.rest[name].inverted() @ q @ self.rest[name]
+        if loc:
+            self.pb['root'].location = self.rest['root'].inverted() @ Vector(loc)
+        for p in self.pb:
+            p.keyframe_insert('rotation_quaternion', frame=frame)
+            p.keyframe_insert('location', frame=frame)
+
+    def action(self, name, frames):
+        act = bpy.data.actions.new(self.rig.name + '_' + name)
+        act.use_fake_user = True
+        self.rig.animation_data.action = act
+        for fr, posen, loc in frames:
+            self.key(fr, posen, loc)
+        spur = self.rig.animation_data.nla_tracks.new()
+        spur.name = name
+        spur.strips.new(name, int(frames[0][0]), act)
+        self.rig.animation_data.action = None
+        self.aktionen[name] = act
+
+
+def _m(*ps):
+    out = {}
+    for p in ps:
+        for k, v in p.items():
+            out[k] = out.get(k, []) + list(v)
+    return out
+
+
+def animieren(name, rig):
+    """Vorne ist -Y. Drehung um X mit positivem Winkel kippt den Oberkörper nach vorn und schwingt
+    hängende Arme nach hinten."""
+    st = STIL[name]
+    A = Anim(rig)
+    H = rig.data.bones['body'].tail_local.z
+    # Ruhe: Atmen (2 s)
+    atmen = {'body': [(X, 3)], 'head': [(X, -4)], 'arm.L': [(Y, 4)], 'arm.R': [(Y, -4)]}
+    A.action('idle', [(1, {}, None), (25, atmen, (0, 0, -0.015 * H)), (49, {}, None)])
+    # Laufen: 16 Bilder je Doppelschritt
+    frames = []
+    for i in range(9):
+        w = i / 8 * math.tau
+        si, co = math.sin(w), abs(math.cos(w))
+        p = {'leg.L': [(X, st['step'] * si)], 'leg.R': [(X, -st['step'] * si)],
+             'arm.L': [(X, -st['swing'] * si)], 'arm.R': [(X, st['swing'] * si)],
+             'body': [(X, 6), (Z, 5 * si)], 'head': [(X, -3), (Z, -3 * si)]}
+        loc = (0, 0, st['bob'] * (co - 0.5))
+        if st.get('schweben'):
+            p['body'] = [(X, 8), (Y, 6 * si)]
+            loc = (0, 0, st['bob'] * (1 + math.sin(w)))
+        if st.get('huepfen'):
+            t = i / 8
+            sprung = math.sin(min(t * 2, 1) * math.pi)
+            p = {'leg.L': [(X, -50 * sprung)], 'leg.R': [(X, -50 * sprung)], 'arm.L': [(X, 30 * sprung)],
+                 'arm.R': [(X, 30 * sprung)], 'body': [(X, -12 * sprung)]}
+            loc = (0, 0, st['huepfen'] * sprung)
+        frames.append((1 + i * 2, p, loc))
+    A.action('run', frames)
+    # Angriff
+    art = st['angriff']
+    if art == 'beide':
+        auf = {'arm.L': [(X, -150)], 'arm.R': [(X, -150)], 'hand.L': [(X, -20)], 'hand.R': [(X, -20)],
+               'body': [(X, -14)], 'head': [(X, -8)]}
+        ab = {'arm.L': [(X, -50)], 'arm.R': [(X, -50)], 'hand.L': [(X, 20)], 'hand.R': [(X, 20)],
+              'body': [(X, 22)], 'head': [(X, 6)]}
+        A.action('attack', [(1, {}, None), (7, auf, (0, 0.04 * H, 0.03 * H)), (11, ab, (0, -0.06 * H, -0.04 * H)),
+                            (14, ab, (0, -0.06 * H, -0.04 * H)), (22, {}, None)])
+    elif art == 'wurf':
+        aus = {'arm.R': [(X, 160)], 'hand.R': [(X, 30)], 'body': [(X, -12), (Z, -20)], 'arm.L': [(X, -40)]}
+        los = {'arm.R': [(X, -100)], 'hand.R': [(X, -10)], 'body': [(X, 18), (Z, 15)], 'arm.L': [(X, 20)]}
+        A.action('attack', [(1, {}, None), (8, aus, None), (12, los, (0, -0.04 * H, 0)), (15, los, None), (22, {}, None)])
+    elif art == 'stoss':
+        zurueck = {'arm.R': [(X, 35)], 'body': [(Z, -20), (X, -4)], 'arm.L': [(X, -30)]}
+        vor = {'arm.R': [(X, -75)], 'body': [(Z, 15), (X, 14)], 'arm.L': [(X, -20)], 'leg.R': [(X, 20)], 'leg.L': [(X, -15)]}
+        A.action('attack', [(1, {}, None), (7, zurueck, None), (10, vor, (0, -0.1 * H, -0.02 * H)),
+                            (14, vor, (0, -0.1 * H, -0.02 * H)), (22, {}, None)])
+    elif art == 'stab':
+        auf = {'arm.L': [(X, -60)], 'body': [(X, -8)], 'head': [(X, -10)]}
+        vor = {'arm.L': [(X, -95)], 'body': [(X, 16)], 'head': [(X, 8)]}
+        A.action('attack', [(1, {}, None), (7, auf, (0, 0, 0.03 * H)), (11, vor, (0, -0.05 * H, 0)), (14, vor, None), (22, {}, None)])
+    else:  # sprung
+        duck = {'body': [(X, 10)], 'leg.L': [(X, 25)], 'leg.R': [(X, 25)]}
+        satz = {'body': [(X, -18)], 'head': [(X, -20)], 'leg.L': [(X, -60)], 'leg.R': [(X, -60)],
+                'arm.L': [(X, -50)], 'arm.R': [(X, -50)]}
+        A.action('attack', [(1, {}, None), (6, duck, (0, 0, -0.08 * H)), (10, satz, (0, -0.35 * H, 0.25 * H)),
+                            (14, {}, (0, -0.2 * H, 0)), (22, {}, None)])
+    # Zauber: Arme hoch, Oberkörper zurück, kurz anheben
+    hoch = {'arm.L': [(X, -160), (Y, -15)], 'arm.R': [(X, -160), (Y, 15)], 'body': [(X, -14)], 'head': [(X, -18)]}
+    if st.get('huepfen'):
+        hoch = {'body': [(X, -25)], 'head': [(X, -25)], 'leg.L': [(X, 20)], 'leg.R': [(X, 20)]}
+    elif art == 'stab':  # Stab bleibt aufrecht: nur anheben, freie Hand hoch
+        hoch = {'arm.L': [(X, -35)], 'arm.R': [(X, -150), (Y, 15)], 'body': [(X, -10)], 'head': [(X, -18)]}
+    A.action('cast', [(1, {}, None), (8, hoch, (0, 0, 0.06 * H)), (16, hoch, (0, 0, 0.08 * H)), (24, {}, None)])
+    # Treffer: kurz nach hinten zucken
+    zuck = {'body': [(X, -16)], 'head': [(X, -12)], 'arm.L': [(X, 20)], 'arm.R': [(X, 20)]}
+    A.action('hit', [(1, {}, None), (4, zuck, (0, 0.05 * H, 0)), (10, {}, None)])
+    # Tod: nach hinten umkippen und liegen bleiben
+    knick = {'body': [(X, -20)], 'head': [(X, -25)], 'leg.L': [(X, 15)], 'leg.R': [(X, 15)],
+             'arm.L': [(X, -40), (Y, 30)], 'arm.R': [(X, -40), (Y, -30)]}
+    liegt = _m(knick, {'root': [(X, -85)]})
+    if st.get('huepfen'):
+        knick = {'body': [(X, -10)], 'leg.L': [(X, -40)], 'leg.R': [(X, -40)]}
+        liegt = _m(knick, {'root': [(Y, 170)]})
+    unten = 1.2 * H if st.get('huepfen') else 0.0  # auf den Rücken gedreht: wieder über den Boden heben
+    A.action('death', [(1, {}, None), (6, knick, (0, 0.05 * H, 0.3 * unten)), (16, liegt, (0, 0.2 * H, unten)),
+                       (19, _m(liegt, {'head': [(X, 8)]}), (0, 0.22 * H, unten)), (30, liegt, (0, 0.2 * H, unten))])
+    # Grundpose zurücksetzen: sonst exportiert glTF die letzte Schlüsselpose (Tod) als Ruhelage der Knochen
+    for p in A.pb:
+        p.rotation_quaternion = Quaternion()
+        p.location = Vector()
+    return A
+
+
+def pose_zeigen(rig, anim, bild):
+    """Pose zeigen: Aktion setzen, Bild anspringen (für Vorschaubilder)."""
+    for t in rig.animation_data.nla_tracks:
+        t.mute = True
+    rig.animation_data.action = anim
+    bpy.context.scene.frame_set(bild)
+
+
+def exportieren(ob, rig, pfad):
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select_set(True)
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.export_scene.gltf(filepath=pfad, export_format='GLB', use_selection=True, export_animations=True,
+                              export_animation_mode='NLA_TRACKS', export_skins=True, export_yup=True,
+                              export_apply=False)
 
 
 def rendern(ob, pfad, groesse=420):
     sc = bpy.context.scene
+    if sc.camera:
+        sc.render.filepath = pfad
+        bpy.ops.render.render(write_still=True)
+        return
     sc.render.engine = 'CYCLES'
     sc.cycles.device = 'CPU'
     sc.cycles.samples = 24
@@ -475,14 +677,36 @@ def main():
         return
     namen = NUR or list(FIGUREN)
     bilder = []
+    posen = []
     for n in namen:
         ob = bauen(n)
-        exportieren(ob, os.path.join(ZIEL, n + '.glb'))
-        print('GLB', n, len(ob.data.polygons), 'Flächen')
+        rig = riggen(ob)
+        A = animieren(n, rig)
+        exportieren(ob, rig, os.path.join(ZIEL, n + '.glb'))
+        print('GLB', n, len(ob.data.polygons), 'Flächen', len(rig.data.bones), 'Knochen')
         if BOGEN:
             p = os.path.join(ZIEL, n + '.png')
             rendern(ob, p)
             bilder.append((n, p))
+        if POSEN:
+            reihe = []
+            for a, bild in (('idle', 1), ('run', 5), ('attack', 7), ('attack', 12), ('cast', 10), ('death', 30)):
+                pose_zeigen(rig, A.aktionen[a], bild)
+                p = os.path.join(ZIEL, f'{n}_{a}_{bild}.png')
+                rendern(ob, p, 300)
+                reihe.append(p)
+            posen.append((n, reihe))
+    if POSEN:
+        from PIL import Image, ImageDraw
+        s = 300
+        im = Image.new('RGB', (6 * s, len(posen) * (s + 20)), (20, 22, 30))
+        dr = ImageDraw.Draw(im)
+        for j, (n, reihe) in enumerate(posen):
+            for i, p in enumerate(reihe):
+                im.paste(Image.open(p).convert('RGB').resize((s, s)), (i * s, j * (s + 20)))
+            dr.text((6, j * (s + 20) + s + 4), n + '   Ruhe | Laufen | Ausholen | Schlag | Zauber | Tod', fill=(240, 240, 240))
+        im.save(POSEN)
+        print('POSEN', POSEN)
     if BOGEN:
         from PIL import Image, ImageDraw
         s, spalten = 420, 5

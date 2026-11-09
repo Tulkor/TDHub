@@ -175,3 +175,4 @@ und `steinschleuder` (Randgruppen TD), `buehne` (Randgruppen Bühnennebel, darau
 
 ## Heldenmodelle `heroes/` (eigene, CC0, 2026-11-07)
 Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/helden_bau.py` (Blender), keine fremden Vorlagen.
+Moor-Gegner `heroes/gegner/` (Sumpfling bis Grolm, 2026-11-09): ebenso eigene Arbeit aus `tools/modelle/bollwerk_figuren.py`, CC0.
