@@ -175,3 +175,7 @@ und `steinschleuder` (Randgruppen TD), `buehne` (Randgruppen Bühnennebel, darau
 
 ## Heldenmodelle `heroes/` (eigene, CC0, 2026-11-07)
 Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/helden_bau.py` (Blender), keine fremden Vorlagen.
+
+## Bezirk „Überwuchert“ (2026-11-08)
+
+- `bezirke/ueberwuchert/*.glb`: eigene Arbeit (CC0), erzeugt mit `tools/modelle/pilz_bau.py` (Blender, Texturen im Skript berechnet).

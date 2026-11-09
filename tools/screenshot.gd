@@ -11,6 +11,7 @@ extends Node
 ##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
 ##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
 ##                           --endboss=varkhun|nerathis|morvath|astrael|zharok feste Endboss-Variante in Welle 40
+##                           --punkt=x,z Kamera auf diesen Weltpunkt (--abstand=N), --bezirk=ueberwuchert Pilzhöfe am Rand
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -26,6 +27,8 @@ extends Node
 ##                           --profi (Filialwahl: Reiter Profi-Filialen), --profil (Filialwahl: Profil-Fenster offen),
 ##                           --bauen=h01P,h02O (diese Tower zuerst), --neigung=-25 Kamera flacher (Grad)
 ##   --map=<id>              Map aus data/maps (Standard classic)
+##   --ohnehud               Oberfläche ausblenden (nur Spielwelt, z. B. Umgebung ansehen)
+##   --bezirk=ueberwuchert   Feld "district" der Map für das Bild setzen (eeveTD/YouTD: Pilzhof statt Friedhof)
 ##   --runden=N              N Runden automatisch spielen (Gems am Weg setzen, ersten behalten, Welle 8× laufen)
 ##   --tower=ruby:2,opal:0   diese Gems in der nächsten Runde setzen (Reihenfolge = Platzierung)
 ##   --welle=N               nächste Welle ist Welle N (Debug-Sprung)
@@ -173,10 +176,14 @@ func _ready() -> void:
 			node = load("res://scenes/heroes_game.tscn").instantiate()
 			node.bot = true
 			node.force_hero = str(opts.get("held", ""))
+			node.district = str(opts.get("bezirk", ""))
 		_:
 			var path := "res://data/maps/%s.json" % opts.get("map", "classic")
 			Session.map_path = path
 			Session.map_override = null
+			if opts.has("bezirk"):
+				Session.map_override = MapData.load_file(path)
+				Session.map_override.district = str(opts.bezirk)
 			# Maps eines anderen Spiels (z. B. "game": "eevetd") starten dessen Szene
 			var md = Database.load_json(path)
 			var kind: String = str(md.get("game", "gemtd")) if md is Dictionary else "gemtd"
@@ -213,6 +220,8 @@ func _ready() -> void:
 		angles = String(opts.get("winkel", "schraeg")).split(",")
 	if opts.has("extra") and scene == "spiel":
 		node.hud.extra_chance_requested.emit()
+	if opts.has("ohnehud") and node.get("hud") != null:
+		node.hud.visible = false
 	if opts.has("lichtpfad") and (scene == "spiel" or scene == "maul"):
 		node.path_lights.visible = true
 		node.board.set_path_dots(false)
@@ -617,6 +626,12 @@ func _prepare_heroes(game: Node) -> void:
 		await _frames(12)
 		return
 	game.cam_pos = game.hero.position
+	if opts.has("punkt"):
+		var pk := String(opts.punkt).split(",")
+		# Kamera folgt im Bot-Lauf dem Helden: Held mitnehmen
+		game.cam_pos = Vector3(float(pk[0]), 0.0, float(pk[1]))
+		game.hero.position = game.cam_pos
+		game.cam_dist = float(opts.get("abstand", str(game.cam_dist)))
 	game._place_camera()
 	await _frames(12)
 

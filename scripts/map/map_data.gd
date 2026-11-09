@@ -43,6 +43,9 @@ var start_gold := 0
 var variance := {"random_rocks": 0, "seed": -1}
 var path_lights: Array = []  ## Farben des Lichtpfads ("#rrggbb"), leer = Farben des Modus (PathLights.COLORS)
 var water: Array = []  ## Visuelle Gewässer in Spielkoordinaten, unabhängig von Kacheln/Kollisionen.
+## Bezirk (Umgebungs-Baukasten neben der Karte), leer = Standard des Modus. "ueberwuchert" = BezirkUeberwuchert.
+var district := ""
+const DISTRICTS := ["", "ueberwuchert"]
 
 
 static func create_empty(w: int, h: int) -> MapData:
@@ -98,6 +101,7 @@ static func from_dict(d: Dictionary) -> MapData:
 	m.variance = d.get("variance", {"random_rocks": 0, "seed": -1})
 	m.path_lights = d.get("path_lights", [])
 	m.water = d.get("water", []).duplicate(true)
+	m.district = str(d.get("district", ""))
 	if int(d.get("format", 1)) < FORMAT:
 		m._upscale()
 	return m
@@ -148,6 +152,8 @@ func to_dict() -> Dictionary:
 		d.path_lights = path_lights
 	if not water.is_empty():
 		d.water = water.duplicate(true)
+	if district != "":
+		d.district = district
 	if spawn_player >= 0:
 		d.spawn_player = spawn_player
 	if not lanes.is_empty():

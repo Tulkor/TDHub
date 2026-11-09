@@ -666,6 +666,10 @@ function renderMapSide() {
           touched();
         })),
         field("Wellen", selectEl(waveOpts, o.waves, (v) => { o.waves = v; touched(); })),
+        field("Bezirk", selectEl([["", "Standard"], ["ueberwuchert", "Überwuchert (Pilzhof)"]], o.district || "", (v) => {
+          if (v) o.district = v; else delete o.district;
+          touched();
+        })),
         field("Leben", numberEl(o, "lives", { min: 1, max: 1000 })),
         field("Startgold", numberEl(o, "start_gold", { min: 0, max: 100000 })),
         field("Sperrzone um Wegpunkte", radius),

@@ -46,3 +46,11 @@ aus einfachen Formen mit Skelett (jedes Teil starr an einem Knochen) und Animati
 `death`: `<python mit bpy> -I tools/modelle/helden_bau.py -- assets/models/heroes [--nur=torvik] [--bild=linie.png]
 [--posen=posen.png]` (Vorschau mit Cycles: Aufstellung bzw. je Held eine Reihe Ruhe/Laufen/Angriff/Zauber/Tod).
 Ein neuer Held = eine Funktion in `BAU` plus Eintrag in `STIL`/`animieren`. Im Spiel: `"model"` in `data/heroes_helden.json`.
+
+Bezirk „Überwuchert“ (Pilzhof: Backsteinmauern mit Pilzkolonien, glühende Fenster und Runen, eigene Arbeit CC0):
+`<python mit bpy> -I tools/modelle/pilz_bau.py -- assets/models/bezirke/ueberwuchert [--nur=pilz_kiste] [--bild=bogen.png]`
+baut `pilz_einzel`, `pilz_bueschel`, `pilz_wand`, `pilz_wand_fenster`, `pilz_mauerecke`, `pilz_kiste`, `pilz_haus`,
+`runenstein` (danach den Ordner `.tex` löschen). Farben stehen oben im Skript (Moodboard-Werte). Im Spiel setzt
+`scripts/map/bezirk_ueberwuchert.gd` (Aufbau in `AUFBAU`) daraus einen Hof zusammen: eeveTD/YouTD über das Map-Feld
+`"district": "ueberwuchert"` (statt Friedhof, Map-Editor „Bezirk“), Bollwerk über `arena.district` in `data/heroes.json`.
+Bild: `tools/screenshot.sh --map=eeve --bezirk=ueberwuchert --winkel=nah --punkt=96,63 --frei --ohnehud`.
