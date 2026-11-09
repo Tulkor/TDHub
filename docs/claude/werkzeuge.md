@@ -1,5 +1,7 @@
 # Spezialwerkzeuge (Build, Release, Editoren, Effekte, Modelle, WC3)
 
+- Windows lokal: vorhandenes `tools/build_windows.sh` über `tools/windows.ps1 -Godot <exe> -Python <exe> -Tool tools/build_windows.sh -ToolArgs --ziel,export/builds,--ohne-tag,--nummer,N` starten. Derselbe Export-/ZIP-Ablauf wie Linux; `setup_godot.sh` erkennt Git Bash und installiert über `windows_templates.py` nur die offizielle 4.3-Exportvorlage ins isolierte APPDATA. ZIP-Ziel überschreibt keine vorhandene Nummer. Auf Windows startet der Build zusätzlich die exportierte EXE headless; Logs `.godot/windows-export.log` und `windows-build-smoke.log`. `--ohne-tests` nur nach bereits bestandenem vollständigem Testlauf. Temporäre Build-Verzeichnisse werden vor dem Aufräumen auf `.godot/build.*` begrenzt.
+
 Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz automatisch ein, sobald ein Thread passende Dateien anfasst.
 
 - Tower prüfen: `tools/tower_pruefen.sh [gemtd eeve rg maul] [--tower=id,…]` baut jeden Tower (jede Stufe) einzeln gegen festgehaltene Boden- und Luftgegner und prüft Schaden und jede Fähigkeit (Chancen auf 100 %, Auren-Tower neben einem Helfer-Tower); Bericht je Modus nach `/mnt/project-files/tests/tower-pruefung-<modus>.md`. Dieselben Läufe sind die Tests `towgemtd toweeve towrg towmaul` (Grundlage `tests/lib/tower_probe.gd`, nur in `alle`). Neue Fähigkeit: in `NEEDS` eintragen, was beobachtet werden muss, sonst meldet der Test „Fähigkeit ohne Prüfung“. eeveTD: Einträge in `eeve.todo` gelten als fehlend. YouTD prüft `ytfaehig`.

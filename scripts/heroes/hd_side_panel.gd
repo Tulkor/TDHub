@@ -290,13 +290,13 @@ func _fill_final() -> void:
 		return
 	if ch.boss_started:
 		if f.boss != null and is_instance_valid(f.boss) and not f.boss.dead:
-			_label(tr("Endkampf gegen den Verschlinger"), _box, 14, UiTheme.MISSING, true)
+			_label(tr("Endkampf gegen %s") % tr(str(f.boss.def.name)), _box, 14, UiTheme.MISSING, true, true)
 			_bar(_box, f.boss.hp / f.boss.max_hp, UiTheme.MISSING)
 		_fill_boss_mods(ch)
 		return
 	var left := int(ch.awaken_left())
-	_label(tr("Verschlinger erwacht in %d:%02d") % [left / 60, left % 60], _box, 13, UiTheme.CYAN, true)
-	_label(tr("Löst Challenges, um den Verschlinger zu schwächen, oder geht direkt durch das Tor. Jeder Tod kostet %d Feste-Leben.") % int(f.data.get("death_lives", 3)), _box, 12, UiTheme.MUTED, false, true)
+	_label(tr("Endboss erwacht in %d:%02d") % [left / 60, left % 60], _box, 13, UiTheme.CYAN, true)
+	_label(tr("Löst Challenges, um den Endboss zu schwächen, oder geht direkt durch das Tor. Jeder Tod kostet %d Feste-Leben.") % int(f.data.get("death_lives", 3)), _box, 12, UiTheme.MUTED, false, true)
 	var rs: Dictionary = f.run_state()
 	for cd in f.data.list:
 		var id := str(cd.id)

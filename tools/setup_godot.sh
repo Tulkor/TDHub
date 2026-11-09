@@ -6,6 +6,12 @@
 set -euo pipefail
 
 VERSION="4.3"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    [ -n "${GODOT:-}" ] && [ -f "$GODOT" ] || { echo "Windows: GODOT auf die vorhandene Godot.exe setzen (tools/windows.ps1)."; exit 2; }
+    if [ "${1:-}" != "--ohne-vorlage" ]; then python3 tools/windows_templates.py; fi
+    exit 0 ;;
+esac
 BIN_DIR="${HOME}/.local/bin"
 GODOT="${BIN_DIR}/godot"
 TPL_DIR="${HOME}/.local/share/godot/export_templates/${VERSION}.stable"

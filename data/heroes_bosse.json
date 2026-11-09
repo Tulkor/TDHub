@@ -1,5 +1,5 @@
 {
-	"_info": "Fünf eigenständige Endboss-Varianten für Welle 40. Gemeinsame Datenbasis, phasenabhängige Rotationen und prozedurale Silhouetten. Originale Designs, inspiriert von Raid-Telegraphen, ARPG-Flächenkontrolle und Boss-Kombos.",
+	"_info": "Fünf eigenständige Endboss-Varianten für den Schlund nach Welle 40. Gemeinsame Datenbasis, phasenabhängige Rotationen, Challenge-Schwächen und prozedurale Silhouetten. Originale Designs, inspiriert von Raid-Telegraphen, ARPG-Flächenkontrolle und Boss-Kombos.",
 	"defaults": {
 		"rank": "boss",
 		"armor": 10,
@@ -465,6 +465,7 @@
 	"bosses": [
 		{
 			"id": "varkhun",
+			"weaknesses": {"verschl_hagel": "richter_ofen"},
 			"name": "Varkhun, der Kettenrichter",
 			"title": "Kettenschmiede",
 			"theme": "Kettenschmiede",
@@ -499,6 +500,7 @@
 		},
 		{
 			"id": "nerathis",
+			"weaknesses": {"verschl_hagel": "flut_geysire"},
 			"name": "Nerathis, Königin der Gezeiten",
 			"title": "Sturmflut",
 			"theme": "Sturmflut",
@@ -533,6 +535,7 @@
 		},
 		{
 			"id": "morvath",
+			"weaknesses": {"verschl_hagel": "dorn_sporen"},
 			"name": "Morvath, der Dornenchor",
 			"title": "Dornenfäulnis",
 			"theme": "Dornenfäulnis",
@@ -567,6 +570,7 @@
 		},
 		{
 			"id": "astrael",
+			"weaknesses": {"verschl_hagel": "zeit_echo"},
 			"name": "Astrael, Hüter der gebrochenen Stunde",
 			"title": "Gebrochene Zeit",
 			"theme": "Gebrochene Zeit",
@@ -601,6 +605,7 @@
 		},
 		{
 			"id": "zharok",
+			"weaknesses": {"verschl_hagel": "schlund_jagd"},
 			"name": "Zharok, Herz der Finsternis",
 			"title": "Kosmischer Schlund",
 			"theme": "Kosmischer Schlund",

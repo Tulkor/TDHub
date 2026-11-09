@@ -62,11 +62,10 @@ func _fight(id: String) -> void:
 		game._remove(enemy)
 	game.enemies.clear()
 	game.start_wave(40)
-	var queued: Array = game.spawn_queue.filter(func(q): return str(game.enemy_defs[q.id].rank) == "boss")
-	var boss: HdEnemy = game._spawn_queued(queued[0])
 	game.spawn_queue.clear()
-	boss.position = game.zones.center("arena")
-	boss.home = boss.position
+	game.final.enter()
+	game.systems.challenges.start_boss("gate")
+	var boss: HdEnemy = game.final.boss
 	game.hero.position = boss.position + Vector3(4, 0, 7)
 	boss.target = game.hero
 	game.play_time = 30

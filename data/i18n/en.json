@@ -3593,5 +3593,14 @@
 	"Kettendiener": "Chain Servant",
 	"Sporenwicht": "Sporeling",
 	"Schlundling": "Mawspawn",
-	"Erholungsfenster": "Recovery window"
+	"Erholungsfenster": "Recovery window",
+	"%s erwacht! Der Endkampf beginnt.": "%s awakens! The final battle begins.",
+	"Endkampf gegen %s (%d Challenges geschafft)": "Final battle against %s (%d challenges completed)",
+	"Endkampf: %s · %d %%": "Final battle: %s · %d %%",
+	"%s · Endboss erwacht in %d:%02d": "%s · Final boss awakens in %d:%02d",
+	"Endkampf gegen %s": "Final battle against %s",
+	"Endboss erwacht in %d:%02d": "Final boss awakens in %d:%02d",
+	"Löst Challenges, um den Endboss zu schwächen, oder geht direkt durch das Tor. Jeder Tod kostet %d Feste-Leben.": "Complete challenges to weaken the final boss, or go straight through the gate. Each death costs %d fortress lives.",
+	"Tor des Endbosses": "Final Boss Gate",
+	"Endboss verliert eine Flächenfähigkeit": "The final boss loses an area attack"
 }

@@ -1,6 +1,6 @@
 # Bollwerk-Endbosse
 
-Welle 40 wählt einmal pro Partie einen der fünf Endbosse. Ansage und Spawn verwenden dieselbe gespeicherte Auswahl. Die Kriegsherren in Welle 10/20/30 bleiben erhalten. Die Designs sind eigenständige Figuren mit Raid-Warnmustern und ARPG-Flächenkontrolle; keine übernommenen Figuren oder Assets aus anderen Spielen.
+Nach dem Großangriff in Welle 40 beginnt das Endgebiet „Der Schlund“. Dort wird einmal pro Partie einer der fünf Endbosse gewählt; Tor und Weckuhr verwenden dieselbe gespeicherte Auswahl. Die Kriegsherren in Welle 10/20/30 bleiben erhalten. Die Designs sind eigenständige Figuren mit Raid-Warnmustern und ARPG-Flächenkontrolle; keine übernommenen Figuren oder Assets aus anderen Spielen.
 
 | Boss | Design-Thema | Sechs Moves |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ Die Bossleiste zeigt den aktuellen Move mit einem Ausweichhinweis und kennzeichn
 ## Daten und Erweiterung
 
 - `data/heroes_bosse.json`: `defaults` → Boss-Overrides, `add_defaults` → Add-Overrides über `SystemHost.cascade`; bestehende Schwierigkeits-/Wellen-/Spielerzahl-Skalierung bleibt aktiv.
-- `HdBossCatalog`: Katalog installieren, Welle-40-Gruppen als Kopie auflösen, Auswahl zwischen Ansage und Landung stabil halten. `HdGame.force_final_boss` legt eine Variante für Tests/Vorschauen fest; leer = Zufall.
+- `HdBossCatalog`: Katalog installieren und Auswahl stabil halten. `HdGame.force_final_boss` legt eine Variante für Tests/Vorschauen fest; leer = Zufall. `heroes_endgebiet.json → boss.variants` aktiviert die Auswahl für den Schlund; ohne Varianten gilt weiter `boss.id`. `weaknesses` übersetzt Challenge-Schwächungen in die passende Fähigkeit des jeweiligen Bosses; Lebens-/Heldenboni gelten unverändert.
 - `HdBossBrain`: phasenabhängige Rotation, Erholung, sechs Positionsproben im 0,5-Sekunden-Abstand, Besitz und Cleanup. Bestehende Bewegung, Aggro, Leine und CC bleiben in `HdEnemy`.
 - Neue Musterfelder: `kind: line` trifft markierte Bahnen direkt; `kind: echo` trifft eingefrorene Erinnerungspositionen; `pattern: orbit` plus `placement_radius` verteilt Kreise; `retarget` steuert das erneute Anvisieren zwischen Wiederholungen. `repeat`, `repeat_windup`, `rotate`, `grow`, `count` und `spread` verwenden die vorhandene Combo-Logik.
 - Pro Boss maximal acht lebende Adds, zwölf Bodenflächen und 72 Geschosse. Älteste Bodenflächen werden ersetzt; bei vollem Geschossbudget entstehen keine weiteren. Adds geben weder Gold noch XP. Beim Boss-Tod werden eigene Warnflächen, Pools, Geschosse und Adds entfernt; fremde Gefahren bleiben erhalten. Projektil-Cleanup ist auch beim Tod innerhalb der Geschossiteration sicher.
@@ -33,7 +33,7 @@ godot --path . res://tools/heroes/boss_probe.tscn -- --kampf=astrael
 tools/screenshot.sh --szene=heroes --endboss=varkhun --held=torvik --zeit=8 --warnung --nah
 ```
 
-`heroesboss` prüft alle 30 Moves samt Warnzeit/Treffer, Phasen, Rotation, CC-Unterbrechung, Erholung, Limits, Tod durch Heldengeschoss und Welle-40-Sieg. `heroes` behält für seine bisherigen vier Heldenkampagnen den ursprünglichen Verschlinger als feste Regression. Neue Varianten werden im fokussierten Test geprüft.
+`heroesboss` prüft alle 30 Moves samt Warnzeit/Treffer, Phasen, Rotation, CC-Unterbrechung, Erholung, Limits, Tod durch Heldengeschoss, Übergang W40 → Schlund, Challenge-Schwächungen und Endkampf-Sieg. `heroes` behält für seine bisherigen vier Heldenkampagnen den ursprünglichen Verschlinger als feste Regression. Neue Varianten werden im fokussierten Test geprüft.
 
 Unter Windows vorhandene Wrapper verwenden:
 
@@ -43,4 +43,4 @@ Unter Windows vorhandene Wrapper verwenden:
 ./tools/render_windows.ps1 -Godot C:/tools/godot.exe -Scene res://tools/heroes/boss_probe.tscn -Name boss-fight -OptionsJson '["--kampf=astrael"]'
 ```
 
-Die GPU-Vitrine schreibt `.godot/boss-gallery.png`, die Kampfvorschau `.godot/boss-fight-<id>.png`. Die Vorschau versetzt Boss und Held für eine reproduzierbare Warnphase in die Arena; im normalen Spiel landet der Boss vor der Feste. Die Testauswahl kennt `bossdata` und den Modustest `heroesboss`.
+Die GPU-Vitrine schreibt `.godot/boss-gallery.png`, die Kampfvorschau `.godot/boss-fight-<id>.png`. Die Vorschau zeigt eine reproduzierbare Warnphase im Schlund. Die Testauswahl kennt `bossdata` und den Modustest `heroesboss`.

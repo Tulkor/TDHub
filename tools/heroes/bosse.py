@@ -41,6 +41,7 @@ def main():
                 outer = ab["radius"] + ab.get("grow", 0) * n
                 check(0 <= inner < outer, aid + ": ungültiger Folge-Ring")
     for boss in data["bosses"]:
+        check(set(boss.get("weaknesses", {}).values()) <= known, boss["id"] + ": unbekannte Challenge-Schwäche")
         check(len(boss["phases"]) == 2 and 0 < boss["phases"][1]["at"] < boss["phases"][0]["at"] < 1, boss["id"] + ": ungültige Phasen")
         unlocked = set(boss["abilities"])
         for stage in [boss, *boss["phases"]]:

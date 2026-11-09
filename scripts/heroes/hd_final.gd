@@ -68,6 +68,8 @@ func enter() -> void:
 	var c: Array = data.area.center
 	center = Vector3(float(c[0]), 0, float(c[1]))
 	active = true
+	if bool(data.boss.get("variants", false)):
+		HdBossCatalog.resolve(game)
 	game.events.kinds.clear()
 	_build()
 	_deaths = game.hero.deaths
@@ -433,12 +435,13 @@ func _step_hold(dt: float) -> void:
 func start_boss(mods: Dictionary, reason: String) -> void:
 	_clean_run()
 	var bd: Dictionary = data.boss
-	var base: Dictionary = game.enemy_defs[str(bd.id)].duplicate(true)
-	base.id = "final_" + str(bd.id)
+	var chosen := HdBossCatalog.resolve(game) if bool(bd.get("variants", false)) else str(bd.id)
+	var base: Dictionary = game.enemy_defs[chosen].duplicate(true)
+	base.id = "final_" + chosen
 	base.erase("land")
 	base.erase("siege")
 	var bm: Dictionary = mods.get("boss", {})
-	var removed: Array = bm.get("remove", [])
+	var removed: Array = (bm.get("remove", []) as Array).map(func(a): return base.get("weaknesses", {}).get(a, a))
 	base.abilities = (base.abilities as Array).filter(func(a): return not (a in removed))
 	for ph in base.get("phases", []):
 		ph.add = (ph.get("add", []) as Array).filter(func(a): return not (a in removed))
@@ -465,9 +468,9 @@ func start_boss(mods: Dictionary, reason: String) -> void:
 		game.hero.add_shield(float(hm.shield), 99999.0)
 	game.teleport_hero(ap + Vector3(0, 0, float(data.arena.radius) - 3.0))
 	if reason == "awaken":
-		game.message.emit(tr("Der Verschlinger erwacht! Der Endkampf beginnt."))
+		game.message.emit(tr("%s erwacht! Der Endkampf beginnt.") % tr(str(base.name)))
 	else:
-		game.message.emit(tr("Endkampf gegen den Verschlinger (%d Challenges geschafft)") % (sys().done_count() if sys() else 0))
+		game.message.emit(tr("Endkampf gegen %s (%d Challenges geschafft)") % [tr(str(base.name)), sys().done_count() if sys() else 0])
 	game.changed.emit()
 
 
@@ -524,9 +527,9 @@ func lines() -> Array:
 	var s = sys()
 	if s.boss_started:
 		if boss and is_instance_valid(boss) and not boss.dead:
-			out.append(tr("Endkampf: Verschlinger %d %%") % roundi(boss.hp / boss.max_hp * 100.0))
+			out.append(tr("Endkampf: %s · %d %%") % [tr(str(boss.def.name)), roundi(boss.hp / boss.max_hp * 100.0)])
 		return out
-	out.append(tr("%s · Verschlinger erwacht in %d:%02d") % [tr(str(data.name)), int(s.awaken_left()) / 60, int(s.awaken_left()) % 60])
+	out.append(tr("%s · Endboss erwacht in %d:%02d") % [tr(str(data.name)), int(s.awaken_left()) / 60, int(s.awaken_left()) % 60])
 	for cd in data.list:
 		var st: String = s.state_of(str(cd.id))
 		var mark: String = {"done": "✓", "failed": "✗", "active": "▶"}.get(st, "○")

@@ -10,6 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.local/bin:$PATH"
+GODOT_BIN="${GODOT:-godot}"
 
 ZIEL=/mnt/project-files/builds
 TESTS=1
@@ -47,10 +48,22 @@ NAME="GemTD_V0_${N}.zip"
 # Tower-Tabelle aktuell halten (Projektregel).
 python3 tools/tower_tabelle.py --kopieren >/dev/null
 
-TMP=$(mktemp -d)
+mkdir -p .godot
+TMP=$(mktemp -d "$PWD/.godot/build.XXXXXX")
 # Versionsnummer nur für den Export eintragen (Hub und Mitwirkende zeigen sie), danach zurücksetzen.
 cp project.godot "$TMP/project.godot.orig"
-trap 'cp "$TMP/project.godot.orig" project.godot; rm -rf "$TMP"' EXIT
+cleanup() {
+  cp "$TMP/project.godot.orig" project.godot
+  python3 - "$TMP" <<'PY'
+import pathlib, shutil, sys
+target = pathlib.Path(sys.argv[1]).resolve()
+root = (pathlib.Path.cwd() / ".godot").resolve()
+if target.parent != root or not target.name.startswith("build."):
+    raise RuntimeError("Unsicherer temporärer Build-Pfad")
+shutil.rmtree(target)
+PY
+}
+trap cleanup EXIT
 python3 - "0.${N}" <<'PY'
 import re, sys
 s = open("project.godot", encoding="utf-8").read()
@@ -60,9 +73,20 @@ open("project.godot", "w", encoding="utf-8").write(s)
 PY
 mkdir -p export/windows "$TMP/GemTD"
 tools/godot_import.sh
-godot --headless --path . --export-release "Windows" "$TMP/GemTD/GemTD.exe" >"$TMP/export.log" 2>&1 || {
-  echo "Export fehlgeschlagen:"; grep -E "ERROR|error" "$TMP/export.log" | grep -v 'Parameter "m"' | head -20; exit 1; }
-[ -s "$TMP/GemTD/GemTD.exe" ] || { echo "Export hat keine GemTD.exe erzeugt"; tail -20 "$TMP/export.log"; exit 1; }
+EXPORT_LOG="$PWD/.godot/windows-export.log"
+"$GODOT_BIN" --headless --path . --export-release "Windows" "$TMP/GemTD/GemTD.exe" >"$EXPORT_LOG" 2>&1 || {
+  echo "Export fehlgeschlagen:"; grep -E "ERROR|error" "$EXPORT_LOG" | grep -v 'Parameter "m"' | head -20; exit 1; }
+[ -s "$TMP/GemTD/GemTD.exe" ] || { echo "Export hat keine GemTD.exe erzeugt"; tail -20 "$EXPORT_LOG"; exit 1; }
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    SMOKE_LOG="$PWD/.godot/windows-build-smoke.log"
+    timeout 120 "$TMP/GemTD/GemTD.exe" --headless --quit-after 120 --log-file "$SMOKE_LOG" >/dev/null 2>&1 || {
+      echo "Windows-Starttest fehlgeschlagen: $SMOKE_LOG"; exit 1; }
+    if grep -Eq 'SCRIPT ERROR|SHADER ERROR|Parse Error' "$SMOKE_LOG"; then
+      echo "Windows-Starttest meldet Fehler: $SMOKE_LOG"; exit 1
+    fi
+    echo "Windows-Starttest: exportierte EXE startet fehlerfrei" ;;
+esac
 
 python3 - "$TMP" "$TMP/$NAME" <<'PY'
 import sys, zipfile, pathlib

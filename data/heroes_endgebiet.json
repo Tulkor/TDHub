@@ -23,7 +23,7 @@
 			-22
 		],
 		"hold": 1.5,
-		"name": "Tor des Verschlingers"
+		"name": "Tor des Endbosses"
 	},
 	"arena": {
 		"pos": [
@@ -35,6 +35,7 @@
 	"station_hold": 1.0,
 	"boss": {
 		"id": "verschlinger",
+		"variants": true,
 		"hp": 1.0,
 		"summon": {
 			"id": "leerling",
@@ -86,7 +87,7 @@
 						"verschl_hagel"
 					]
 				},
-				"text": "Verschlinger verliert den Leerenhagel"
+				"text": "Endboss verliert eine Flächenfähigkeit"
 			}
 		},
 		{

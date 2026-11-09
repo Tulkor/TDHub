@@ -579,7 +579,7 @@ func _prepare_heroes(game: Node) -> void:
 	if opts.has("endboss"):
 		game.force_final_boss = str(opts.endboss)
 		game.final_boss_id = ""
-		opts["boss"] = "40"
+		opts["endgebiet"] = "boss"
 	if opts.has("boss"):
 		game.spawn_queue.clear()
 		game.hero.add_xp(4000.0)

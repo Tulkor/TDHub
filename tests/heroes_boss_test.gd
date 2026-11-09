@@ -22,6 +22,7 @@ func _ready() -> void:
 	Profile.reset_cache()
 	for id in Database.load_json(HdBossCatalog.DATA).final_bosses:
 		await encounter(str(id))
+	await weakness()
 	print("Endbosse: %d Prüfungen, %d Fehler" % [checks, failures])
 	get_tree().quit(1 if failures else 0)
 
@@ -43,28 +44,24 @@ func encounter(id: String) -> void:
 	g.enemies.clear()
 	g.hero.max_hp = 1000000
 	g.hero.hp = g.hero.max_hp
-	g.start_wave(39)
-	g.spawn_queue.clear()
-	check(str(g._boss_def(40).id) == id, id + ": Ansage")
+	check(HdBossCatalog.resolve(g) == id, id + ": feste Auswahl")
 	g.rng.randi()
 	g.start_wave(40)
 	var queued: Array = g.spawn_queue.filter(func(q): return str(g.enemy_defs[q.id].rank) == "boss")
-	check(queued.size() == 1 and str(queued[0].id) == id, id + ": Welle 40 passt zur Ansage")
-	if queued.is_empty():
-		g.queue_free()
-		await get_tree().process_frame
-		return
-	g._spawn_queued(queued[0])
+	check(queued.is_empty(), id + ": Welle 40 bleibt Großangriff ohne Endboss")
 	g.spawn_queue.clear()
-	var boss: HdEnemy = g.enemies.back()
+	g.step(1.0 / 30.0)
+	check(g.final.active and g.state == "play", id + ": nach Welle 40 ins Endgebiet")
+	g.systems.challenges.start_boss("gate")
+	var boss: HdEnemy = g.final.boss
+	check(boss.id == "final_" + id, id + ": ausgewählte Variante erscheint im Schlund")
 	check(boss.boss_visual != null and boss.boss_visual.get_child_count() >= 10, id + ": eigene Silhouette")
-	check(boss.zone == "siege", id + ": Landung vor der Festung")
-	boss.position = g.zones.center("arena")
-	boss.home = boss.position
+	check(boss.zone == "final", id + ": Schlund-Arena")
 	g.hero.position = boss.position + Vector3(0, 0, 7)
 	boss.target = g.hero
 	g.play_time = 10
 	boss.start_cast(str(boss.abilities()[0]), g.play_time)
+	check(boss.cast.tele[0].position.y > 0.06, id + ": Warnfläche liegt über dem erhöhten Schlund-Boden")
 	boss.take(boss.max_hp * 0.36)
 	check(boss.phase == 1 and not boss.casting(), id + ": Phase 2 stoppt laufenden Angriff")
 	check(boss.gap_until >= g.play_time + 2, id + ": Phasenpause")
@@ -167,3 +164,22 @@ func move(g: HdGame, boss: HdEnemy, aid: String) -> void:
 		g.play_time += 0.1
 		boss._step_cast(0.1, g.play_time)
 	check(not boss.casting() and boss.gap_until > g.play_time, aid + ": Combo endet mit Erholung")
+
+
+func weakness() -> void:
+	var g: HdGame = load("res://scenes/heroes_game.tscn").instantiate()
+	g.force_final_boss = "varkhun"
+	add_child(g)
+	await get_tree().process_frame
+	g.set_physics_process(false)
+	g.spawn_queue.clear()
+	g.final.enter()
+	g.systems.challenges.gains.append({"boss": {"remove": ["verschl_hagel"], "hp": -0.2}})
+	g.systems.challenges.start_boss("gate")
+	var boss: HdEnemy = g.final.boss
+	var normal_hp: float = float(g.enemy_defs.varkhun.hp) * float(g.diff().hp) * float(g.scaling().hp)
+	check(is_equal_approx(boss.max_hp, normal_hp * 0.8), "Schlund-Challenge schwächt auch die Lebenspunkte der Bossvarianten")
+	boss.take(boss.max_hp * 0.75)
+	check(not boss.abilities().has("richter_ofen"), "Siegel-Challenge entfernt die passende Varianten-Fähigkeit auch in Phase 3")
+	g.queue_free()
+	await get_tree().process_frame

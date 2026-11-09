@@ -1455,7 +1455,7 @@ func area_hit(src: HdEnemy, inside: bool, dmg: float, knockdown: float) -> void:
 
 
 func add_tele(t: HdTelegraph) -> void:
-	t.position.y = 0.03 + rng.randf() * 0.01
+	t.position.y = (0.085 if final.active else 0.03) + rng.randf() * 0.01
 	add_child(t)
 
 
@@ -1463,7 +1463,7 @@ func add_pool(at: Vector3, r: float, dps: float, time: float, _src) -> void:
 	var is_boss_pool: bool = _src is HdEnemy and _src.boss_brain != null
 	var t := HdTelegraph.circle(r, HdTelegraph.enemy_color() if is_boss_pool else HdTelegraph.POISON)
 	t.progress = 1.0
-	t.position = Vector3(at.x, 0.025, at.z)
+	t.position = Vector3(at.x, 0.08 if final.active else 0.025, at.z)
 	add_child(t)
 	var owner_id: int = _src.get_instance_id() if _src is HdEnemy and _src.boss_brain != null else 0
 	if owner_id != 0:

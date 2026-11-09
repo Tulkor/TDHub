@@ -2,7 +2,7 @@
 """Nahtlose Wassertexturen deterministisch erzeugen; nur Python-Standardbibliothek.
 
 python tools/water/textures.py [--size=256] [--check]
---check vergleicht die PNGs bytegenau, ohne Dateien zu ändern.
+--check vergleicht Bilddaten und Format, unabhängig von der zlib-Version der Plattform.
 """
 import argparse
 import math
@@ -13,6 +13,29 @@ import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGET = ROOT / "assets/textures/water"
+
+
+def image_data(content):
+    """Eigene RGB-PNGs mit Filter 0 lesen; Deflate-Ausgabe darf je zlib-Version variieren."""
+    if content[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    offset, header, packed = 8, None, bytearray()
+    try:
+        while offset + 12 <= len(content):
+            length = struct.unpack_from(">I", content, offset)[0]
+            kind = content[offset + 4:offset + 8]
+            data = content[offset + 8:offset + 8 + length]
+            crc = struct.unpack_from(">I", content, offset + 8 + length)[0]
+            if zlib.crc32(kind + data) & 0xffffffff != crc:
+                return None
+            if kind == b"IHDR":
+                header = data
+            if kind == b"IDAT":
+                packed.extend(data)
+            offset += length + 12
+        return header, zlib.decompress(packed)
+    except (ValueError, struct.error, zlib.error):
+        return None
 
 
 def png(size, pixels):
@@ -84,7 +107,7 @@ def main():
     for name, content in files.items():
         path = TARGET / name
         if args.check:
-            if not path.exists() or path.read_bytes() != content:
+            if not path.exists() or image_data(path.read_bytes()) != image_data(content):
                 bad.append(name)
         else:
             path.write_bytes(content)
