@@ -123,6 +123,19 @@ func take_raw_damage(amount: float) -> float:
 	return before - core.get_health()
 
 
+## Nur Darstellung: der Modus-Kern hat Vorrang vor den allgemeinen Status-Timern.
+func visual_status_flags() -> int:
+	var flags := super.visual_status_flags()
+	if core != null and is_instance_valid(core):
+		if core.get_current_movespeed() < core.get_base_movespeed() - 0.1:
+			flags |= 1
+		if core.is_stunned():
+			flags |= 4
+		if core.get_overall_armor() < core.get_base_armor() - 0.01:
+			flags |= 8
+	return flags
+
+
 ## Tempo und Betäubung kommen jedes Bild aus dem Kern (Verlangsamung, Schnell usw. sind Modifikatoren).
 func _process(delta: float) -> void:
 	if core != null and is_instance_valid(core) and not dead:

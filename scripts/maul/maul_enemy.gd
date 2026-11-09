@@ -58,6 +58,10 @@ func route_progress() -> float:
 	return (traveled - leg_from) / path_len if path_len > 0.0 else 0.0
 
 
+func status_visible() -> bool:
+	return not invisible or game == null or game.is_detected(self)
+
+
 func _update_visual() -> void:
 	super._update_visual()
 	if invisible:

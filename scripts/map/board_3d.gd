@@ -114,7 +114,7 @@ var _zone_flash := 0.0
 var _zone_shown := 1.0
 var _zone_mats: Array = []
 var _hover: MeshInstance3D
-var _hover_mat: StandardMaterial3D
+var _hover_mat: ShaderMaterial
 ## Aussehen nach dem Oberflächen-Stil beim Anlegen (FieldStyle.current()).
 var style: Dictionary = FieldStyle.STYLES[FieldStyle.NEON]
 
@@ -236,13 +236,24 @@ func _ready() -> void:
 	dot.radial_segments = 12
 	dot.rings = 6
 	_path = _multimesh(dot, false)
-	_path.material_override = FieldStyle.line_material(path_color, style.path_energy)
+	var arrows := PlaneMesh.new()
+	arrows.size = Vector2.ONE * 0.24
+	_path.multimesh.mesh = arrows
+	var path_mat := ShaderMaterial.new()
+	path_mat.shader = preload("res://assets/shaders/path_arrow.gdshader")
+	path_mat.set_shader_parameter("color", path_color)
+	path_mat.set_shader_parameter("energy", style.path_energy)
+	_path.material_override = path_mat
 	_path.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_markers = Node3D.new()
 	add_child(_markers)
 	_hover = MeshInstance3D.new()
-	_hover.mesh = _box(Vector3(CELL, 0.12, CELL))
-	_hover_mat = make_material(Color(0, 1, 0, 0.35), true)
+	var preview_plane := PlaneMesh.new()
+	preview_plane.size = Vector2.ONE * CELL
+	_hover.mesh = preview_plane
+	_hover_mat = ShaderMaterial.new()
+	_hover_mat.shader = VisualFx.BUILD
+	_hover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_hover.material_override = _hover_mat
 	_hover.visible = false
 	add_child(_hover)
@@ -551,7 +562,11 @@ func refresh_path() -> void:
 	var mm := _path.multimesh
 	mm.instance_count = path_points.size()
 	for i in path_points.size():
-		mm.set_instance_transform(i, Transform3D(Basis(), to_3d(path_points[i], 0.02 + ground_y(path_points[i]))))
+		var next: Vector2 = path_points[mini(i + 1, path_points.size() - 1)]
+		var prev: Vector2 = path_points[maxi(i - 1, 0)]
+		var dir: Vector2 = next - prev
+		var facing := Basis(Vector3.UP, atan2(-dir.x, -dir.y)) if not dir.is_zero_approx() else Basis()
+		mm.set_instance_transform(i, Transform3D(facing, to_3d(path_points[i], 0.04 + ground_y(path_points[i]))))
 
 
 ## Wegpunkte am Boden ein/aus (aus, solange der Lichtpfad läuft).
@@ -567,7 +582,8 @@ func refresh_hover() -> void:
 	if _hover.visible:
 		_hover.position = to_3d(footprint_center(hover_cell, hover_size), 0.0)
 		_hover.scale = Vector3(hover_size, 1, hover_size)
-		_hover_mat.albedo_color = Color(0.2, 1, 0.2, 0.4) if hover_ok else Color(1, 0.2, 0.2, 0.4)
+		_hover.position.y = 0.08 + ground_y(Vector2(_hover.position.x, _hover.position.z))
+		_hover_mat.set_shader_parameter("valid", hover_ok)
 	_refresh_hover_ring()
 
 
@@ -577,19 +593,12 @@ func _refresh_hover_ring() -> void:
 		if _hover_ring != null:
 			_hover_ring.visible = false
 		return
-	if _hover_ring == null:
-		_hover_ring = MeshInstance3D.new()
-		_hover_ring.material_override = make_material(Color(0.13, 0.77, 0.93, 0.75), true)
-		_hover_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(_hover_ring)
-	if not is_equal_approx(hover_range, _hover_ring_r):
+	if _hover_ring == null or not is_equal_approx(hover_range, _hover_ring_r):
+		if _hover_ring != null:
+			_hover_ring.queue_free()
 		_hover_ring_r = hover_range
-		var torus := TorusMesh.new()
-		torus.inner_radius = maxf(hover_range - 0.06, 0.01)
-		torus.outer_radius = maxf(hover_range, 0.07)
-		torus.rings = 64
-		torus.ring_segments = 4
-		_hover_ring.mesh = torus
+		_hover_ring = VisualFx.area(hover_range, Color(0.13, 0.77, 0.93, 0.65), self)
+		add_child(_hover_ring)
 	var c := footprint_center(hover_cell, hover_size)
 	_hover_ring.position = to_3d(c, 0.06 + ground_y(c))
 	_hover_ring.visible = true

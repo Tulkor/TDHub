@@ -96,7 +96,8 @@ def show(path, args):
 
 
 def main():
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # | head soll nicht mit Traceback enden
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # | head soll nicht mit Traceback enden
     paths, args = [], {}
     for a in sys.argv[1:]:
         if a.startswith("--"):

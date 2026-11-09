@@ -4,7 +4,6 @@ extends Node3D
 ## cell ist das Feld oben links der 2×2 belegten Felder. Logische Position `pos` in Einheiten
 ## (1 = eine Towerbreite) als Vector2, die 3D-Position folgt daraus.
 
-const GEM_SHADER := preload("res://assets/shaders/gem.gdshader")
 ## Deckkraft für Modelle mit eigener Textur ("model_tint": false)
 const GEM_OPACITY_TEXTURED := 0.85
 ## Helligkeit der Lichtscheibe im Sockel (über 1 = leuchtet im Glow)
@@ -98,6 +97,7 @@ var base_tint := Color(0, 0, 0, 0)  ## Sockel in dieser Farbe (eeveTD: Bonusfeld
 var _base_mat: StandardMaterial3D
 var _new_ring: MeshInstance3D
 var _select_ring: MeshInstance3D
+var _aura_ring: MeshInstance3D
 var _range_ring: MeshInstance3D
 var _preview_ring: MeshInstance3D  ## Reichweite nach einem Upgrade (Hover über den Knopf)
 var _time := 0.0
@@ -112,6 +112,7 @@ func setup(g, c: Vector2i, id: String, t: int) -> void:
 
 
 func set_tower(id: String, t: int) -> void:
+	var upgraded := is_inside_tree() and is_instance_valid(_visual) and (id != tower_id or t > tier)
 	tower_id = id
 	tier = t
 	def = Database.towers.get(id, {})
@@ -121,6 +122,8 @@ func set_tower(id: String, t: int) -> void:
 	_apply_level(false)
 	place_at(cell)
 	_build_visual()
+	if upgraded:
+		VisualFx.pulse(self, global_position, 0.85, Color(color, 0.65))
 
 
 ## Felder pro Kante: Tower 2×2, Fallen 3×3 (ab dem Anker cell).
@@ -282,6 +285,8 @@ func _apply_level(announce: bool) -> void:
 
 ## Aufstieg sichtbar machen: „LEVEL n“ steigt über dem Tower auf und verblasst (Modi können mehr anhängen).
 func _level_up(_old_level: int) -> void:
+	if is_inside_tree():
+		VisualFx.pulse(self, global_position, 0.8, Color(color, 0.6))
 	if DisplayServer.get_name() == "headless" or not is_inside_tree():
 		return
 	var l := Label3D.new()
@@ -353,6 +358,7 @@ func _apply_enemy_auras(delta: float) -> void:
 				continue
 			match type:
 				"burn_aura":
+					e.burn_visual_time = 0.25
 					e.last_hit_by = owner_player
 					e.last_tower = self
 					total_damage += e.take_raw_damage(float(ab.dps) * delta)
@@ -675,6 +681,8 @@ func info_text() -> String:
 
 func set_selected(value: bool) -> void:
 	selected = value
+	if is_instance_valid(_aura_ring):
+		_aura_ring.visible = value or hovered
 	if _select_ring:
 		_select_ring.visible = value
 		_range_ring.visible = (value or hovered) and (can_attack() or _aura_radius() > 0.0)
@@ -687,6 +695,8 @@ var hovered := false  ## Maus liegt kurz darauf: Reichweitenring wie bei der Aus
 
 func set_hovered(value: bool) -> void:
 	hovered = value
+	if is_instance_valid(_aura_ring):
+		_aura_ring.visible = selected or value
 	if _range_ring != null and is_instance_valid(_range_ring):
 		_range_ring.visible = (selected or value) and (can_attack() or _aura_radius() > 0.0)
 
@@ -697,7 +707,7 @@ func show_preview_range(radius: float) -> void:
 		_preview_ring.queue_free()
 	_preview_ring = null
 	if radius > 0.0 and _visual != null:
-		_preview_ring = _ring(radius, 0.07, UiTheme.CYAN)
+		_preview_ring = _range_area(radius)
 
 
 ## Radius des Reichweitenrings für bestimmte Werte: Fallen mit Fläche zeigen nur Luft- oder Aurareichweite.
@@ -743,8 +753,8 @@ func _build_visual() -> void:
 	_preview_ring = null
 	_visual = Node3D.new()
 	add_child(_visual)
-	var mat := ShaderMaterial.new()
-	mat.shader = GEM_SHADER
+	var mat := VisualFx.gem_material(game, tier >= 4 and str(def.get("category", "gem")) == "gem" and FieldStyle.is_neon())
+	mat.set_shader_parameter("facet_strength", 0.15 + float(tier) * 0.08)
 	mat.set_shader_parameter("color", color)
 	if not FieldStyle.is_neon():
 		# bei Tageslicht kaum Eigenleuchten, sonst wirken die Kristalle flach wie Plastik
@@ -1184,7 +1194,8 @@ func _finish_visual() -> void:
 	_new_ring.visible = is_new
 	_select_ring = _ring(0.52, 0.06, Color.YELLOW)
 	# Fallen zeigen ihre Fläche über die Platte, der Ring nur Luft- oder Aurareichweite
-	_range_ring = _ring(ring_radius(stats, is_trap()) * range_mult(), 0.05, Color(1, 1, 1, 0.6))
+	_range_ring = _range_area(ring_radius(stats, is_trap()) * range_mult())
+	_refresh_aura_ring()
 	set_selected(selected)
 
 
@@ -1219,8 +1230,37 @@ func _rebuild_range_ring() -> void:
 	if _range_ring != null and is_instance_valid(_range_ring):
 		var vis := _range_ring.visible
 		_range_ring.queue_free()
-		_range_ring = _ring(ring_radius(stats, is_trap()) * range_mult(), 0.05, Color(1, 1, 1, 0.6))
+		_range_ring = _range_area(ring_radius(stats, is_trap()) * range_mult())
 		_range_ring.visible = vis
+	_refresh_aura_ring()
+
+
+func _refresh_aura_ring() -> void:
+	if is_instance_valid(_aura_ring):
+		_aura_ring.queue_free()
+	_aura_ring = null
+	var radius := _aura_radius()
+	if radius <= 0.0 or _visual == null:
+		return
+	var col := color
+	var pattern := 1.0
+	for ab in abilities():
+		match str(ab.get("type", "")):
+			"burn_aura": col = Color("ff8a32")
+			"slow_aura":
+				col = Color("73caff")
+				pattern = 2.0
+			"armor_aura": col = Color("e6ab62")
+	_aura_ring = VisualFx.area(radius, Color(col, 0.5), game, pattern)
+	_aura_ring.position.y = 0.08
+	_visual.add_child(_aura_ring)
+	_aura_ring.visible = selected or hovered
+
+
+func _range_area(radius: float) -> MeshInstance3D:
+	var node := VisualFx.area(radius, Color(color, 0.7), game)
+	_visual.add_child(node)
+	return node
 
 
 func _ring(radius: float, thickness: float, col: Color) -> MeshInstance3D:

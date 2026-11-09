@@ -1,6 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name systeme)
-## Modi: kern, system:run_record, system:difficulty, system:targeting, system:economy, system:save, system:waves, system:coop, system:inventory, system:leveling, system:build, system:controls
+## Modi: kern, system:run_record, system:difficulty, system:targeting, system:economy, system:save, system:waves, system:coop, system:inventory, system:leveling, system:build, system:controls, system:visuals, system:water
 ## Gemeinsame Spielsysteme (scripts/systems/, tools/systeme.py): jedes System im Katalog lässt sich ohne Modus
 ## anlegen, die Kaskade Basiswerte → Modus-Daten (modes.json system_cfg) mischt wie CSS (Modus gewinnt, tief),
 ## und jeder Modus bekommt seine angekreuzten Systeme als Kind-Knoten.
@@ -75,6 +75,6 @@ func _modes() -> void:
 		var game := Node.new()
 		add_child(game)
 		var got := SystemHost.attach(game, str(m.id))
-		check(got.size() == list.filter(func(n): return n != "leveling").size(),
+		check(got.size() == list.filter(func(n): return load(SystemHost.script_path(str(n))).get_instance_base_type() == &"Node").size(),
 			"%s bekommt %d Systeme als Knoten" % [m.id, got.size()])
 		game.free()

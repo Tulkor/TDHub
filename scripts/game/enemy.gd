@@ -94,8 +94,14 @@ var _anim: AnimationPlayer      ## nur bei animierten Modellen
 var _model: Node3D
 var _model_path := ""
 var _model_size := 0.0
-var _overlay: StandardMaterial3D  ## Treffer-Blitz und Zustandsfarben auf dem Modell
+var _overlay: ShaderMaterial  ## Muster für Zustände und Treffer, auch auf Platzhalterformen
 var _flash := 0.0
+var burn_visual_time := 0.0  ## Nur Darstellung der bestehenden Feuer-Aura
+var _status_floor := 0.0
+var _status_flags := -1
+var _status_hit := -1.0
+var _status_y := INF
+var _status_shown := true
 var _hit_hp := 0.0               ## Leben beim letzten Treffer-Zucken
 var _hit_cool := 0.0
 
@@ -253,9 +259,9 @@ func slowed_speed() -> float:
 
 
 ## Zustand für Zuschauer: [net_id, id, Strecke, Tempo ohne Schnelllauf, hp, max_hp, Flags (1 langsam, 2 Gift,
-## 4 betäubt), Form, Größe, Bahn, schnelles Stück von, bis, Schnelllauf-Faktor]
+## 4 betäubt, 8 Rüstungsbruch, 16 unverwundbar, 32 Feuerdarstellung), Form, Größe, Bahn, schnelles Stück von, bis, Schnelllauf-Faktor]
 func net_state() -> Array:
-	var flags := (1 if slow_time > 0.0 else 0) | (2 if poison_time > 0.0 else 0) | (4 if stun_time > 0.0 else 0)
+	var flags := visual_status_flags()
 	var free: Array = game.free_stretch(self) if game != null else [-1.0, -1.0]
 	var factor: float = game.idle_speed_factor() if game != null else 1.0
 	return [net_id, enemy_id, traveled, base_speed(), hp, max_hp, flags, shape_name, size, lane, free[0], free[1], factor]
@@ -272,10 +278,23 @@ func apply_net_state(s: Array, age := 0.0) -> void:
 	net_boost = float(s[12]) if s.size() > 12 else 1.0
 	hp = float(s[4])
 	max_hp = float(s[5])
-	var flags := int(s[6])
+	apply_status_flags(int(s[6]))
+
+
+## Dieselben Bits für Shader und Zuschauer. Modi können echte Zustände aus ihrem Kern ergänzen.
+func visual_status_flags() -> int:
+	return (1 if slow_time > 0.0 else 0) | (2 if poison_time > 0.0 else 0) | (4 if stun_time > 0.0 else 0) \
+		| (8 if armor_reduction_time > 0.0 else 0) | (16 if invulnerable_time > 0.0 else 0) | (32 if burn_visual_time > 0.0 else 0)
+
+
+## Nur auf Darstellungsgegnern des Zuschauers verwenden, nicht auf simulierten Gegnern.
+func apply_status_flags(flags: int) -> void:
 	slow_time = 1.0 if flags & 1 else 0.0
 	poison_time = 1.0 if flags & 2 else 0.0
 	stun_time = 1.0 if flags & 4 else 0.0
+	armor_reduction_time = 1.0 if flags & 8 else 0.0
+	invulnerable_time = 1.0 if flags & 16 else 0.0
+	burn_visual_time = 1.0 if flags & 32 else 0.0
 
 
 ## Zuschauer: Gegner läuft mit dem gemeldeten Tempo selbst weiter und wird sanft
@@ -498,6 +517,7 @@ func _build_visual() -> void:
 		add_child(shadow)
 	_body.material_override = _body_mat
 	add_child(_body)
+	_setup_status()
 
 	var bar_y := _body.position.y + height / 2.0 + 0.25
 	if _model != null:
@@ -578,18 +598,65 @@ func _update_visual() -> void:
 		_bar_bg.visible = true
 		_bar_fg.visible = true
 	_bar_fg.scale.x = maxf(clampf(hp / max_hp, 0.0, 1.0), 0.001)
-	var tint := color
-	if poison_time > 0.0:
-		tint = tint.lerp(Color("2ecc71"), 0.45)
-	if slow_time > 0.0:
-		tint = tint.lerp(Color("5dade2"), 0.5)
-	if stun_time > 0.0:
-		tint = tint.lerp(Color.WHITE, 0.5)
-	if invulnerable_time > 0.0:
-		tint = tint.lerp(Color("ffd84a"), 0.6)
-	_body_mat.albedo_color = tint
+	_body_mat.albedo_color = color
+	_update_status()
 	if _anim != null:
 		_animate()
+
+
+func _setup_status() -> void:
+	var target: Node3D = _model if _model != null else _body
+	var bounds := ModelLoader.aabb(target, Transform3D())
+	_status_floor = bounds.position.y
+	_overlay = VisualFx.status(game, bounds)
+	if target is MeshInstance3D:
+		target.material_overlay = _overlay
+	for m in target.find_children("*", "MeshInstance3D", true, false):
+		m.material_overlay = _overlay
+	_hit_hp = hp
+	_status_flags = -1
+	_status_hit = -1.0
+	_status_y = INF
+	_status_shown = true
+
+
+func _update_status() -> void:
+	if _overlay == null:
+		return
+	var floor_y := global_position.y + _status_floor
+	if not is_equal_approx(_status_y, floor_y):
+		_overlay.set_shader_parameter("base_y", floor_y)
+		_status_y = floor_y
+	var shown := status_visible()
+	if shown != _status_shown:
+		var cfg: Dictionary = _overlay.get_meta("visual_cfg").status
+		_overlay.set_shader_parameter("strength", float(cfg.strength) if shown and bool(cfg.enabled) else 0.0)
+		_status_shown = shown
+	if _overlay.next_pass != null:
+		var xray := _overlay.next_pass as ShaderMaterial
+		if bool(xray.get_shader_parameter("enabled")) != shown:
+			xray.set_shader_parameter("enabled", shown)
+	if hp < _hit_hp:
+		_flash = 0.7
+	_flash = maxf(_flash - get_process_delta_time() * 5.0, 0.0)
+	burn_visual_time = maxf(burn_visual_time - get_process_delta_time(), 0.0)
+	if not is_equal_approx(_status_hit, _flash):
+		_overlay.set_shader_parameter("hit", _flash)
+		_status_hit = _flash
+	var flags := visual_status_flags()
+	if flags != _status_flags:
+		var parameters := ["frost", "poison", "stun", "armor_break", "invulnerable", "burning"]
+		for i in parameters.size():
+			if _status_flags < 0 or (_status_flags ^ flags) & (1 << i):
+				_overlay.set_shader_parameter(parameters[i], 1.0 if flags & (1 << i) else 0.0)
+		_status_flags = flags
+	if _anim == null:
+		_hit_hp = hp
+
+
+## Modi können verborgene Einheiten von der zusätzlichen Sichtbarkeit ausnehmen.
+func status_visible() -> bool:
+	return true
 
 
 # --- Animiertes Modell (Boss und Monster) ------------------------------------------------
@@ -602,13 +669,6 @@ func _setup_animation(model: Node3D) -> void:
 	for n in ["walk", "idle"]:
 		if _anim.has_animation(n):
 			_anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
-	_overlay = StandardMaterial3D.new()
-	_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	_overlay.albedo_color = Color(0, 0, 0, 0)
-	for m in model.find_children("*", "MeshInstance3D", true, false):
-		m.material_overlay = _overlay
 	_hit_hp = hp
 	_anim.play("walk")
 	_anim.seek(randf() * _anim.current_animation_length)
@@ -627,7 +687,6 @@ func _animate() -> void:
 		_hit_hp = hp
 	elif hp > _hit_hp:
 		_hit_hp = hp
-	_flash = maxf(_flash - delta * 5.0, 0.0)
 	var want := "idle" if stun_time > 0.0 else "walk"
 	var cur := _anim.current_animation
 	if cur != "hit" and cur != want and _anim.has_animation(want):
@@ -638,36 +697,43 @@ func _animate() -> void:
 		_anim.speed_scale = clampf(current_speed() * boost / (_model_size * 2.0), 0.6, 2.5)
 	else:
 		_anim.speed_scale = 1.0
-	var state := Color(0, 0, 0, 0)
-	if poison_time > 0.0:
-		state = Color("2ecc71")
-	if slow_time > 0.0:
-		state = Color("5dade2")
-	if stun_time > 0.0:
-		state = Color.WHITE
-	state.a = 0.25 if state.a > 0.0 else 0.0
-	_overlay.albedo_color = state.lerp(Color(1, 1, 1, 0.3), _flash)
 
 
-## Getötet: an der Stelle bleibt das Modell kurz liegen (Animation death) und sinkt in den Boden.
+
+## Getötet: begrenzte, rein visuelle Kopie; Todesanimation und Auflösen, auf Niedrig nur absinken.
 func _leave_corpse() -> void:
-	if _anim == null or not _anim.has_animation("death") or not is_inside_tree() or get_parent() == null:
+	var cfg: Dictionary = VisualFx.config(game).death
+	if not bool(cfg.enabled) or not is_inside_tree() or get_parent() == null or get_tree().get_nodes_in_group("visual_corpse").size() >= int(cfg.max_active):
 		return
 	var corpse := Node3D.new()
-	var model := ModelLoader.instantiate(_model_path, _model_size)
-	if model == null:
-		return
-	for i in _model.get_child_count():
-		_copy_overrides(_model.get_child(i), model.get_child(i))
+	var model: Node3D
+	if _model != null:
+		model = ModelLoader.instantiate(_model_path, _model_size)
+		if model == null:
+			corpse.free()
+			return
+		for i in mini(_model.get_child_count(), model.get_child_count()):
+			_copy_overrides(_model.get_child(i), model.get_child(i))
+	else:
+		model = Node3D.new()
+		var body := _body.duplicate() as MeshInstance3D
+		body.material_overlay = null
+		model.add_child(body)
 	corpse.add_child(model)
 	get_parent().add_child(corpse)
-	corpse.global_transform = _model.global_transform
+	corpse.add_to_group("visual_corpse")
+	corpse.global_transform = _model.global_transform if _model != null else global_transform
 	var players := model.find_children("*", "AnimationPlayer", true, false)
-	if not players.is_empty():
+	if not players.is_empty() and players[0].has_animation("death"):
 		players[0].play("death")
+	var duration := maxf(float(cfg.duration), 0.1)
+	if Display.quality >= int(cfg.min_quality):
+		VisualFx.dissolve(model, duration, color)
+	if boss:
+		VisualFx.shockwave(corpse, global_position, 2.5 * size)
 	var tw := corpse.create_tween()
-	tw.tween_interval(1.4)
-	tw.tween_property(corpse, "position:y", corpse.position.y - 0.6 * size, 1.2)
+	tw.tween_interval(duration * 0.54)
+	tw.tween_property(corpse, "position:y", corpse.position.y - 0.6 * size, duration * 0.46)
 	tw.tween_callback(corpse.queue_free)
 
 

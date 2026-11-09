@@ -97,6 +97,10 @@ var _fly_roads: Dictionary = {} ## Straße → gerade Fluglinie
 var _boss_marker: Node3D
 
 
+func system_mode() -> String:
+	return "heroes"
+
+
 func _init() -> void:
 	SystemHost.attach(self, "heroes")
 

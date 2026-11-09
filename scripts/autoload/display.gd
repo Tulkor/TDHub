@@ -118,6 +118,7 @@ func _default_quality() -> int:
 func apply_quality() -> void:
 	FxPlayer.lights_enabled = q("hit_lights")
 	if DisplayServer.get_name() == "headless":
+		quality_changed.emit()
 		return
 	get_tree().root.msaa_3d = q("msaa")
 	get_tree().root.mesh_lod_threshold = q("lod")

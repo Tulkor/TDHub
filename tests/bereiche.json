@@ -12,6 +12,8 @@
   "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "systeme_pruefen", "skripte"],
   "regeln": [
     ["tests/bereiche.json", []],
+    ["tools/water/*", ["watertextures", "syswater"]],
+    ["assets/textures/water/*", ["watertextures", "syswater"]],
     ["tests/lib/tower_probe.gd", ["towgemtd", "toweeve", "towrg", "towmaul"]],
     ["tools/relay/*", ["relay"]],
     ["tools/balance_editor/*", ["balanceeditor"]],

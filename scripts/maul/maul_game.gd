@@ -147,6 +147,10 @@ var _range_preview_r := -1.0
 var _hud_timer := 0.0
 
 
+func system_mode() -> String:
+	return "shoppingmaul"
+
+
 func _init() -> void:
 	SystemHost.attach(self, "shoppingmaul")
 

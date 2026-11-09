@@ -42,6 +42,7 @@ var start_gold := 0
 ## Zufallselemente beim Spielstart. random_rocks: Anzahl Steine, seed: -1 = jedes Mal anders.
 var variance := {"random_rocks": 0, "seed": -1}
 var path_lights: Array = []  ## Farben des Lichtpfads ("#rrggbb"), leer = Farben des Modus (PathLights.COLORS)
+var water: Array = []  ## Visuelle Gewässer in Spielkoordinaten, unabhängig von Kacheln/Kollisionen.
 
 
 static func create_empty(w: int, h: int) -> MapData:
@@ -63,6 +64,8 @@ static func load_file(path: String) -> MapData:
 
 
 static func from_dict(d: Dictionary) -> MapData:
+	if not d.get("water", []) is Array:
+		return null
 	var m := MapData.new()
 	m.id = str(d.get("id", "map"))
 	m.name = str(d.get("name", m.id))
@@ -94,6 +97,7 @@ static func from_dict(d: Dictionary) -> MapData:
 	m.start_gold = int(d.get("start_gold", 0))
 	m.variance = d.get("variance", {"random_rocks": 0, "seed": -1})
 	m.path_lights = d.get("path_lights", [])
+	m.water = d.get("water", []).duplicate(true)
 	if int(d.get("format", 1)) < FORMAT:
 		m._upscale()
 	return m
@@ -142,6 +146,8 @@ func to_dict() -> Dictionary:
 		d.game = game
 	if not path_lights.is_empty():
 		d.path_lights = path_lights
+	if not water.is_empty():
+		d.water = water.duplicate(true)
 	if spawn_player >= 0:
 		d.spawn_player = spawn_player
 	if not lanes.is_empty():

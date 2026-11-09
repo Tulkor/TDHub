@@ -64,6 +64,12 @@ var rng := RandomNumberGenerator.new()
 var fixed_seed := -1  ## Tests: fester Zufall ab _ready (vor add_child setzen), sonst zufällig
 
 
+func system_mode() -> String:
+	return "survivors"
+
+
+
+
 func _init() -> void:
 	SystemHost.attach(self, "survivors")
 

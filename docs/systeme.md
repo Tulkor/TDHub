@@ -15,6 +15,8 @@ Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. eige
 | leveling – Tower-Level und EP | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – | – |
 | build – Bauen, Belegen, Wege, Lichtpfad, Deckung | 7 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – |
 | controls – Eingabe, Auswahl, Hover, Pause, Tempo | 7 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – |
+| visuals – Gemeinsame Shader und visuelle Effekte | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
+| water – Fließendes Wasser und Wasserfälle | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
 
 ## Modusregeln
 

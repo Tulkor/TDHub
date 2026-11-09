@@ -36,6 +36,9 @@ func add_beam(from: Vector3, to: Vector3, col: Color, fx_key: String = "") -> vo
 				else:
 					Sfx.play_shot(parts[1], int(parts[2]))
 			if parts[0] == "n":
+				var radius := float(parts[3]) if parts.size() > 3 else 2.0
+				VisualFx.pulse(self, from, radius, Color(col, 0.45), 1.0)
+				VisualFx.shockwave(self, from, radius)
 				if set.has("nova"):
 					fx.play_nova(set.nova, from, float(parts[3]) if parts.size() > 3 else 2.0)
 					return
@@ -56,6 +59,10 @@ func add_beam(from: Vector3, to: Vector3, col: Color, fx_key: String = "") -> vo
 func clear() -> void:
 	beams.clear()
 	_mesh.clear_surfaces()
+	for child in get_children():
+		if child.is_in_group("visual_transient") or child.is_in_group("visual_shockwave"):
+			remove_child(child)
+			child.queue_free()
 	if fx != null:
 		fx.clear()
 

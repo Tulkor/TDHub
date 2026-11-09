@@ -111,6 +111,19 @@
 			"etappe": 7,
 			"eigen": [],
 			"haken": ["_on_click", "_update_hover", "_box_select", "select", "_select", "set_user_paused", "_on_pause_toggled", "paused_input"]
+		},
+		"visuals": {
+			"titel": "Gemeinsame Shader und visuelle Effekte",
+			"klasse": "VisualFx",
+			"etappe": 0,
+			"eigen": []
+		},
+		"water": {
+			"titel": "Fließendes Wasser und Wasserfälle",
+			"etappe": 0,
+			"eigen": [],
+			"klasse": "WaterSystem",
+			"haken": ["water_regions"]
 		}
 	}
 }

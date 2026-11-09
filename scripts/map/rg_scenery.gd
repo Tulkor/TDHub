@@ -322,6 +322,8 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool, tint: bool) -> void
 					t.backlight_enabled = true
 					t.backlight = Color(0.35, 0.45, 0.2)
 				mesh.surface_set_material(i, t)
+				# Auch deckende Baumteile übernehmen ihre Textur/Farbe; die Basis bleibt fest.
+				mesh.surface_set_material(i, VisualFx.wind_material(t, mesh.get_aabb(), self))
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -330,5 +332,6 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool, tint: bool) -> void
 		mm.set_instance_transform(i, xfs[i] * m[1])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
+	mmi.extra_cull_margin = 0.5 if tint else 0.0
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)

@@ -61,6 +61,7 @@ static func attach(game: Node, mode_id: String, names: Array = []) -> Dictionary
 			continue  # gemeinsame Bibliothek ohne Knoten (z. B. Leveling mit static func)
 		var sys: GameSystem = obj
 		sys.name = str(n)
+		sys.set_meta("mode_id", mode_id)
 		sys.setup(game, config(mode_id, str(n)))
 		game.add_child(sys)
 		out[str(n)] = sys

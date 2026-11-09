@@ -129,6 +129,7 @@ func _ready() -> void:
 
 func _on_quality_changed() -> void:
 	_apply_mix(_night)
+	VisualFx.refresh_quality()
 
 
 ## Tageszeit laufen lassen (eeveTD, YouTD): Licht, Himmel, Nebel und Bildfilter folgen der Uhr, die Szenerie
@@ -228,7 +229,10 @@ func _apply_mix(n: float) -> void:
 	gm.set_shader_parameter("macro", lerpf(_ground_day[3], NIGHT_EXTRA.ground_macro, n))
 	var forest: Color = Color.WHITE.lerp(NIGHT_EXTRA.forest_tint, n)
 	for m in _forest_mats:
-		m[0].albedo_color = m[1] * forest
+		if m[0] is ShaderMaterial:
+			m[0].set_shader_parameter("albedo_color", m[1] * forest)
+		else:
+			m[0].albedo_color = m[1] * forest
 	# Grafik „Niedrig“: Laternen ohne echtes Licht (jedes Licht zeichnet die Modelle in seiner Nähe noch einmal),
 	# der Lichtfleck am Boden bleibt; Bäume ohne Schatten
 	var low := Display.quality == Display.LOW
@@ -575,6 +579,8 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool) -> void:
 		mm.set_instance_transform(i, xfs[i] * m[1])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
+	# Schwenkende Kronen können etwas über die statische Mesh-AABB hinausragen.
+	mmi.extra_cull_margin = 0.5
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if shadows:
 		_shadow_mmis.append(mmi)
@@ -590,8 +596,9 @@ func _muted(mesh: Mesh) -> Mesh:
 		if mat is BaseMaterial3D:
 			var dark: BaseMaterial3D = mat.duplicate()
 			dark.albedo_color *= FOREST_TINT
-			_forest_mats.append([dark, dark.albedo_color])
-			copy.surface_set_material(i, dark)
+			var wind := VisualFx.wind_material(dark, mesh.get_aabb(), self)
+			_forest_mats.append([wind, dark.albedo_color])
+			copy.surface_set_material(i, wind)
 	return copy
 
 

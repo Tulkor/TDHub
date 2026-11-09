@@ -30,6 +30,12 @@ func _check(n: String, short: bool) -> int:
 		print("FEHLER %s: lässt sich nicht laden" % n)
 		return 1
 	var errs: Array[String] = []
+	var water_cfg := SystemHost.config(m.game if m.game != "" else "gemtd", "water")
+	var water_errors := WaterSystem.validate_regions(m.water, water_cfg.geometry, int(water_cfg.max_bodies))
+	if water_errors.is_empty():
+		water_errors = WaterSystem.fall_errors(m.water)
+	for error in water_errors:
+		errs.append(error)
 	var buildable := 0
 	for y in m.height:
 		for x in m.width:

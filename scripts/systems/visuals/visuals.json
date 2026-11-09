@@ -1,0 +1,10 @@
+{
+	"_info": "Gemeinsame visuelle Basis. Modi überschreiben system_cfg.visuals; keine Spielregeln oder Zufallswürfe.",
+	"status": {"enabled": true, "strength": 0.7},
+	"death": {"enabled": true, "min_quality": 1, "max_active": 20, "duration": 2.6},
+	"occlusion": {"enabled": true, "min_quality": 1, "color": "#ffc26670"},
+	"range": {"fill": 0.035, "motion": 0.12},
+	"wind": {"enabled": true, "min_quality": 1, "strength": 0.018},
+	"gem": {"refraction": true},
+	"shockwave": {"enabled": true, "min_quality": 2, "min_radius": 1.5, "max_active": 3, "strength": 0.006}
+}

@@ -20,6 +20,7 @@ static func create() -> MaulMap:
 	m.rows = src.rows
 	m.zones = src.zones
 	m.lives = src.lives
+	m.water = src.water.duplicate(true)
 	m.marker_radius = 1
 	m.maul = d.get("maul", {})
 	m._collect_points()
