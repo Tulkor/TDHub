@@ -129,6 +129,18 @@
 			"titel": "Maze-Vorlagen",
 			"etappe": 8,
 			"eigen": []
+		},
+		"timed_events": {
+			"titel": "Ereignis-Uhr: alle N Sekunden ein Ereignis aus einem Pool",
+			"etappe": 0,
+			"eigen": [],
+			"haken": ["event_clock_running", "event_progress", "event_busy", "event_allowed", "event_rng", "start_event"]
+		},
+		"challenges": {
+			"titel": "Endgebiet mit Challenges und Endboss-Tor",
+			"etappe": 0,
+			"eigen": [],
+			"haken": ["challenge_begin", "challenge_finished", "challenge_abort", "final_boss_start"]
 		}
 	}
 }

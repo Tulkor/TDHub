@@ -9,6 +9,7 @@ var route: Array = []          ## Vector3, Karawane
 var leg := 0
 var speed := 2.4
 var arrived := false
+var until_time := 0.0          ## > 0: verschwindet zu dieser Spielzeit (Söldner aus Ereignissen)
 var _stuck_t := 0.0
 var _stuck_pos := Vector3.ZERO
 
@@ -53,6 +54,10 @@ func step(dt: float) -> void:
 		return
 	if kind == "caravan":
 		_step_route(dt)
+		return
+	if until_time > 0.0 and game.play_time >= until_time:
+		game.buildings.erase(self)
+		queue_free()
 		return
 	# Kämpfer: in der Nähe des Helden bleiben, sonst wie ein Turm schießen
 	var h = game.hero

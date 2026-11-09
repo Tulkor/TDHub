@@ -455,6 +455,6 @@ func refresh() -> void:
 	for i in _stash_slots.size():
 		_paint(_stash_slots[i], shop.stash[i], "stash", i)
 	_update_roads()
-	_roads.get_parent().visible = not _window.visible
+	_roads.get_parent().visible = not _window.visible and not game.final.active
 	if _window.visible:
 		_rebuild()

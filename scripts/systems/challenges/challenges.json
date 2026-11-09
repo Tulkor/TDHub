@@ -1,0 +1,6 @@
+{
+	"_info": "Basiswerte des Endgebiets mit Challenges. data: JSON-Datei mit list (Challenges) und Gebietsdaten des Modus. awaken: Sekunden, bis der Endboss von selbst erwacht (0 = nie). retry: gescheiterte Challenges neu beginnen. Ein Modus überschreibt sie in data/modes.json unter system_cfg.challenges; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"data": "",
+	"awaken": 480.0,
+	"retry": true
+}

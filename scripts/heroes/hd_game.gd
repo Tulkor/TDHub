@@ -98,6 +98,10 @@ var blessing: Dictionary = {}   ## Schrein-Segen {stats, until}
 var blood_wave := 0             ## Blutmond liegt auf dieser Welle
 var _fly_roads: Dictionary = {} ## Straße → gerade Fluglinie
 var _boss_marker: Node3D
+## Ereignisse alle 5 Minuten (System timed_events) und Endgebiet (System challenges, HdFinal)
+var event_buffs: Array = []     ## Werte auf Zeit aus Ereignissen {name, stats, until}
+var event_mods: Array = []      ## Gegner-/Gold-/EP-Faktoren auf Zeit {name, foes, gold, xp, until}
+var final: HdFinal
 
 
 func system_mode() -> String:
@@ -133,6 +137,7 @@ func _ready() -> void:
 	zones = HdZones.new(self)
 	zones.add_stones()
 	events = HdEvents.new(self)
+	final = HdFinal.new(self)
 	hero.set_bonus(shop.bonus())
 	hud = load("res://scripts/heroes/hd_hud.gd").new()
 	hud.game = self
@@ -359,6 +364,8 @@ func gate_by_name(label: String):
 
 ## Neben der Feste, zwischen den Straßen (diagonal).
 func hero_spawn() -> Vector3:
+	if final and final.active:
+		return final.start_pos()
 	return fortress_pos + Vector3(6.5, 0, 6.5)
 
 
@@ -856,9 +863,16 @@ func step(dt: float) -> void:
 	_step_blasts(dt)
 	zones.step(dt)
 	events.step(dt)
+	_step_event_buffs()
+	if systems.has("timed_events"):
+		systems.timed_events.tick(dt)
+	final.step(dt)
 	enemies = enemies.filter(func(e): return not e.dead)
-	if state == "play" and wave >= wave_count() and spawn_queue.is_empty() and wave_enemies() == 0:
-		_finish(true)
+	if state == "play" and not final.active and wave >= wave_count() and spawn_queue.is_empty() and wave_enemies() == 0:
+		if systems.has("challenges") and wave_limit == 0:
+			final.enter()
+		else:
+			_finish(true)
 
 
 ## Teleport-Steine: Held steht kurz drauf (teleport.hold) → zur anderen Seite (Feste ↔ vor das Vorwerk).
@@ -906,13 +920,14 @@ func spawn(id: String, at = null, road_s := 0.0, rd = null) -> HdEnemy:
 	e.road_s = road_s
 	e.position = at if at != null else e.path().point(road_s, e.lane)
 	if blood_wave == wave and events:
-		var bm := events.blood()
+		var bm = events.blood()
 		e.max_hp *= float(bm.get("hp", 2.0))
 		e.hp = e.max_hp
 		e.max_shield *= float(bm.get("hp", 2.0))
 		e.shield = e.max_shield
 		e.dmg_mult *= float(bm.get("damage", 1.25))
 		e.reward = float(bm.get("reward", 2.0))
+	_apply_foe_mods(e)
 	add_child(e)
 	enemies.append(e)
 	return e
@@ -996,6 +1011,8 @@ func leak(e: HdEnemy) -> void:
 	if e.dead:
 		return
 	_remove(e)
+	if e.event_tag != "":
+		events.kinds.on_leak(e)
 	leaks += 1
 	_wave_leaks += 1
 	lives -= int(e.def.get("lives", 1))
@@ -1027,12 +1044,12 @@ func _kill(e: HdEnemy) -> void:
 		_spread_plague(e)
 	kills += 1
 	hero.kills += 1
-	hero.add_xp(float(e.def.get("xp", 10)))
-	if zones.on_kill(e) or events.on_kill(e):
+	hero.add_xp(float(e.def.get("xp", 10)) * event_xp_mult())
+	if zones.on_kill(e) or events.on_kill(e) or final.on_kill(e):
 		changed.emit()
 		return
 	_wave_kills += 1
-	var g := roundi(shop.kill_gold(e) * e.reward)
+	var g := roundi(shop.kill_gold(e) * e.reward * event_gold_mult())
 	if g > 0 and not e.gold_free:
 		shop.add_gold(g)
 		floater(e.position + Vector3(0, e.height() + 1.0, 0), "+%d" % g, UiTheme.COIN)
@@ -1080,7 +1097,9 @@ func boss_phase(e: HdEnemy, ph: Dictionary) -> void:
 	message.emit(tr(str(ph.get("name", "Neue Phase"))))
 	fx.nova(e.position, 10.0, UiTheme.PURPLE_LIGHT)
 	var sm: Dictionary = ph.get("summon", {})
-	if not sm.is_empty():
+	if not sm.is_empty() and final.active:
+		final.summon(e, sm)
+	elif not sm.is_empty():
 		for r in roads:
 			for k in int(sm.count):
 				spawn_queue.append({"t": play_time + k * 1.2, "id": str(sm.id), "road": r})
@@ -1223,6 +1242,13 @@ func free_point(p: Vector3, r: float) -> Vector3:
 	return p
 
 
+## Spielfeld [x0, z0, x1, z1]: die Karte oder das Endgebiet.
+func bounds() -> Array:
+	if final and final.active:
+		return final.bounds()
+	return cfg.arena.bounds
+
+
 ## Aus Hindernissen herausschieben und im Spielfeld halten.
 func _resolve(u: Node3D) -> void:
 	var flying: bool = u is HdEnemy and u.fly
@@ -1238,7 +1264,7 @@ func _resolve(u: Node3D) -> void:
 				d = Vector3(1, 0, 0)
 				l = 1.0
 			u.position += d / l * (min_d - l)
-	var b: Array = cfg.arena.bounds
+	var b: Array = bounds()
 	u.position.x = clampf(u.position.x, float(b[0]), float(b[2]))
 	u.position.z = clampf(u.position.z, float(b[1]), float(b[3]))
 	u.position.y = 0.0
@@ -1335,6 +1361,8 @@ func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 	if hero.b("lifesteal") > 0.0 and hero.alive():
 		hero.hp = minf(hero.max_hp, hero.hp + dmg * hero.b("lifesteal"))
 	e.provoke(hero)
+	if e.event_tag != "":
+		events.kinds.on_hit(e)
 	if not quiet:
 		floater(e.position + Vector3(0, e.height() + 0.4, 0), str(roundi(dmg)), UiTheme.TEXT)
 	if e.hp <= 0.0:
@@ -1575,6 +1603,90 @@ func floater(at: Vector3, text: String, c: Color) -> void:
 	floated.emit(at, text, c)
 
 
+# ---------------------------------------------------------------- Ereignisse (Haken für timed_events und challenges)
+
+## Uhr der Ereignisse läuft nur während der Wellen, nicht während ein Kriegsherr lebt, nicht im Endgebiet.
+func event_clock_running() -> bool:
+	return state == "play" and not final.active and wave >= 1 and not boss_alive() and not _boss_queued()
+
+
+func event_progress() -> int:
+	return wave
+
+
+func event_busy() -> bool:
+	return events.busy()
+
+
+func event_allowed(d: Dictionary) -> bool:
+	return events.allowed(d)
+
+
+func event_rng() -> RandomNumberGenerator:
+	return rng
+
+
+func start_event(d: Dictionary) -> void:
+	events.start(str(d.id))
+
+
+func challenge_begin(d: Dictionary) -> void:
+	final.on_begin(d)
+
+
+func challenge_finished(d: Dictionary, ok: bool) -> void:
+	final.on_finished(d, ok)
+
+
+func challenge_abort(d: Dictionary) -> void:
+	final.on_abort(d)
+
+
+func final_boss_start(mods: Dictionary, reason: String) -> void:
+	final.start_boss(mods, reason)
+
+
+## Werte auf Zeit (Ereignis-Segen, Endkampf-Belohnungen), zählen in HdShop.bonus().
+func add_event_buff(name: String, stats: Dictionary, time: float) -> void:
+	event_buffs.append({"name": name, "stats": stats, "until": play_time + time})
+	shop._changed()
+
+
+func _step_event_buffs() -> void:
+	var n := event_buffs.size() + event_mods.size()
+	event_buffs = event_buffs.filter(func(b): return play_time < float(b.until))
+	event_mods = event_mods.filter(func(b): return play_time < float(b.until))
+	if event_buffs.size() + event_mods.size() != n:
+		shop._changed()
+
+
+func event_gold_mult() -> float:
+	var m := 1.0
+	for b in event_mods:
+		m *= float(b.get("gold", 1.0))
+	return m
+
+
+func event_xp_mult() -> float:
+	var m := 1.0
+	for b in event_mods:
+		m *= float(b.get("xp", 1.0))
+	return m
+
+
+## Zeitgeist-Ereignisse (Finsternis, Erschöpfte Horde …) auf neue Wellengegner.
+func _apply_foe_mods(e: HdEnemy) -> void:
+	for b in event_mods:
+		var f: Dictionary = b.get("foes", {})
+		if f.has("hp"):
+			e.max_hp *= float(f.hp)
+			e.hp = e.max_hp
+		if f.has("damage"):
+			e.dmg_mult *= float(f.damage)
+		if f.has("speed"):
+			e.speed *= float(f.speed)
+
+
 # ---------------------------------------------------------------- Ende
 
 func _finish(victory: bool) -> void:
@@ -1667,6 +1779,8 @@ func bot_turn() -> void:
 ## Ziel ohne Gegner in der Nähe: Ausrüstung aus dem Lager holen, sonst zur Straße mit dem meisten
 ## Druck (Gegner weiter vorn zählen mehr), dort zum vordersten Gegner oder vor das Vorwerk.
 func _bot_goal() -> Vector3:
+	if final.active:
+		return final.gate_pos() if not systems.challenges.boss_started else final.arena_pos()
 	var threat := {}
 	var lead := {}
 	for r in roads:

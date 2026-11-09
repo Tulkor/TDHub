@@ -1,0 +1,160 @@
+{
+	"_info": "Endgebiet „Der Schlund“ nach Welle 40 (System challenges, Ablauf HdFinal). area: Mitte und halbe Größe (eigenes Gebiet neben der Karte). start: Ankunft. gate: Tor zum Endboss (draufstehen gate_hold s). arena: Kampfplatz des Endbosses. list: Challenges mit pos (relativ zur Mitte), kind (echos, siegel, glutpfad, halten, wagnis) und reward (boss: hp = Anteil Leben, remove = Fähigkeiten weg; hero: Werte im Endkampf, shield; item, perma … wie bei Ereignissen). awaken: in modes.json system_cfg.challenges (Sekunden bis der Boss von selbst erwacht).",
+	"name": "Der Schlund",
+	"area": {
+		"center": [
+			320,
+			0
+		],
+		"half": [
+			60,
+			50
+		],
+		"ground": "1a1226",
+		"edge": "3a2a5a"
+	},
+	"start": [
+		0,
+		40
+	],
+	"gate": {
+		"pos": [
+			0,
+			-22
+		],
+		"hold": 1.5,
+		"name": "Tor des Verschlingers"
+	},
+	"arena": {
+		"pos": [
+			0,
+			-36
+		],
+		"radius": 13
+	},
+	"station_hold": 1.0,
+	"boss": {
+		"id": "verschlinger",
+		"hp": 1.0,
+		"summon": {
+			"id": "leerling",
+			"count": 4
+		}
+	},
+	"list": [
+		{
+			"id": "echos",
+			"name": "Echos der Kriegsherren",
+			"kind": "echos",
+			"pos": [
+				-38,
+				22
+			],
+			"color": "ff5c8a",
+			"desc": "Grolm, Vargul und Ignar kehren als Echos zurück, einer nach dem anderen. Wer fällt, muss neu beginnen.",
+			"bosses": [
+				"grolm",
+				"vargul",
+				"ignar"
+			],
+			"hp": 0.55,
+			"reward": {
+				"boss": {
+					"hp": -0.15
+				},
+				"text": "Verschlinger −15 % Leben"
+			}
+		},
+		{
+			"id": "siegel",
+			"name": "Siegelsteine",
+			"kind": "siegel",
+			"pos": [
+				-38,
+				-12
+			],
+			"color": "3ab8ff",
+			"desc": "Vier Runensteine. Die Wandtafel zeigt die Reihenfolge. Ein Fehler weckt die Wächter und mischt neu.",
+			"stones": 4,
+			"wrong": {
+				"base": "leerling",
+				"count": 3
+			},
+			"reward": {
+				"boss": {
+					"remove": [
+						"verschl_hagel"
+					]
+				},
+				"text": "Verschlinger verliert den Leerenhagel"
+			}
+		},
+		{
+			"id": "glutpfad",
+			"name": "Glutpfad",
+			"kind": "glutpfad",
+			"pos": [
+				38,
+				28
+			],
+			"color": "ffb43a",
+			"desc": "Lauf durch den Gang voller Glutflächen zum Altar. Höchstens zwei Treffer.",
+			"length": 26,
+			"width": 7,
+			"every": 0.35,
+			"radius": 2.2,
+			"windup": 0.9,
+			"damage": 0.08,
+			"max_hits": 2,
+			"reward": {
+				"hero": {
+					"speed": 0.2,
+					"attack_speed": 0.15
+				},
+				"text": "Im Endkampf +20 % Tempo, +15 % Angriffstempo"
+			}
+		},
+		{
+			"id": "leuchtfeuer",
+			"name": "Leuchtfeuer halten",
+			"kind": "halten",
+			"pos": [
+				38,
+				-18
+			],
+			"color": "5ce08a",
+			"desc": "60 s im Kreis des Leuchtfeuers bleiben, während die Leere anstürmt.",
+			"time": 45.0,
+			"radius": 5.0,
+			"every": 6.0,
+			"spawn": {
+				"base": "leerling",
+				"count": 4
+			},
+			"reward": {
+				"hero": {
+					"shield": 900
+				},
+				"text": "Im Endkampf ein Schild von 900"
+			}
+		},
+		{
+			"id": "fluchschrein",
+			"name": "Fluchschrein",
+			"kind": "wagnis",
+			"pos": [
+				0,
+				14
+			],
+			"color": "c07aff",
+			"desc": "Nimm einen Fluch an: Im Endkampf nimmst du 20 % mehr Schaden. Dafür gibt es sofort ein legendäres Item.",
+			"reward": {
+				"item": 5,
+				"hero": {
+					"dmg_in": -0.2
+				},
+				"text": "Legendäres Item, Fluch im Endkampf"
+			}
+		}
+	]
+}

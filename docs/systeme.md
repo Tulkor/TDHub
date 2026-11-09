@@ -17,6 +17,8 @@ Erzeugt mit `python3 tools/systeme.py matrix --md`, nicht von Hand ändern. eige
 | controls – Eingabe, Auswahl, Hover, Pause, Tempo | 7 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | – | – |
 | visuals – Gemeinsame Shader und visuelle Effekte | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
 | water – Fließendes Wasser und Wasserfälle | 0 | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ | gemeinsam ✓ |
+| timed_events – Ereignis-Uhr: alle N Sekunden ein Ereignis aus einem Pool | 0 | – | – | – | – | – | gemeinsam ✓ | – |
+| challenges – Endgebiet mit Challenges und Endboss-Tor | 0 | – | – | – | – | – | gemeinsam ✓ | – |
 
 ## Modusregeln
 
