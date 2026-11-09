@@ -366,6 +366,8 @@ func _build_world() -> void:
 	e.ambient_light_energy = 0.6
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = Display.quality > 0
+	# Himmel nur für Spiegelungen (Rüstungen, Waffen, Gadgets), sichtbar bleibt der Hintergrund
+	Metall.spiegel_himmel(e, Color("5a6a86"), Color("a8b0bc"), Color("2a2e26"))
 	env.environment = e
 	add_child(env)
 	var sun := DirectionalLight3D.new()

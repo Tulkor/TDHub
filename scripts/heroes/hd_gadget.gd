@@ -37,7 +37,7 @@ func setup_gadget(g, id: String, d: Dictionary, at: Vector3, owner_hero, dir: Ve
 
 
 func _build() -> void:
-	var metal := HdDev.mat(Color("8a7a5a"), 0.5)
+	var metal := HdDev.metall(Color("8a7a5a"), 0.5)
 	var accent := HdDev.mat(Color("ffb040"), 0.5, 0.8)
 	add_child(HdDev.cyl(radius, radius * 1.1, 0.3, HdDev.mat(Color("5a5048"), 0.5), Vector3(0, 0.15, 0), 8))
 	_top = Node3D.new()

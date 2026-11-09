@@ -329,7 +329,11 @@ static func _model(name: String) -> Node3D:
 		var path := "res://assets/models/nature/%s.glb" % name
 		_scenes[name] = load(path) if ResourceLoader.exists(path) else null
 	var ps: PackedScene = _scenes[name]
-	return ps.instantiate() if ps else null
+	if ps == null:
+		return null
+	var n := ps.instantiate()
+	Metall.modell(n)
+	return n
 
 
 ## Schnee auf alle nach oben zeigenden Flächen eines Modells legen (Überzug-Shader).

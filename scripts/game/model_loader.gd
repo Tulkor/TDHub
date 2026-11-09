@@ -50,6 +50,8 @@ static func instantiate(path: String, size := 1.0, tint: Material = null) -> Nod
 		model.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z) * s
 	if tint != null:
 		_apply_material(model, tint)
+	else:
+		Metall.modell(model)
 	_play_idle(model)
 	return holder
 

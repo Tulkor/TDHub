@@ -386,6 +386,7 @@ func _build_deco_base() -> void:
 	brass.albedo_color = DecoTheme.GOLD
 	brass.metallic = 0.9
 	brass.roughness = 0.3
+	Metall.veredeln(brass)
 	var stone := StandardMaterial3D.new()
 	stone.albedo_color = Color("16393b")
 	stone.roughness = 0.2
@@ -415,6 +416,7 @@ func _deco_trim(box: AABB) -> void:
 	brass.emission_enabled = true
 	brass.emission = DecoTheme.GOLD
 	brass.emission_energy_multiplier = 0.12
+	Metall.veredeln(brass)
 	var top := box.end.y
 	var cx := box.get_center().x
 	var cz := box.get_center().z

@@ -37,6 +37,9 @@ const ENV_DEFAULT := {
 	"ssao": 1.0, "ssao_radius": 0.8, "ssil": 0.0, "vol_fog": 0.0,
 	# Ränder abdunkeln und leicht tönen (CameraRig, screen_post.gdshader), 0 = aus
 	"vignette": 0.45, "vignette_color": Color(0.12, 0.04, 0.22),
+	# Studiolicht nur für Metall-Spiegelungen (Metall, metall_himmel.gdshaderinc): Stärke, Softboxen oben,
+	# Streifen am Horizont. Arcade: rosa Softboxen und Cyan-Streifen wie Neonröhren
+	"metall": 0.9, "metall_farbe": Color("ffb0e0"), "metall_farbe2": Color("70f0ff"),
 }
 
 ## Plakatwand: Bodentexturen statt Gras und Erde (selbst erzeugt, tools/rg_texturen.py): Pflaster mit Gras
@@ -98,6 +101,7 @@ const STYLES := {
 		# Nacht nach dem Vorbild Duskwood (WoW Forever, Wunsch von Lukas): blauvioletter Nebel, in dem der Wald
 		# als Silhouette versinkt, kühles Mondlicht, kein Gegenlicht; die warmen Laternen setzt EeveScenery
 		"env_night": {
+			"metall": 0.45, "metall_farbe": Color("a8b8e0"), "metall_farbe2": Color("6a7aa8"),
 			"sky_top": Color("0a0c1c"), "sky_horizon": Color("2a2c4a"), "ground_bottom": Color("0c0d18"),
 			# weniger flaches Umgebungslicht, dafür ein kräftigerer, silbriger Mond mit Glanz: Tower, Barrikaden
 			# und Bäume bekommen eine helle und eine dunkle Seite statt einheitlich blau zu sein
@@ -112,6 +116,7 @@ const STYLES := {
 			"ssao": 1.4, "ssil": 0.8, "vol_fog": 0.02,
 		},
 		"env": {
+			"metall": 0.8, "metall_farbe": Color("fff0d8"), "metall_farbe2": Color("c8d8e8"),
 			"sky_top": Color("6f97a8"), "sky_horizon": Color("c9d6b8"), "ground_bottom": Color("2e3a26"),
 			# Umgebungslicht großteils vom Himmel: Oberseiten hell und bläulich, Flanken dunkler
 			"ambient": Color("b8c6d0"), "ambient_energy": 0.3, "ambient_sky": 0.5,
@@ -159,6 +164,7 @@ const STYLES := {
 		"contact_shadow": 0.55,
 		"hit_glow": 0.5,
 		"env": {
+			"metall": 1.0, "metall_farbe": Color("ffe4b8"), "metall_farbe2": Color("8fd8d0"),
 			"sky_top": Color("030a0d"), "sky_horizon": Color("0e2428"), "ground_bottom": Color("030a0b"),
 			# Mondlicht (Lukas, 2026-10-28): kühles, schwaches Licht von schräg oben, die Häuser am Rand
 			# bleiben dunkel und heben sich nur mit Dächern und Kanten ab; die Bodenleuchten tragen das Licht
@@ -173,6 +179,7 @@ const STYLES := {
 		},
 		# Nacht: schwaches, kühles Mondlicht von oben, die Bodenleuchten tragen das Licht
 		"env_night": {
+			"metall": 0.55, "metall_farbe": Color("c0cce8"), "metall_farbe2": Color("6fb8c0"),
 			"sky_top": Color("02070a"), "sky_horizon": Color("0a1c22"), "ground_bottom": Color("020507"),
 			# Mond kräftig genug, dass Dächer und Fassaden der Häuser sich voneinander abheben
 			"ambient": Color("5d7fa8"), "ambient_energy": 0.24,
@@ -215,6 +222,7 @@ const STYLES := {
 		"contact_shadow": 0.55,
 		"hit_glow": 0.5,
 		"env": {
+			"metall": 0.8, "metall_farbe": Color("fff4e4"), "metall_farbe2": Color("d0dce8"),
 			"sky_top": Color("9fb4c4"), "sky_horizon": Color("dcdcd4"), "ground_bottom": Color("6a6a64"),
 			# etwas gedämpfter als zuvor (Lukas, 2026-10-30: „weniger stark beleuchtet“)
 			"ambient": Color("c8ccd0"), "ambient_energy": 0.28, "ambient_sky": 0.5,
@@ -286,4 +294,5 @@ static func line_material(col: Color, energy: float) -> Material:
 	m.emission_enabled = true
 	m.emission = col
 	m.emission_energy_multiplier = maxf(energy - 1.0, 0.0) * 0.6 + 0.15
+	Metall.veredeln(m)
 	return m

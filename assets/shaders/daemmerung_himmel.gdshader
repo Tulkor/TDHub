@@ -3,6 +3,8 @@
 // Nur Uniforms, kein TIME: Godot rechnet die Umgebungs-Cubemap nur neu, wenn DayCycle Werte ändert.
 shader_type sky;
 
+#include "res://assets/shaders/metall_himmel.gdshaderinc"
+
 uniform vec3 top_color : source_color = vec3(0.1, 0.15, 0.35);
 uniform vec3 mid_color : source_color = vec3(0.35, 0.3, 0.5);
 uniform vec3 horizon_color : source_color = vec3(0.9, 0.5, 0.3);
@@ -77,7 +79,11 @@ void sky() {
 		vec3 cc = mix(cloud_dark, cloud_lit, pow(cs, 3.0) * 0.8 + 0.2);
 		col = mix(col, cc, c * clouds);
 	}
-	if (!AT_CUBEMAP_PASS) {
+	if (AT_CUBEMAP_PASS) {
+		// Studiolicht für Metall-Spiegelungen, so hell wie der Himmel gerade ist (nachts schwach, Mondlicht-Ton)
+		float hell = dot(mix(horizon_color, top_color, 0.5), vec3(0.3, 0.5, 0.2));
+		col += metall_studio(d) * clamp(0.25 + hell * 2.5, 0.25, 1.6);
+	} else {
 		// Sonnenscheibe mit weichem Rand, darunter am Horizont abgeschnitten
 		float sun_disc = smoothstep(cos(sun_size * 1.15), cos(sun_size * 0.85), dot(d, sd));
 		col += sun_color * sun_energy * sun_disc * smoothstep(-0.01, 0.01, h);
