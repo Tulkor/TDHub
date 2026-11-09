@@ -82,12 +82,13 @@ static func metal(c: Color, scale := 0.5) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = c
 	m.albedo_texture = _brushed()
-	m.metallic = 0.5
-	m.roughness = 0.68
+	m.metallic = 0.7
+	m.roughness = 0.55
 	m.metallic_specular = 0.35
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * scale
+	Metall.veredeln(m)
 	_mats[key] = m
 	return m
 
@@ -160,6 +161,7 @@ static func diamond_plate(c: Color, scale := 1.6) -> StandardMaterial3D:
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * scale
+	Metall.veredeln(m)
 	_mats[key] = m
 	return m
 

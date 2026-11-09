@@ -471,6 +471,7 @@ func _add_fires() -> void:
 	iron.albedo_color = Color("2c2a30")
 	iron.metallic = 0.7
 	iron.roughness = 0.5
+	Metall.veredeln(iron)
 	var coal := StandardMaterial3D.new()
 	coal.albedo_color = Color("1a0c08")
 	coal.emission_enabled = true
@@ -649,6 +650,8 @@ func _add_lanterns() -> void:
 	brass.albedo_color = Color("2a2620")
 	brass.metallic = 0.75
 	brass.roughness = 0.4
+	Metall.veredeln(wood)
+	Metall.veredeln(brass)
 	_glass_mat = StandardMaterial3D.new()
 	_glass_mat.albedo_color = Color(1.0, 0.63, 0.31, 0.55)
 	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

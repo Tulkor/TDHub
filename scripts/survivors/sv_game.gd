@@ -131,15 +131,9 @@ func _build_world() -> void:
 	e.ambient_light_color = Color("4c5262")
 	e.ambient_light_energy = 0.35
 	# Himmel nur für Spiegelungen (Metall), sichtbar bleibt der dunkle Hintergrund
-	var sky := Sky.new()
-	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color("22262f")
-	sm.sky_horizon_color = Color("5d626e")
-	sm.ground_bottom_color = Color("0c0f18")
-	sm.ground_horizon_color = Color("3a4560")
-	sky.sky_material = sm
-	e.sky = sky
-	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	# (Verlauf plus kühles Studiolicht mit Cyan-Streifen am Horizont, Metall)
+	Metall.spiegel_himmel(e, Color("22262f"), Color("5d626e"), Color("0c0f18"),
+			{"metall": 0.55, "metall_farbe": Color("c4d0e4"), "metall_farbe2": Color("6fd8ff")})
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.glow_enabled = true
 	e.glow_intensity = 0.9

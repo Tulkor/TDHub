@@ -944,6 +944,7 @@ func _add_embers(model: Node3D, box: AABB) -> void:
 		bronze.albedo_color = Color("5a4030")
 		bronze.metallic = 0.6
 		bronze.roughness = 0.45
+		Metall.veredeln(bronze)
 		ModelLoader._apply_material(model, bronze)
 	var coal := MeshInstance3D.new()
 	var disk := CylinderMesh.new()

@@ -127,6 +127,7 @@ func apply_quality() -> void:
 	for we in get_tree().root.find_children("*", "WorldEnvironment", true, false):
 		if we.environment:
 			we.environment.glow_enabled = q("glow")
+	Metall.stufe_anwenden(get_tree().root)
 	quality_changed.emit()
 
 

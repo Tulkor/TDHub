@@ -178,6 +178,7 @@ func build(map: MaulMap) -> void:
 	cm.albedo_color = CORNICE
 	cm.metallic = 0.6
 	cm.roughness = 0.45
+	Metall.veredeln(cm)
 	_cornices.material_override = cm
 	_cornices.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for i in cornices.size():

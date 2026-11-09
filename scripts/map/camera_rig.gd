@@ -255,21 +255,16 @@ static func add_environment(parent: Node, look: Dictionary = {}, filter := true)
 	var tint: Color = look.tint
 	if look.has("sky_top"):
 		# eigener, einfacher Himmel (eeveTD, Shopping Maul)
-		var sky_mat := ProceduralSkyMaterial.new()
-		sky_mat.sky_top_color = look.sky_top * tint
-		sky_mat.sky_horizon_color = look.sky_horizon * tint
-		sky_mat.ground_horizon_color = look.sky_horizon * tint
-		sky_mat.ground_bottom_color = look.ground_bottom * tint
-		sky_mat.sun_angle_max = 0.0
-		env.sky = Sky.new()
-		env.sky.sky_material = sky_mat
-		env.sky.radiance_size = Sky.RADIANCE_SIZE_32
+		# Verlauf wie ProceduralSkyMaterial, dazu Studiolicht für Metall-Spiegelungen (Metall)
+		Metall.spiegel_himmel(env, look.sky_top * tint, look.sky_horizon * tint, look.ground_bottom * tint, look)
 		env.background_mode = Environment.BG_SKY
 	else:
 		var sky := _sky()
 		if sky != null:
 			env.background_mode = Environment.BG_SKY
 			env.sky = sky
+			Metall.himmel_werte(sky.sky_material, look)
+			Metall.himmel(env)
 	# Leuchten für helle (HDR) Flächen, z. B. die Neon-Wegpunkte
 	env.glow_enabled = Display.q("glow")
 	env.glow_intensity = look.glow_intensity

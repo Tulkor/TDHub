@@ -142,6 +142,9 @@ func attach(made: Dictionary, game: Node) -> void:
 		env.sky = Sky.new()
 		env.sky.radiance_size = Sky.RADIANCE_SIZE_32
 	env.sky.sky_material = _sky_mat
+	# neutrales Studiolicht, der Himmel-Shader dunkelt es nach Tageszeit ab
+	Metall.himmel_werte(_sky_mat, {"metall": 0.6, "metall_farbe": Color("fff0e0"), "metall_farbe2": Color("c8d8e8")})
+	Metall.himmel(env)
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.fog_enabled = true

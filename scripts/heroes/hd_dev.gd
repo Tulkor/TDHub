@@ -29,6 +29,19 @@ static func grid_texture() -> Texture2D:
 
 
 ## Rastermaterial in Farbe c; scale = Kästchen je Einheit / 4.
+## Metall (Gadgets, Rüstungsteile): wie mat(), aber metallisch mit gemeinsamem Metall-Look.
+static func metall(c: Color, scale := 0.25) -> StandardMaterial3D:
+	var key := "metall|%s|%s" % [c.to_html(), scale]
+	if _mats.has(key):
+		return _mats[key]
+	var m: StandardMaterial3D = mat(c, scale).duplicate()
+	m.metallic = 0.8
+	m.roughness = 0.4
+	Metall.veredeln(m)
+	_mats[key] = m
+	return m
+
+
 static func mat(c: Color, scale := 0.25, glow := 0.0) -> StandardMaterial3D:
 	var key := "%s|%s|%s" % [c.to_html(), scale, glow]
 	if _mats.has(key):
