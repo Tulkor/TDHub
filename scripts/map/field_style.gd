@@ -68,7 +68,8 @@ const STYLES := {
 		# sonst wirkt der Boden heller als im alten Renderer
 		# Glühen nach dem Prinzip der Pilze (Pilzhof): blasser, fast weißer Kern, breiter gesättigter Schein
 		"floor": {"floor_color": Color("040208"), "floor_alpha": 0.6, "halo_width": 0.05, "major_energy": 1.15, "line_energy": 0.55, "minor_energy": 0.26, "cell_energy": 0.12,
-				"core_white": 0.6, "edge_energy": 2.0, "glow_halo": 0.28, "glow_width": 0.18, "glow_sat": 0.85},
+				"core_white": 0.6, "edge_energy": 2.0, "glow_halo": 0.28, "glow_width": 0.18, "glow_sat": 0.85,
+				"zone_holo": 1.0},
 		# dünner farbiger Dunst knapp über dem Boden (Board3D, ground_mist.gdshader), ab Grafik Mittel
 		"haze": {"color": Color("7a1aa0"), "density": 0.075, "height": 0.22, "scale": 0.16},
 		"path": Color("2ef2e0"), "path_energy": 2.2,

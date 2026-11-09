@@ -25,6 +25,7 @@ const ROCK_MAX_HEIGHT := 0.75
 const ROCK_SHADER := preload("res://assets/shaders/rock.gdshader")
 ## Neon: Shader für Röhren (innen weiß, außen farbig) und das Gitter-Feld.
 const NEON_SHADER := preload("res://assets/shaders/neon.gdshader")
+const MARKER_RING_SHADER := preload("res://assets/shaders/marker_ring.gdshader")
 const NEON_FLOOR_SHADER := preload("res://assets/shaders/neon_floor.gdshader")
 ## Dasselbe Feld beleuchtet und deckend (FieldStyle "floor_lit", z. B. Marmor in Art déco).
 const LIT_FLOOR_SHADER := preload("res://assets/shaders/neon_floor_lit.gdshader")
@@ -751,6 +752,23 @@ func _process(delta: float) -> void:
 
 ## Wegpunkt als Neonröhren-Ring: nur die Kontur, mit überhelltem Kern, der im Glow leuchtet.
 func _add_marker(c: Vector2i, text: String, col: Color) -> void:
+	if FieldStyle.is_neon():
+		# Neon: flache Leuchtlinie wie das Feld (marker_ring.gdshader) statt einer Röhre
+		var flat := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2.ONE * 1.55
+		flat.mesh = plane
+		var fm := ShaderMaterial.new()
+		fm.shader = MARKER_RING_SHADER
+		fm.set_shader_parameter("color", col)
+		fm.set_shader_parameter("energy", style.marker_energy)
+		fm.render_priority = 1
+		flat.material_override = fm
+		flat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flat.position = to_3d(cell_center(c), 0.012 + ground_y(cell_center(c)))
+		_markers.add_child(flat)
+		_add_marker_label(c, text, col)
+		return
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.38
@@ -762,6 +780,10 @@ func _add_marker(c: Vector2i, text: String, col: Color) -> void:
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ring.position = to_3d(cell_center(c), 0.04 + ground_y(cell_center(c)))
 	_markers.add_child(ring)
+	_add_marker_label(c, text, col)
+
+
+func _add_marker_label(c: Vector2i, text: String, col: Color) -> void:
 	if text == "" or not marker_labels:
 		return
 	var label := Label3D.new()
