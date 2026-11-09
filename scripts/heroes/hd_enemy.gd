@@ -82,6 +82,8 @@ var cd_mult := 1.0             ## Abklingzeiten-Faktor (Bossphasen)
 var extra_abilities: Array = []
 var siege_t := 0.0
 var reward := 1.0              ## Faktor auf Gold (Blutmond)
+var boss_brain = null          ## Gemeinsamer Endboss-Ablauf; normale Gegner bleiben unverändert.
+var boss_visual: HdBossVisual
 var gold_free := false         ## kein Gold/keine Welle zählt (Sonderzonen, Prüfungen)
 
 
@@ -109,11 +111,18 @@ func setup(g, d: Dictionary, wave: int) -> void:
 	for aid in d.get("abilities", []):
 		ab_ready[aid] = now + game.rng.randf_range(1.5, 3.5)
 	_build_body()
+	if d.has("encounter"):
+		boss_brain = HdBossBrain.new(self)
 
 
 func _build_body() -> void:
 	_body = Node3D.new()
 	add_child(_body)
+	if def.has("visual"):
+		boss_visual = HdBossVisual.new()
+		_body.add_child(boss_visual)
+		boss_visual.build(def)
+		return
 	var s: Array = def.get("size", [1, 1, 1])
 	var size := Vector3(float(s[0]), float(s[1]), float(s[2]))
 	var col := Color(str(def.get("color", "777777")))
@@ -262,6 +271,10 @@ func taunt(taunter: Node3D, time: float) -> void:
 func step(dt: float, now: float) -> void:
 	if dead:
 		return
+	if boss_brain != null:
+		boss_brain.observe(now)
+		if boss_visual != null:
+			boss_visual.animate(now, phase, casting())
 	cc.update(now)
 	hit_flash = maxf(0.0, hit_flash - dt)
 	if knock_t > 0.0:
@@ -284,6 +297,8 @@ func step(dt: float, now: float) -> void:
 	_choose_target()
 	if _try_ability(now):
 		return
+	if boss_brain != null and now < gap_until:
+		return  # Tatsächliches Angriffsfenster: auch kein automatischer Nahkampfschlag.
 	if target:
 		var reach: float = float(def.attack.range) + radius + target.radius
 		var d := _flat_dist(target.position)
@@ -463,6 +478,8 @@ func _check_stuck(dt: float, now: float) -> void:
 # ---------------------------------------------------------------- Fähigkeiten
 
 func _try_ability(now: float) -> bool:
+	if boss_brain != null:
+		return boss_brain.try_cast(now)
 	if now < gap_until:
 		return false
 	for aid in abilities():
@@ -498,6 +515,8 @@ func start_cast(aid: String, now: float) -> void:
 		dir = facing
 	cast = {"id": aid, "ab": ab, "t": 0.0, "windup": float(ab.windup), "phase": "windup", "n": 0,
 		"rep": int(ab.get("repeat", 1)), "dir": dir.normalized(), "point": tpos, "tele": []}
+	if str(ab.kind) == "echo":
+		cast.memory = boss_brain.echo_points(int(cast.rep)) if boss_brain != null else [tpos]
 	_face(dir)
 	_make_teles()
 
@@ -508,11 +527,13 @@ func _make_teles() -> void:
 	var dir: Vector3 = cast.dir.rotated(Vector3.UP, deg_to_rad(float(ab.get("rotate", 0.0)) * n))
 	var teles: Array = []
 	match str(ab.kind):
-		"circle":
+		"circle", "echo":
 			var count := int(ab.get("count", 1))
 			for k in count:
-				var p: Vector3 = cast.point
-				if k > 0:
+				var p: Vector3 = cast.memory[mini(n, cast.memory.size() - 1)] if str(ab.kind) == "echo" else cast.point
+				if str(ab.get("pattern", "")) == "orbit":
+					p = position + dir.rotated(Vector3.UP, TAU * k / maxf(count, 1)) * float(ab.get("placement_radius", 7.0))
+				elif k > 0:
 					p += Vector3(game.rng.randf_range(-1, 1), 0, game.rng.randf_range(-1, 1)).normalized() * game.rng.randf_range(1.5, float(ab.get("scatter", 3.0)))
 				var t := HdTelegraph.circle(float(ab.radius))
 				t.position = p
@@ -532,7 +553,7 @@ func _make_teles() -> void:
 			t.position = position
 			t.aim(dir)
 			teles.append(t)
-		"skillshot":
+		"skillshot", "line":
 			var count := int(ab.get("count", 1))
 			var spread := float(ab.get("spread", 0.0))
 			for k in count:
@@ -553,18 +574,24 @@ func _make_teles() -> void:
 			teles.append(t)
 	for t in teles:
 		game.add_tele(t)
+		if boss_brain != null:
+			boss_brain.track(t)
 	cast.tele = teles
 	cast.cur_dir = dir
 
 
 ## Betäubt oder unterbrochen: Warnfläche weg, Cooldown bleibt (startete beim Ansetzen).
-func cancel_cast() -> void:
+func cancel_cast(silent := false) -> void:
 	for t in cast.get("tele", []):
 		if is_instance_valid(t):
 			t.queue_free()
 	cast = {}
 	casts_interrupted += 1
-	game.floater(position + Vector3(0, height() + 0.6, 0), tr("Unterbrochen"), UiTheme.CYAN)
+	_body.rotation.y = 0.0
+	if boss_brain != null:
+		boss_brain.recover(game.play_time)
+	if not silent:
+		game.floater(position + Vector3(0, height() + 0.6, 0), tr("Unterbrochen"), UiTheme.CYAN)
 
 
 func _step_cast(dt: float, now: float) -> void:
@@ -614,7 +641,7 @@ func _fire(_now: float) -> void:
 	var dmg := float(ab.get("damage", 0.0)) * out_mult()
 	var kind := str(ab.kind)
 	match kind:
-		"circle", "cone", "ring":
+		"circle", "echo", "cone", "ring", "line":
 			for t in cast.tele:
 				game.tele_hit(self, t, dmg, 0.0)
 				if kind == "circle" and float(ab.get("pool", 0.0)) > 0.0:
@@ -652,10 +679,16 @@ func _next_or_end() -> void:
 		cast.t = 0.0
 		cast.phase = "windup"
 		cast.windup = float(cast.ab.get("repeat_windup", cast.ab.windup))
-		if str(cast.ab.kind) == "circle":
+		if bool(cast.ab.get("retarget", str(cast.ab.kind) == "circle")):
 			var h = game.hero
 			if h and h.alive():
 				cast.point = h.position
+				if str(cast.ab.kind) != "circle":
+					var aim: Vector3 = h.position - position
+					aim.y = 0.0
+					cast.dir = aim.normalized() if aim.length_squared() > 0.01 else facing
 		_make_teles()
 	else:
 		cast = {}
+		if boss_brain != null:
+			boss_brain.recover(game.play_time)

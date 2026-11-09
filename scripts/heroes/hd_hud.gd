@@ -18,6 +18,7 @@ var _boss_panel: PanelContainer
 var _boss_name: Label
 var _boss_bar: ProgressBar
 var _boss_info: Label
+var _boss_move: Label
 var _name: Label
 var _hp_bar: ProgressBar
 var _hp_label: Label
@@ -141,8 +142,12 @@ func _build_boss() -> void:
 	v.add_child(row)
 	_boss_name = _label("", row, 15, UiTheme.GOLD, true)
 	_boss_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_boss_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_boss_info = _label("", row, 13, UiTheme.MUTED)
 	_boss_bar = _bar(v, UiTheme.MISSING, 14)
+	_boss_move = _label("", v, 13, UiTheme.TEXT)
+	_boss_move.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_boss_move.custom_minimum_size.x = 480
 	_boss_panel.visible = false
 
 
@@ -295,6 +300,12 @@ func refresh() -> void:
 			_boss_name.text += "  " + tr("Phase %d / %d") % [boss.phase + 1, phs.size() + 1]
 		_boss_bar.max_value = boss.max_hp
 		_boss_bar.value = boss.hp
+		_boss_move.visible = boss.boss_brain != null
+		if boss.boss_brain != null:
+			if boss.casting():
+				_boss_move.text = tr(str(boss.cast.ab.name)) + " · " + tr(str(boss.cast.ab.get("hint", "")))
+			else:
+				_boss_move.text = tr("Erholungsfenster") if game.play_time < boss.gap_until else tr(str(boss.def.theme))
 		if boss.cc.immune(game.play_time):
 			_boss_info.text = tr("CC-immun %d s") % ceili(boss.cc.immune_until - game.play_time)
 		else:

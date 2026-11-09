@@ -197,7 +197,9 @@ static func validate(spec: Variant) -> String:
 		return "length muss positiv sein"
 	if not spec.get("material", {}) is Dictionary:
 		return "material muss ein Objekt sein"
-	return ""
+	if spec.has("crest_foam") and not spec.crest_foam is bool:
+		return "crest_foam muss boolesch sein"
+	return WaterBank.validate(spec.get("banks", {}))
 
 
 static func _xz_ok(v: Variant) -> bool:
@@ -525,6 +527,10 @@ static func _regions(g: _Grid, pieces: Array, spec: Dictionary, width: float) ->
 		data.id = "%s_%s%d" % [name, kind, counter[kind]]
 		if not material.is_empty():
 			data.material = material.duplicate(true)
+		if spec.has("banks"):
+			data.banks = spec.banks.duplicate(true)
+		if spec.has("crest_foam"):
+			data.crest_foam = spec.crest_foam
 		out.append(data)
 	for k in pieces.size():
 		var piece: Dictionary = pieces[k]

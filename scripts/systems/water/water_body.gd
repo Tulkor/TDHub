@@ -27,6 +27,10 @@ var body_width := 1.0
 ## Grundrisse anderer Gewässer (lokal zu dieser Fläche): dort entsteht kein Uferschaum.
 var open_a := PackedVector4Array()
 var open_b := PackedVector4Array()
+var shore_left: Array[Vector3] = []
+var shore_right: Array[Vector3] = []
+var bank_mesh: MeshInstance3D
+var crest_foam: MeshInstance3D
 
 const MAX_OPEN := 16
 const HEIGHT_TOLERANCE := 0.35  ## Höhenabstand, ab dem Wasser nicht mehr als „angeschlossen“ gilt.
@@ -52,8 +56,13 @@ static func validate(data: Variant, geometry: Dictionary) -> String:
 	var kind := str(data.get("kind", ""))
 	if kind not in ["pool", "river", "waterfall"]:
 		return "kind muss pool, river oder waterfall sein"
+	if data.has("crest_foam") and not data.crest_foam is bool:
+		return "crest_foam muss boolesch sein"
 	if not data.get("material", {}) is Dictionary:
 		return "material muss ein Objekt sein"
+	var bank_error := WaterBank.validate(data.get("banks", {}))
+	if bank_error != "":
+		return bank_error
 	for key in NUMBERS + ["direction_degrees"]:
 		if data.get("material", {}).has(key):
 			var n = data.material[key]
@@ -212,6 +221,9 @@ func configure(data: Dictionary, appearance: Dictionary, geometry: Dictionary) -
 	material = ShaderMaterial.new()
 	surface.material_override = material
 	apply_quality(Display.quality)
+	if str(data.kind) == "waterfall" and bool(data.get("crest_foam", true)):
+		crest_foam = WaterCrest.build(self)
+		add_child(crest_foam)
 
 
 func apply_quality(quality: int) -> void:
@@ -241,6 +253,8 @@ func apply_quality(quality: int) -> void:
 
 func set_time(seconds: float) -> void:
 	material.set_shader_parameter("flow_time", seconds)
+	if crest_foam != null:
+		crest_foam.material_override.set_shader_parameter("flow_time", seconds)
 
 
 ## Ein Wasserfall schlägt hier auf: Schaumkern, Ringe und (bei Flüssen) eine Schaumschleppe flussab.
@@ -371,6 +385,8 @@ func _ribbon(points: Array, step: float) -> ArrayMesh:
 	path_length = distances[-1]
 	_samples = samples
 	_distances = distances
+	shore_left = left
+	shore_right = right
 	for i in range(samples.size() - 1):
 		var verts := [left[i], right[i], left[i + 1], right[i], right[i + 1], left[i + 1]]
 		var wa := sample_widths[i]

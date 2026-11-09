@@ -12,12 +12,16 @@ class GameFixture:
 	var systems := {}
 	var map: MapData
 	var region_override: Variant = null
+	var terrain: WaterRoute.Terrain
 
 	func system_mode() -> String:
 		return "gemtd"
 
 	func water_regions() -> Variant:
 		return region_override
+
+	func water_terrain() -> WaterRoute.Terrain:
+		return terrain
 
 
 func check(cond: bool, msg: String) -> void:
@@ -89,6 +93,15 @@ func _ready() -> void:
 		aer_max = maxf(aer_max, c.r)
 	check(aer_min < 0.01 and aer_max > 0.99, "Belüftung wächst mit der Fallgeschwindigkeit von 0 auf 1")
 	check(water.bodies[2].fall_speed > 1.0, "Fall-Textur läuft mit der Physik-Geschwindigkeit")
+	check(water.bodies[1].bank_mesh != null, "jeder Fluss erhält automatisch eine Böschung")
+	check(water.bodies[2].crest_foam != null, "Fallkante erhält übergreifenden Schaumbogen")
+	var crest_vertices: PackedVector3Array = water.bodies[2].crest_foam.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var upstream := false
+	var downstream := false
+	for v in crest_vertices:
+		upstream = upstream or v.z < 5.0
+		downstream = downstream or v.z > 5.0
+	check(upstream and downstream, "Kantenschaum überdeckt Fluss und Wasserfall beidseits der Naht")
 	var joined := WaterSystem._connect_flow([
 		{"kind": "waterfall", "points": [[0, 2, 0], [0, 0, 1]], "width": 1.0},
 		{"kind": "river", "points": [[0, 0, 1], [0, 0, 4]], "width": 1.0},
@@ -153,6 +166,7 @@ func _ready() -> void:
 	water.set_time(3.0)
 	water._process(0.5)
 	check(is_equal_approx(float(river.material.get_shader_parameter("flow_time")), 3.5), "gemeinsame Strömungsuhr wird an Materialien weitergegeben")
+	check(is_equal_approx(float(water.bodies[2].crest_foam.material_override.get_shader_parameter("flow_time")), 3.5), "Kantenschaum verwendet dieselbe pausierbare Strömungsuhr")
 	water.set_process(true)
 	get_tree().paused = true
 	var time_before := water.clock
@@ -171,6 +185,7 @@ func _ready() -> void:
 	water.rebuild()
 	check(water.bodies.is_empty(), "Modus kann Wassersystem abschalten")
 	mode["system_cfg"] = original
+	await _banks()
 	Display.quality = quality_before
 	Display.apply_quality()
 	owner_game.queue_free()
@@ -178,3 +193,78 @@ func _ready() -> void:
 	await get_tree().process_frame
 	print("\n%s: %d Fehler" % ["BESTANDEN" if failures == 0 else "FEHLGESCHLAGEN", failures])
 	get_tree().quit(1 if failures > 0 else 0)
+
+
+func _banks() -> void:
+	var owner_game := GameFixture.new()
+	add_child(owner_game)
+	var water: WaterSystem = SystemHost.attach(owner_game, "gemtd", ["water"]).water
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var entry := {"kind": "river", "points": [[0, 1, 0], [0, 1, 5]], "width": 2.0}
+	check(water.set_regions([entry]).is_empty(), "erhöhter Fluss braucht keine manuell gesetzten Ufer")
+	var bank := water.bodies[0].bank_mesh
+	var vertices: PackedVector3Array = bank.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var bottom := INF
+	var top := -INF
+	var source_cap := false
+	var finite := true
+	for p in vertices:
+		bottom = minf(bottom, p.y)
+		top = maxf(top, p.y)
+		source_cap = source_cap or p.z < -0.5
+		finite = finite and p.is_finite()
+	check(bottom < 0 and top > 1.1 and finite, "Böschung verbindet Boden und erhöhte Uferkrone mit endlicher Geometrie")
+	check(source_cap, "freie Flussquelle erhält abgerundeten Erdabschluss")
+	check(not bank.is_processing(), "Ufer brauchen keinen laufenden Prozess")
+	var previous := water.bodies[0]
+	var invalid := entry.duplicate(true)
+	invalid.banks = {"width": -1}
+	check(not water.set_regions([invalid]).is_empty() and water.bodies[0] == previous, "ungültiges Uferupdate erhält bestehende Landschaft")
+	owner_game.terrain = WaterRoute.Terrain.new()
+	owner_game.terrain.height = func(x, _z): return -0.2 + x * 0.1
+	water.set_regions([entry])
+	vertices = water.bodies[0].bank_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var follows_ground := true
+	var feet := 0
+	for p in vertices:
+		if p.y < -0.21 + p.x * 0.1:
+			feet += 1
+			follows_ground = follows_ground and is_equal_approx(p.y, -0.225 + p.x * 0.1)
+	check(follows_ground and feet > 0, "äußere Böschung folgt dem Höhenfeld statt über dem Gelände zu schweben")
+	entry.banks = {"enabled": false}
+	water.set_regions([entry])
+	check(water.bodies[0].bank_mesh == null, "Karte kann automatisch erzeugte Ufer abschalten")
+	water._mode_rules.banks = {"enabled": true, "height": 0.3}
+	water.set_regions([entry])
+	check(water.bodies[0].bank_mesh != null and water.bank_options(entry).height == 0.3, "explizite Modus-Uferregeln gewinnen gegen Kartenwerte")
+	water._mode_rules.clear()
+	entry.banks = {"style": "natural"}
+	water.set_regions([entry])
+	bank = water.bodies[0].bank_mesh
+	var before: PackedVector3Array = bank.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var low := INF
+	var high := -INF
+	for p in before:
+		if p.y > 1:
+			low = minf(low, p.y)
+			high = maxf(high, p.y)
+	check(high - low > 0.08, "Naturufer enthält niedrigere Stellen und kleine Erdhügel")
+	check(bank.get_node_or_null("BankStones") != null, "Naturufer erhält gebündelt gezeichnete Steine")
+	water.set_regions([entry])
+	check(water.bodies[0].bank_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] == before, "Uferunregelmäßigkeiten bleiben bei Neuaufbau deterministisch")
+	var saved_skin := UiTheme.skin
+	UiTheme.use_skin(UiTheme.POSTER)
+	entry.banks = {}
+	water.set_regions([entry])
+	bank = water.bodies[0].bank_mesh
+	check(bank.get_meta("bank_style") == "city" and bank.material_override is ShaderMaterial, "Stadt-Tileset wählt automatisch Pflastergehwege")
+	check(bank.get_node_or_null("BankStones") == null, "Stadtgehwege enthalten keine zufälligen Ufersteine")
+	check(bank.material_override.get_shader_parameter("cobble_tex") != null, "Pflastergehweg verwendet vorhandene Pflastersteintextur")
+	water._mode_rules.banks = {"style": "natural"}
+	check(water.bank_options(entry).style == "natural", "explizite Modus-Regel gewinnt gegen automatische Tileset-Wahl")
+	UiTheme.use_skin(saved_skin)
+	water.clear()
+	check(water.bodies.is_empty() and water.layer == null, "Wasser entfernen räumt auch Böschungen auf")
+	owner_game.queue_free()
+	await get_tree().process_frame

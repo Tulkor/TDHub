@@ -1,0 +1,654 @@
+{
+	"_info": "Fünf eigenständige Endboss-Varianten für Welle 40. Gemeinsame Datenbasis, phasenabhängige Rotationen und prozedurale Silhouetten. Originale Designs, inspiriert von Raid-Telegraphen, ARPG-Flächenkontrolle und Boss-Kombos.",
+	"defaults": {
+		"rank": "boss",
+		"armor": 10,
+		"speed": 2.6,
+		"aggro": 24,
+		"leash": 34,
+		"attack": {
+			"damage": 34,
+			"interval": 1.8,
+			"range": 3.2
+		},
+		"xp": 2200,
+		"lives": 50,
+		"land": true,
+		"ignore_buildings": true,
+		"siege": {
+			"interval": 8,
+			"lives": 1
+		},
+		"encounter": {
+			"recovery": 1.25,
+			"phase_pause": 2.0,
+			"max_adds": 8,
+			"max_pools": 12,
+			"max_projectiles": 72
+		}
+	},
+	"add_defaults": {
+		"rank": "normal",
+		"hp": 135,
+		"armor": 2,
+		"speed": 3.5,
+		"radius": 0.5,
+		"size": [0.9, 1.2, 0.9],
+		"attack": {
+			"damage": 9,
+			"interval": 1.6,
+			"range": 1.2
+		},
+		"aggro": 16,
+		"leash": 30,
+		"xp": 0,
+		"lives": 0,
+		"abilities": []
+	},
+	"final_bosses": ["varkhun", "nerathis", "morvath", "astrael", "zharok"],
+	"abilities": {
+		"richter_hiebe": {
+			"name": "Dreifaches Urteil",
+			"hint": "Wechsle hinter die nächsten Hiebe.",
+			"kind": "cone",
+			"cast_range": 10,
+			"range": 9,
+			"angle": 80,
+			"windup": 1.4,
+			"cooldown": 13,
+			"damage": 175,
+			"repeat": 3,
+			"repeat_windup": 1.0,
+			"rotate": 70
+		},
+		"richter_ketten": {
+			"name": "Kreuz der Ketten",
+			"hint": "Verlasse die markierten Kettenbahnen.",
+			"kind": "line",
+			"cast_range": 21,
+			"length": 20,
+			"width": 1.8,
+			"count": 2,
+			"spread": 90,
+			"windup": 1.6,
+			"cooldown": 16,
+			"damage": 180,
+			"repeat": 2,
+			"repeat_windup": 1.1,
+			"rotate": 45
+		},
+		"richter_urteil": {
+			"name": "Richterspruch",
+			"hint": "Der Bereich direkt am Richter bleibt frei.",
+			"kind": "ring",
+			"cast_range": 22,
+			"inner": 3.5,
+			"radius": 12,
+			"windup": 2.0,
+			"cooldown": 18,
+			"damage": 220
+		},
+		"richter_ansturm": {
+			"name": "Kettenjagd",
+			"hint": "Zwei Anstürme: nach jedem neu ausweichen.",
+			"kind": "charge",
+			"cast_range": 20,
+			"min_range": 3,
+			"length": 12,
+			"width": 2.6,
+			"windup": 1.5,
+			"cooldown": 17,
+			"damage": 180,
+			"knockdown": 0.5,
+			"repeat": 2,
+			"repeat_windup": 1.1,
+			"retarget": true
+		},
+		"richter_ruf": {
+			"name": "Eiserne Gefolgschaft",
+			"hint": "Beseitige die Diener, bevor die Ketten kommen.",
+			"kind": "summon",
+			"cast_range": 24,
+			"radius": 4,
+			"windup": 2.4,
+			"cooldown": 25,
+			"summon": "richter_diener",
+			"count": 3
+		},
+		"richter_ofen": {
+			"name": "Die letzte Schmiede",
+			"hint": "Zwischen den glühenden Feldern bleiben Lücken.",
+			"kind": "circle",
+			"cast_range": 24,
+			"radius": 2.3,
+			"windup": 2.0,
+			"cooldown": 22,
+			"damage": 165,
+			"count": 5,
+			"pattern": "orbit",
+			"placement_radius": 7,
+			"pool": 4,
+			"pool_dps": 24
+		},
+		"flut_wellen": {
+			"name": "Dreifache Brandung",
+			"hint": "Laufe mit den nach außen wandernden Wellen.",
+			"kind": "ring",
+			"cast_range": 22,
+			"inner": 2.8,
+			"radius": 5.5,
+			"windup": 1.5,
+			"cooldown": 15,
+			"damage": 170,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"grow": 2.5
+		},
+		"flut_geysire": {
+			"name": "Geysirjagd",
+			"hint": "Die Geysire folgen deinen letzten Positionen.",
+			"kind": "circle",
+			"cast_range": 23,
+			"radius": 2.4,
+			"windup": 1.6,
+			"cooldown": 14,
+			"damage": 160,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"retarget": true,
+			"pool": 3,
+			"pool_dps": 22
+		},
+		"flut_faecher": {
+			"name": "Splitter der Tiefsee",
+			"hint": "Nutze die Lücken im langsamen Geschossfächer.",
+			"kind": "skillshot",
+			"cast_range": 23,
+			"length": 23,
+			"width": 0.7,
+			"speed": 13,
+			"windup": 1.5,
+			"cooldown": 13,
+			"damage": 165,
+			"count": 7,
+			"spread": 17
+		},
+		"flut_kreuz": {
+			"name": "Gezeitenkreuz",
+			"hint": "Das zweite Kreuz ist um eine Achteldrehung versetzt.",
+			"kind": "line",
+			"cast_range": 24,
+			"length": 20,
+			"width": 1.6,
+			"count": 4,
+			"spread": 90,
+			"windup": 1.7,
+			"cooldown": 18,
+			"damage": 185,
+			"repeat": 2,
+			"repeat_windup": 1.2,
+			"rotate": 45
+		},
+		"flut_wirbel": {
+			"name": "Wandernder Mahlstrom",
+			"hint": "Halte Abstand, solange der Mahlstrom wandert.",
+			"kind": "whirl",
+			"cast_range": 9,
+			"radius": 4,
+			"windup": 1.6,
+			"cooldown": 21,
+			"duration": 3.0,
+			"tick": 0.75,
+			"damage": 42,
+			"speed_mult": 0.55
+		},
+		"flut_ertrinken": {
+			"name": "Auge der Sturmflut",
+			"hint": "Suche das freie Auge direkt bei Nerathis.",
+			"kind": "ring",
+			"cast_range": 24,
+			"inner": 4,
+			"radius": 14,
+			"windup": 2.2,
+			"cooldown": 23,
+			"damage": 225
+		},
+		"dorn_faecher": {
+			"name": "Dornenlitanei",
+			"hint": "Der Dornenchor dreht sich in drei Schritten.",
+			"kind": "cone",
+			"cast_range": 16,
+			"range": 11,
+			"angle": 65,
+			"windup": 1.6,
+			"cooldown": 15,
+			"damage": 175,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"rotate": 120
+		},
+		"dorn_sporen": {
+			"name": "Sporensaat",
+			"hint": "Lege die Sporenfelder abseits deines Fluchtwegs ab.",
+			"kind": "circle",
+			"cast_range": 23,
+			"radius": 2.5,
+			"windup": 1.7,
+			"cooldown": 17,
+			"damage": 145,
+			"count": 2,
+			"scatter": 3.5,
+			"repeat": 2,
+			"repeat_windup": 1.2,
+			"pool": 5,
+			"pool_dps": 27
+		},
+		"dorn_bluete": {
+			"name": "Totenblüte",
+			"hint": "Im Inneren der Blüte bleibt Platz.",
+			"kind": "ring",
+			"cast_range": 23,
+			"inner": 3.2,
+			"radius": 11,
+			"windup": 1.9,
+			"cooldown": 19,
+			"damage": 200
+		},
+		"dorn_ruf": {
+			"name": "Chor der Verfaulten",
+			"hint": "Beseitige die Sporenwichte.",
+			"kind": "summon",
+			"cast_range": 24,
+			"radius": 4,
+			"windup": 2.5,
+			"cooldown": 26,
+			"summon": "sporenwicht",
+			"count": 4
+		},
+		"dorn_wurzeln": {
+			"name": "Wurzelgeflecht",
+			"hint": "Wechsle in eine freie Wurzelgasse.",
+			"kind": "line",
+			"cast_range": 23,
+			"length": 18,
+			"width": 1.6,
+			"count": 3,
+			"spread": 55,
+			"windup": 1.7,
+			"cooldown": 17,
+			"damage": 170,
+			"repeat": 2,
+			"repeat_windup": 1.2,
+			"rotate": 25
+		},
+		"dorn_garten": {
+			"name": "Garten des letzten Atems",
+			"hint": "Halte die Mitte und die Lücken zwischen den Blüten frei.",
+			"kind": "circle",
+			"cast_range": 24,
+			"radius": 2.2,
+			"count": 6,
+			"pattern": "orbit",
+			"placement_radius": 8,
+			"windup": 2.1,
+			"cooldown": 24,
+			"damage": 170,
+			"pool": 5,
+			"pool_dps": 25
+		},
+		"zeit_echo": {
+			"name": "Nachhall vergangener Schritte",
+			"hint": "Meide deine früheren Positionen; die Warnorte bleiben fest.",
+			"kind": "echo",
+			"cast_range": 24,
+			"radius": 2.4,
+			"windup": 1.7,
+			"cooldown": 16,
+			"damage": 170,
+			"repeat": 3,
+			"repeat_windup": 1.1
+		},
+		"zeit_zeiger": {
+			"name": "Zeigerbruch",
+			"hint": "Die Uhrzeiger wandern in drei Sprüngen weiter.",
+			"kind": "line",
+			"cast_range": 24,
+			"length": 21,
+			"width": 1.5,
+			"count": 2,
+			"spread": 90,
+			"windup": 1.6,
+			"cooldown": 17,
+			"damage": 180,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"rotate": 30
+		},
+		"zeit_splitter": {
+			"name": "Sekundensplitter",
+			"hint": "Durchquere die Lücken zwischen den langsamen Splittern.",
+			"kind": "skillshot",
+			"cast_range": 24,
+			"length": 23,
+			"width": 0.7,
+			"speed": 12,
+			"windup": 1.5,
+			"cooldown": 13,
+			"damage": 165,
+			"count": 5,
+			"spread": 22
+		},
+		"zeit_ringe": {
+			"name": "Rücklauf",
+			"hint": "Die Ringe laufen nach innen statt nach außen.",
+			"kind": "ring",
+			"cast_range": 24,
+			"inner": 7,
+			"radius": 11,
+			"windup": 1.7,
+			"cooldown": 19,
+			"damage": 185,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"grow": -2.3
+		},
+		"zeit_zifferblatt": {
+			"name": "Zerbrochenes Zifferblatt",
+			"hint": "Die äußeren Felder versetzen sich nach dem ersten Schlag.",
+			"kind": "circle",
+			"cast_range": 24,
+			"radius": 2,
+			"count": 6,
+			"pattern": "orbit",
+			"placement_radius": 7,
+			"windup": 1.8,
+			"cooldown": 20,
+			"damage": 165,
+			"repeat": 2,
+			"repeat_windup": 1.2,
+			"rotate": 30,
+			"retarget": false
+		},
+		"zeit_riss": {
+			"name": "Fünf verlorene Augenblicke",
+			"hint": "Fünf alte Positionen werden nacheinander getroffen.",
+			"kind": "echo",
+			"cast_range": 24,
+			"radius": 2.7,
+			"windup": 1.8,
+			"cooldown": 24,
+			"damage": 180,
+			"repeat": 5,
+			"repeat_windup": 1.0
+		},
+		"schlund_kreuz": {
+			"name": "Sternenbruch",
+			"hint": "Wechsle nach dem ersten Kreuz in die neue Lücke.",
+			"kind": "line",
+			"cast_range": 24,
+			"length": 22,
+			"width": 1.9,
+			"count": 4,
+			"spread": 90,
+			"windup": 1.7,
+			"cooldown": 17,
+			"damage": 185,
+			"repeat": 2,
+			"repeat_windup": 1.2,
+			"rotate": 45
+		},
+		"schlund_jagd": {
+			"name": "Blutige Sternensaat",
+			"hint": "Die Flächen folgen dir dreimal und bleiben kurz liegen.",
+			"kind": "circle",
+			"cast_range": 24,
+			"radius": 2.5,
+			"windup": 1.6,
+			"cooldown": 16,
+			"damage": 155,
+			"repeat": 3,
+			"repeat_windup": 1.1,
+			"pool": 3,
+			"pool_dps": 25
+		},
+		"schlund_sterne": {
+			"name": "Zähne des Firmaments",
+			"hint": "Zwischen den Sternenzähnen sind sichere Bahnen.",
+			"kind": "skillshot",
+			"cast_range": 25,
+			"length": 25,
+			"width": 0.7,
+			"speed": 14,
+			"windup": 1.7,
+			"cooldown": 15,
+			"damage": 170,
+			"count": 9,
+			"spread": 18
+		},
+		"schlund_maul": {
+			"name": "Das offene Maul",
+			"hint": "Der sichere Kern liegt direkt am Boss.",
+			"kind": "ring",
+			"cast_range": 25,
+			"inner": 4,
+			"radius": 14,
+			"windup": 2.2,
+			"cooldown": 22,
+			"damage": 225
+		},
+		"schlund_ruf": {
+			"name": "Brut aus dem Nichts",
+			"hint": "Räume die Schlundlinge aus dem Kampfbereich.",
+			"kind": "summon",
+			"cast_range": 25,
+			"radius": 4,
+			"windup": 2.5,
+			"cooldown": 26,
+			"summon": "schlundling",
+			"count": 3
+		},
+		"schlund_ende": {
+			"name": "Vier letzte Horizonte",
+			"hint": "Der Schlund schlägt viermal im Kreis.",
+			"kind": "cone",
+			"cast_range": 23,
+			"range": 14,
+			"angle": 80,
+			"windup": 1.7,
+			"cooldown": 24,
+			"damage": 195,
+			"repeat": 4,
+			"repeat_windup": 1.1,
+			"rotate": 90
+		}
+	},
+	"bosses": [
+		{
+			"id": "varkhun",
+			"name": "Varkhun, der Kettenrichter",
+			"title": "Kettenschmiede",
+			"theme": "Kettenschmiede",
+			"hp": 11800,
+			"size": [3.8, 4.8, 3.4],
+			"radius": 1.9,
+			"color": "342c2b",
+			"visual": {
+				"theme": "forge",
+				"accent": "ff8b38"
+			},
+			"abilities": ["richter_hiebe", "richter_ketten", "richter_urteil"],
+			"rotation": ["richter_hiebe", "richter_ketten", "richter_urteil"],
+			"phases": [
+				{
+					"at": 0.65,
+					"name": "Zweite Phase: Die Ketten brechen",
+					"add": ["richter_ansturm", "richter_ruf"],
+					"cooldown": 0.9,
+					"rotation": ["richter_ansturm", "richter_hiebe", "richter_urteil", "richter_ruf", "richter_ketten"],
+					"recovery": 1.1
+				},
+				{
+					"at": 0.3,
+					"name": "Letzte Phase: Das Urteil brennt",
+					"add": ["richter_ofen"],
+					"cooldown": 0.9,
+					"rotation": ["richter_ofen", "richter_urteil", "richter_ansturm", "richter_hiebe", "richter_ruf", "richter_ketten"],
+					"recovery": 0.95
+				}
+			]
+		},
+		{
+			"id": "nerathis",
+			"name": "Nerathis, Königin der Gezeiten",
+			"title": "Sturmflut",
+			"theme": "Sturmflut",
+			"hp": 10800,
+			"size": [3.4, 4.8, 3.2],
+			"radius": 1.8,
+			"color": "20505c",
+			"visual": {
+				"theme": "tide",
+				"accent": "76f3e0"
+			},
+			"abilities": ["flut_wellen", "flut_geysire", "flut_faecher"],
+			"rotation": ["flut_wellen", "flut_geysire", "flut_faecher"],
+			"phases": [
+				{
+					"at": 0.65,
+					"name": "Zweite Phase: Die Flut steigt",
+					"add": ["flut_kreuz", "flut_wirbel"],
+					"cooldown": 0.9,
+					"rotation": ["flut_kreuz", "flut_wellen", "flut_faecher", "flut_wirbel", "flut_geysire"],
+					"recovery": 1.1
+				},
+				{
+					"at": 0.3,
+					"name": "Letzte Phase: Im Auge der Sturmflut",
+					"add": ["flut_ertrinken"],
+					"cooldown": 0.9,
+					"rotation": ["flut_ertrinken", "flut_faecher", "flut_kreuz", "flut_wellen", "flut_wirbel", "flut_geysire"],
+					"recovery": 0.95
+				}
+			]
+		},
+		{
+			"id": "morvath",
+			"name": "Morvath, der Dornenchor",
+			"title": "Dornenfäulnis",
+			"theme": "Dornenfäulnis",
+			"hp": 12000,
+			"size": [4.5, 4.8, 4],
+			"radius": 2.0,
+			"color": "455033",
+			"visual": {
+				"theme": "rot",
+				"accent": "b7e765"
+			},
+			"abilities": ["dorn_faecher", "dorn_sporen", "dorn_bluete"],
+			"rotation": ["dorn_faecher", "dorn_sporen", "dorn_bluete"],
+			"phases": [
+				{
+					"at": 0.65,
+					"name": "Zweite Phase: Der Chor erwacht",
+					"add": ["dorn_ruf", "dorn_wurzeln"],
+					"cooldown": 0.9,
+					"rotation": ["dorn_ruf", "dorn_faecher", "dorn_bluete", "dorn_wurzeln", "dorn_sporen"],
+					"recovery": 1.1
+				},
+				{
+					"at": 0.3,
+					"name": "Letzte Phase: Alles wird Dünger",
+					"add": ["dorn_garten"],
+					"cooldown": 0.9,
+					"rotation": ["dorn_garten", "dorn_bluete", "dorn_ruf", "dorn_faecher", "dorn_wurzeln", "dorn_sporen"],
+					"recovery": 0.95
+				}
+			]
+		},
+		{
+			"id": "astrael",
+			"name": "Astrael, Hüter der gebrochenen Stunde",
+			"title": "Gebrochene Zeit",
+			"theme": "Gebrochene Zeit",
+			"hp": 10400,
+			"size": [3.8, 4.8, 3.8],
+			"radius": 1.8,
+			"color": "383653",
+			"visual": {
+				"theme": "time",
+				"accent": "f1ca75"
+			},
+			"abilities": ["zeit_echo", "zeit_zeiger", "zeit_splitter"],
+			"rotation": ["zeit_echo", "zeit_zeiger", "zeit_splitter"],
+			"phases": [
+				{
+					"at": 0.65,
+					"name": "Zweite Phase: Der Zeiger läuft zurück",
+					"add": ["zeit_ringe", "zeit_zifferblatt"],
+					"cooldown": 0.9,
+					"rotation": ["zeit_ringe", "zeit_echo", "zeit_splitter", "zeit_zifferblatt", "zeit_zeiger"],
+					"recovery": 1.1
+				},
+				{
+					"at": 0.3,
+					"name": "Letzte Phase: Die Stunde zerbricht",
+					"add": ["zeit_riss"],
+					"cooldown": 0.9,
+					"rotation": ["zeit_riss", "zeit_splitter", "zeit_ringe", "zeit_echo", "zeit_zifferblatt", "zeit_zeiger"],
+					"recovery": 0.95
+				}
+			]
+		},
+		{
+			"id": "zharok",
+			"name": "Zharok, Herz der Finsternis",
+			"title": "Kosmischer Schlund",
+			"theme": "Kosmischer Schlund",
+			"hp": 12800,
+			"size": [4.6, 5.2, 4.2],
+			"radius": 2.2,
+			"color": "261b32",
+			"visual": {
+				"theme": "void",
+				"accent": "ff4d73"
+			},
+			"abilities": ["schlund_kreuz", "schlund_jagd", "schlund_sterne"],
+			"rotation": ["schlund_kreuz", "schlund_jagd", "schlund_sterne"],
+			"phases": [
+				{
+					"at": 0.65,
+					"name": "Zweite Phase: Der Himmel blutet",
+					"add": ["schlund_maul", "schlund_ruf"],
+					"cooldown": 0.9,
+					"rotation": ["schlund_maul", "schlund_kreuz", "schlund_sterne", "schlund_ruf", "schlund_jagd"],
+					"recovery": 1.1
+				},
+				{
+					"at": 0.3,
+					"name": "Letzte Phase: Jenseits des letzten Horizonts",
+					"add": ["schlund_ende"],
+					"cooldown": 0.9,
+					"rotation": ["schlund_ende", "schlund_sterne", "schlund_maul", "schlund_kreuz", "schlund_ruf", "schlund_jagd"],
+					"recovery": 0.95
+				}
+			]
+		}
+	],
+	"adds": [
+		{
+			"id": "richter_diener",
+			"name": "Kettendiener",
+			"color": "755948"
+		},
+		{
+			"id": "sporenwicht",
+			"name": "Sporenwicht",
+			"color": "729446"
+		},
+		{
+			"id": "schlundling",
+			"name": "Schlundling",
+			"color": "813b65"
+		}
+	]
+}

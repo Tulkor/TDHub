@@ -10,6 +10,7 @@ extends Node
 ##                           --weit Kamera weit weg (ganze Karte), --shop[=grund|ruest|rezept|holz|tore] Shop offen,
 ##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
 ##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
+##                           --endboss=varkhun|nerathis|morvath|astrael|zharok feste Endboss-Variante in Welle 40
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
 ##   --reiter=X              (mit --seite=profile) overview, history oder ein Modus (gemtd, eeve, maul, youtd …);
 ##   --beispielprofil        Profil mit ausgedachten Runs aller Modi füllen (Profilseite ansehen)
@@ -535,6 +536,10 @@ func _prepare_heroes(game: Node) -> void:
 		HdTelegraph.outline = int(opts.umriss)
 	if opts.has("gold"):
 		game.shop.add_gold(int(opts.gold))
+	if opts.has("endboss"):
+		game.force_final_boss = str(opts.endboss)
+		game.final_boss_id = ""
+		opts["boss"] = "40"
 	if opts.has("boss"):
 		game.spawn_queue.clear()
 		game.hero.add_xp(4000.0)

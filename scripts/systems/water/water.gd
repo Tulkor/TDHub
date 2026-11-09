@@ -215,6 +215,18 @@ func appearance(region: Dictionary) -> Dictionary:
 	return SystemHost.cascade(out, _mode_rules.get("styles", {}).get(kind, {}))
 
 
+func bank_options(region: Dictionary) -> Dictionary:
+	var out := SystemHost.cascade(cfg.get("banks", {}), region.get("banks", {}))
+	out = SystemHost.cascade(out, _mode_rules.get("banks", {}))
+	if str(out.get("style", "auto")) == "auto":
+		var style: Dictionary = FieldStyle.current()
+		var board = game.get("board") if "board" in game else null
+		if board != null and "style" in board and board.style is Dictionary:
+			style = board.style
+		out.style = str(style.get("water_bank_style", "natural"))
+	return out
+
+
 ## Transaktional: bei ungültigen Daten bleiben die bisherigen Flächen erhalten.
 func set_regions(regions: Variant) -> PackedStringArray:
 	last_errors = validate_regions(regions, cfg.get("geometry", {}), int(cfg.get("max_bodies", 64)))
@@ -225,6 +237,9 @@ func set_regions(regions: Variant) -> PackedStringArray:
 			var error := WaterBody.validate(resolved, cfg.get("geometry", {}))
 			if error != "":
 				last_errors.append("water[%d]: %s" % [i, error])
+			var bank_error := WaterBank.validate(bank_options(resolved))
+			if bank_error != "":
+				last_errors.append("water[%d]: %s" % [i, bank_error])
 	if not last_errors.is_empty():
 		return last_errors
 	_clear_layer()
@@ -263,6 +278,15 @@ func set_regions(regions: Variant) -> PackedStringArray:
 				by_index[j].add_impact(bottom, float(fall.get("width", 2.0)) * 0.6)
 				break
 	# Wo Wasser an Wasser grenzt, gibt es kein Ufer und damit keinen Uferschaum.
+	var terrain = hook("water_terrain", [], null)
+	var ground := Callable()
+	if terrain is WaterRoute.Terrain:
+		ground = terrain.ground
+	var fall_ends: Array = []
+	for region in built:
+		if str(region.kind) == "waterfall":
+			fall_ends.append(WaterBody.vec(region.points[0]))
+			fall_ends.append(WaterBody.vec(region.points[-1]))
 	for body in bodies:
 		if str(body.definition.kind) == "waterfall":
 			continue
@@ -271,6 +295,10 @@ func set_regions(regions: Variant) -> PackedStringArray:
 			if other != body:
 				others.append_array(WaterBody.footprints_of(other.definition))
 		body.set_open_neighbors(others)
+		if str(body.definition.kind) == "river":
+			body.bank_mesh = WaterBank.build(body, bank_options(body.definition), ground, others, fall_ends)
+			if body.bank_mesh != null:
+				body.add_child(body.bank_mesh)
 	refresh_quality()
 	set_process(true)
 	return last_errors

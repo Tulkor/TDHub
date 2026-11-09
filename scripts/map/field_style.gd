@@ -129,6 +129,7 @@ const STYLES := {
 		},
 	},
 	DECO: {
+		"water_bank_style": "city",
 		"ground_alpha": 0.0,
 		"floor_lit": true,
 		"floor": {
@@ -189,6 +190,7 @@ const STYLES := {
 		},
 	},
 	POSTER: {
+		"water_bank_style": "city",
 		"ground_alpha": 1.0,
 		"ground_textures": POSTER_TEXTURES,
 		"ground": {

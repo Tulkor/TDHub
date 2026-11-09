@@ -29,7 +29,7 @@ try {
     $env:JOBS = [string]$Jobs
     $env:LOG_DIR = (Join-Path $repo '.godot/test-logs').Replace('\', '/')
     New-Item -ItemType Directory -Force -Path $env:APPDATA | Out-Null
-    if ($Tool -eq 'tools/run_tests.sh') {
+    if ($Tool -in @('tools/run_tests.sh', 'tools/prs.sh')) {
         $ToolArgs = @($ToolArgs | ForEach-Object { $_ -split ',' })
     }
     $bootstrap = 'python3() { "$TDHUB_PYTHON" -X utf8 "$@"; }; export -f python3; bash "$@"'

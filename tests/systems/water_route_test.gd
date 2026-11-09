@@ -137,6 +137,9 @@ func _ready() -> void:
 	var pool_entry := {"kind": "pool", "center": [5, 0, 5], "size": [2, 2]}
 	var expanded := WaterRoute.expand([pool_entry, {"kind": "stream", "source": [1.0, 15.0], "dir": [1, 0]}], flat)
 	check(expanded.regions[0] == pool_entry and expanded.regions.size() >= 2 and expanded.errors.is_empty(), "expand ersetzt nur Läufe")
+	var with_banks := WaterRoute.resolve({"kind": "stream", "source": [1, 15], "dir": [1, 0], "length": 4, "banks": {"height": 0.25}, "crest_foam": false}, flat)
+	check(not with_banks.regions.is_empty() and with_banks.regions.all(func(r): return r.get("banks", {}).get("height") == 0.25 and r.get("crest_foam") == false), "Lauf vererbt Ufer- und Kantenschaumregeln an erzeugte Gewässer")
+	check(WaterRoute.validate({"kind": "stream", "source": [1, 1], "banks": {"width": -1}}) != "", "ungültige Böschung wird vor der Laufsuche abgelehnt")
 
 	print("\n%s: %d Fehler" % ["BESTANDEN" if failures == 0 else "FEHLGESCHLAGEN", failures])
 	get_tree().quit(1 if failures > 0 else 0)

@@ -8,6 +8,7 @@
 	"depth": true,
 	"refraction": true,
 	"geometry": {"step": 0.5, "max_segments": 2048},
+	"banks": {"enabled": true, "style": "auto", "width": 0.9, "height": 0.16, "depth": 0.35, "ground_height": 0.0, "variation": 0.75, "rocks": true, "city_width": 1.35, "soil_color": "66523f", "grass_color": "65704a"},
 	"defaults": {
 		"shallow_color": "#258c96b8", "deep_color": "#07364de6", "foam_color": "#d9f5f0d9",
 		"speed": 0.65, "tiling": 0.7, "normal_strength": 0.7, "wave_height": 0.025,

@@ -12,6 +12,7 @@
   "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "systeme_pruefen", "skripte"],
   "regeln": [
     ["tests/bereiche.json", []],
+    ["tools/heroes/*", ["bossdata", "heroesboss"]],
     ["tools/water/*", ["watertextures", "syswater"]],
     ["assets/textures/water/*", ["watertextures", "syswater"]],
     ["tests/lib/tower_probe.gd", ["towgemtd", "toweeve", "towrg", "towmaul"]],
@@ -58,6 +59,7 @@
     ["scenes/rg_*", ["randgruppen"]],
 
     ["scripts/heroes/*", ["heroes"]],
+    ["data/heroes_bosse.json", ["heroes", "bossdata"]],
     ["data/heroes*.json", ["heroes"]],
     ["scenes/heroes_*", ["heroes"]],
 

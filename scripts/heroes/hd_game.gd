@@ -27,6 +27,8 @@ var hero_list: Array = []       ## ids in Anzeige-Reihenfolge
 var gadget_defs: Dictionary = {}  ## Zix' Baukasten
 var hero_id := "torvik"         ## gewählter Held (user://heroes.cfg)
 var zix_kit: Array = []         ## Zix: 3 Gebäude auf Q W E
+var force_final_boss := ""     ## Optionaler fester Endboss für Tests/Vorschauen.
+var final_boss_id := ""        ## Einmal gewählte Variante; Ansage und Spawn bleiben identisch.
 var force_hero := ""            ## Tests/Bilder/Sim: diesen Helden statt der gespeicherten Wahl
 var ability_defs: Dictionary = {}
 var enemy_defs: Dictionary = {}
@@ -108,6 +110,7 @@ func _init() -> void:
 func _ready() -> void:
 	UiTheme.use_skin(UiTheme.ARCADE)
 	cfg = Database.load_json(DATA)
+	HdBossCatalog.install(cfg)
 	var hd: Dictionary = Database.load_json(HEROES)
 	for h in hd.heroes:
 		hero_defs[str(h.id)] = h
@@ -594,6 +597,7 @@ func _physics_process(dt: float) -> void:
 # ---------------------------------------------------------------- Ablauf
 
 func start(diff_index: int) -> void:
+	final_boss_id = ""
 	difficulty = diff_index
 	Session.difficulty = diff_index
 	lives = int(diff().get("lives", 20))
@@ -644,7 +648,7 @@ func start_wave(n: int) -> void:
 	var w: Dictionary = cfg.waves.list[n - 1]
 	# Gruppen reihum mischen und gleichmäßig über das Spawn-Fenster verteilen
 	var left: Array = []
-	for g in w.groups:
+	for g in HdBossCatalog.groups(self, n):
 		left.append([str(g[0]), int(g[1])])
 	var order: Array = []
 	var any := true
@@ -725,7 +729,7 @@ func start_wave(n: int) -> void:
 
 ## Daten des Kriegsherrn der Welle n.
 func _boss_def(n: int) -> Dictionary:
-	for g in cfg.waves.list[n - 1].groups:
+	for g in HdBossCatalog.groups(self, n):
 		if str(enemy_defs[str(g[0])].get("rank", "")) == "boss":
 			return enemy_defs[str(g[0])]
 	return {}
@@ -956,6 +960,15 @@ func fly_road(r: HdRoad) -> HdRoad:
 
 ## Beschwörerkreis: neue Gegner um den Beschwörer, sie laufen ab seiner Stelle die Straße weiter.
 func summon(src: HdEnemy, id: String, count: int, r: float) -> void:
+	if src.boss_brain != null:
+		count = mini(count, src.boss_brain.remaining_adds())
+		for k in count:
+			var angle := TAU * k / maxf(count, 1)
+			var at := src.position + Vector3(cos(angle), 0, sin(angle)) * r * 0.7
+			var add := spawn_home(id, at, "boss_add", src.home)
+			add.set_meta("boss_owner", src.get_instance_id())
+			add.gold_free = true
+		return
 	for k in count:
 		var a := TAU * k / maxf(count, 1)
 		var p := src.position + Vector3(cos(a), 0, sin(a)) * r * 0.7
@@ -981,7 +994,11 @@ func leak(e: HdEnemy) -> void:
 
 
 func _remove(e: HdEnemy) -> void:
+	if e.dead:
+		return
 	e.dead = true
+	if e.boss_brain != null:
+		e.boss_brain.cleanup()
 	for t in e.cast.get("tele", []):
 		if is_instance_valid(t):
 			t.queue_free()
@@ -1041,6 +1058,8 @@ func _on_death_traits(e: HdEnemy) -> void:
 
 ## Endboss erreicht eine neue Phase: neue Fähigkeiten, schneller, ruft Gegner über alle Straßen.
 func boss_phase(e: HdEnemy, ph: Dictionary) -> void:
+	if e.boss_brain != null:
+		e.boss_brain.enter_phase(play_time)
 	for aid in ph.get("add", []):
 		e.extra_abilities.append(str(aid))
 		e.ab_ready[str(aid)] = play_time + 1.5
@@ -1397,11 +1416,19 @@ func add_tele(t: HdTelegraph) -> void:
 
 
 func add_pool(at: Vector3, r: float, dps: float, time: float, _src) -> void:
-	var t := HdTelegraph.circle(r, HdTelegraph.POISON)
+	var is_boss_pool: bool = _src is HdEnemy and _src.boss_brain != null
+	var t := HdTelegraph.circle(r, HdTelegraph.enemy_color() if is_boss_pool else HdTelegraph.POISON)
 	t.progress = 1.0
 	t.position = Vector3(at.x, 0.025, at.z)
 	add_child(t)
-	pools.append({"pos": at, "r": r, "dps": dps, "until": play_time + time, "tele": t})
+	var owner_id: int = _src.get_instance_id() if _src is HdEnemy and _src.boss_brain != null else 0
+	if owner_id != 0:
+		var owned: Array = pools.filter(func(p): return int(p.get("owner_id", 0)) == owner_id)
+		if owned.size() >= int(_src.def.encounter.get("max_pools", 12)):
+			if is_instance_valid(owned[0].tele):
+				owned[0].tele.queue_free()
+			pools.erase(owned[0])
+	pools.append({"pos": at, "r": r, "dps": dps, "until": play_time + time, "tele": t, "owner_id": owner_id})
 
 
 func _step_pools(dt: float, now: float) -> void:
@@ -1417,7 +1444,12 @@ func _step_pools(dt: float, now: float) -> void:
 
 
 func enemy_projectile(src: HdEnemy, from: Vector3, dir: Vector3, spd: float, length: float, width: float, dmg: float) -> void:
-	var n := HdDev.box(Vector3(0.12, 0.12, 1.4), HdDev.flat(Color("e0b060")))
+	if src.boss_brain != null:
+		var active := projectiles.filter(func(p): return p.get("src") == src).size()
+		if active >= int(src.def.encounter.get("max_projectiles", 72)):
+			return
+	var shot_color := Color(str(src.def.visual.accent)) if src.boss_brain != null else Color("e0b060")
+	var n := HdDev.box(Vector3(0.12, 0.12, 1.4), HdDev.flat(shot_color))
 	add_child(n)
 	projectiles.append({"pos": Vector3(from.x, 1.0, from.z), "dir": dir.normalized(), "speed": spd, "left": length,
 		"width": width, "dmg": dmg, "node": n, "from_hero": false, "src": src})
@@ -1451,6 +1483,11 @@ func _blocked(pos: Vector3) -> bool:
 func _step_projectiles(dt: float) -> void:
 	for i in range(projectiles.size() - 1, -1, -1):
 		var p: Dictionary = projectiles[i]
+		if bool(p.get("cancelled", false)):
+			if is_instance_valid(p.node):
+				p.node.queue_free()
+			projectiles.remove_at(i)
+			continue
 		var mv := minf(float(p.speed) * dt, float(p.left))
 		p.pos += p.dir * mv
 		p.left -= mv
@@ -1496,6 +1533,7 @@ func _step_projectiles(dt: float) -> void:
 		if done:
 			n.queue_free()
 			projectiles.remove_at(i)
+	projectiles = projectiles.filter(func(p): return not bool(p.get("cancelled", false)))
 
 
 ## Königsgewand: Chance, ein Geschoss zum Schützen zurückzuwerfen. Es wird zum Geschoss des Helden.

@@ -58,21 +58,25 @@ func _ready() -> void:
 	cam.current = true
 	var sys: WaterSystem = SystemHost.attach(self, "gemtd", ["water"]).water
 	sys.cfg.regions = streams
+	var city := OS.get_cmdline_user_args().has("--city")
+	if city:
+		sys.cfg.banks.style = "city"
 	for i in 40:
 		await get_tree().process_frame
 	for r in sys.definitions:
 		print("WASSER ", r.kind, " ", r.get("id", ""), " ", r.get("points", [r.get("center"), r.get("size")]))
 	var img := get_viewport().get_texture().get_image()
-	img.save_png(ProjectSettings.globalize_path("res://.godot/wasserlauf-gelaende.png"))
-	print("BILD .godot/wasserlauf-gelaende.png")
+	var prefix := "wasserlauf-stadt" if city else "wasserlauf"
+	img.save_png(ProjectSettings.globalize_path("res://.godot/%s-gelaende.png" % prefix))
+	print("BILD .godot/%s-gelaende.png" % prefix)
 	# Nahaufnahmen: Fallkanten und Beckenausfluss.
-	for shot in [["fall", Vector3(19, 7, 21), Vector3(19, 1.5, 14)], ["becken", Vector3(20, 6, 40), Vector3(20, 0.2, 31)], ["kante", Vector3(19, 4.2, 17.5), Vector3(19, 2.6, 13.2)]]:
+	for shot in [["fall", Vector3(19, 7, 21), Vector3(19, 1.5, 14)], ["becken", Vector3(20, 6, 40), Vector3(20, 0.2, 31)], ["kante", Vector3(19, 4.2, 17.5), Vector3(19, 2.6, 13.2)], ["ufer", Vector3(12, 8, 15), Vector3(12, 3, 8)]]:
 		cam.position = shot[1]
 		cam.look_at(shot[2])
 		for i in 5:
 			await get_tree().process_frame
-		get_viewport().get_texture().get_image().save_png(ProjectSettings.globalize_path("res://.godot/wasserlauf-%s.png" % shot[0]))
-		print("BILD .godot/wasserlauf-%s.png" % shot[0])
+		get_viewport().get_texture().get_image().save_png(ProjectSettings.globalize_path("res://.godot/%s-%s.png" % [prefix, shot[0]]))
+		print("BILD .godot/%s-%s.png" % [prefix, shot[0]])
 	get_tree().quit()
 
 

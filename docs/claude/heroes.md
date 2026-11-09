@@ -1,5 +1,7 @@
 # Bollwerk (Hero Defense)
 
+- Endboss-Varianten (2026-11-09): W40 wählt einmal aus Varkhun/Nerathis/Morvath/Astrael/Zharok; `HdBossCatalog` hält Ansage/Spawn stabil. Daten `data/heroes_bosse.json` kaskadieren gemeinsame Defaults in Boss-/Add-Overrides. `HdBossBrain` ergänzt faire Phasenrotation, echte Erholung, Positions-Echos und besitzgebundenen Cleanup, `HdBossVisual` fünf prozedurale Silhouetten. Phasen bei 65/30 %, je sechs Moves; Altbosse/CC/Bewegung bleiben erhalten. Tests `bossdata heroesboss` zusätzlich zur bestehenden `heroes`-Regression (dort Verschlinger fest). Werkzeuge, Musterfelder und Vorschauen: `tools/heroes/README.md`, `boss_probe.tscn [-- --kampf=<id>]`; Screenshot `--endboss=<id>`. Projektile beim Boss-Tod innerhalb der Iteration nur als `cancelled` markieren, anschließend entfernen.
+
 Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz ein, sobald ein Thread Dateien unter `scripts/heroes/` oder mit `heroes` im Namen anfasst.
 
 - Modus `heroes`, Name „Bollwerk“ (Arbeitstitel). Design unter `/mnt/project-files/docs/hero-defense/` (design, helden, praegungen, ideen); verbindlich für die KI und CC: Abschnitt 15, Steuerung/Warnflächen: Abschnitt 5a, Etappen: Abschnitt 13.

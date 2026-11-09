@@ -154,6 +154,7 @@ func _new_game(held := "torvik") -> HdGame:
 	var g: HdGame = load("res://scenes/heroes_game.tscn").instantiate()
 	g.bot = true
 	g.force_hero = held
+	g.force_final_boss = "verschlinger"  # stabiler Legacy-Regressionslauf; neue Bosse: heroesboss
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)

@@ -4,7 +4,8 @@ Gemeinsames System: `scripts/systems/water/water.gd` (`WaterSystem`), auswählba
 über `data/modes.json` → `systems`. In allen sieben Modi verfügbar; ohne
 Wassereinträge gibt es keine Meshes und keinen laufenden Wasser-Prozess.
 Es ist eine visuelle Ebene. Bau-, Lauf-, Schwimm- oder Schadensregeln werden vom
-jeweiligen Modus festgelegt. Gelände wird nicht automatisch ausgehoben.
+jeweiligen Modus festgelegt. Flüsse erhalten automatisch erhöhte Uferböschungen mit
+Anschluss zum Boden; bestehendes Gelände wird dabei nicht ausgehoben.
 
 ## In einer Karte platzieren
 
@@ -68,8 +69,57 @@ Leichtes Strömungsmodell (`WaterSystem._connect_flow`, `WaterBody._fall_mesh`):
 - Der Aufprall (Schaumkern, Ringe, flussab abklingende Schleppe) wird im
   aufnehmenden Wasser gezeichnet, nie auf trockenem Boden. `impact: false` schaltet
   ihn ab.
-Wasser über einem tieferen Boden platzieren und Ufer mit Gelände/Modellen
-abdecken; überlappende transparente Wasserflächen möglichst vermeiden.
+An jeder angeschlossenen Fallkante entsteht zusätzlich ein animierter Schaumbogen:
+Er beginnt noch auf dem Fluss und folgt dann der Fallparabel. Damit verdeckt er die
+Geometrienaht, statt nur eine weiße Linie auf eine der beiden Flächen zu zeichnen.
+`crest_foam: false` schaltet ihn je Wasserfall/Lauf ab. Er verwendet die gemeinsame
+Strömungsuhr, pausiert mit dem Wasser und funktioniert auf allen Grafikstufen.
+
+## Automatische Uferböschungen
+
+Jeder `river` erhält ohne weitere Platzierung ein statisches Ufermesh (`WaterBank`),
+auch im Karteneditor und bei aus `stream` erzeugten Flüssen. Es übernimmt die
+tatsächlichen geglätteten Kanten und aufgeweiteten Mündungen des Wasserbands:
+nasser Innenrand, erhöhte Uferkrone und sanfter äußerer Hang. Das Bett schließt
+erhöht platziertes Wasser nach unten ab. Freie Quellen/Enden werden abgerundet;
+Mündungen, Zusammenflüsse und Wasserfallanschlüsse bleiben offen.
+
+Naturufer laufen mit mehreren gerundeten Stützreihen und abgesenkten Enden weich
+aus. Ortsfeste Variationen verändern Breite/Höhe und bilden kleine Erdhügel; einzelne
+niedrig aufgelöste Steine werden pro Fluss in einem MultiMesh gebündelt (maximal 96).
+Der Aufbau verbraucht keinen Spiel-Zufall und bleibt bei allen Clients/Neuaufbauten gleich.
+
+Im Stadtstil (FieldStyle `water_bank_style: city`, bei Plakatwand/Art déco) entstehen
+stattdessen links und rechts 1,35 Einheiten breite Pflastergehwege mit Bordkante und
+gefasster Kanalseite. Das Material nutzt die vorhandene
+`assets/textures/ground/cobble.jpg`. Die Pflasterprojektion verwendet Weltmeter;
+an Kurven und senkrechten Seiten wird sie ohne UV-Verzerrung überblendet.
+`banks.style` kann die automatische Tileset-Wahl (`auto`) mit `natural` oder `city`
+überschreiben; explizite Modus-Regeln behalten Vorrang.
+
+Standard: 0,9 Einheiten Hangbreite, 0,16 über der Wasserfläche liegende Uferkrone,
+0,35 Betttiefe, erdiger Innenrand und grasfarbene Außenseite. Über `water_terrain()`
+schließt der Hang an das tatsächliche Höhenfeld an, sonst an `ground_height` (0).
+Die bestehenden Bau-, Bewegungs- und Geländekollisionen werden nicht verändert.
+Wer ein eigenes Gelände aushebt, kann weiterhin `WaterRoute.channel_depth` verwenden.
+
+```json
+{"kind": "river", "points": [[1, 0.2, 1], [1, 0.2, 8]], "width": 1.5,
+ "banks": {"width": 0.7, "height": 0.12, "grass_color": "526941"}}
+```
+
+Uferwerte kaskadieren Basis-`water.banks` → Platzierung-`banks` → explizite
+Modus-`system_cfg.water.banks`; Modus-Regeln gewinnen. `banks.enabled: false`
+deaktiviert sie, etwa bei bereits modellierten Ufern. `stream` reicht seine
+`banks`- und `crest_foam`-Werte an alle erzeugten Gewässer weiter. Parameter sind
+`enabled`, `style`, `width`, `height`, `depth`, `ground_height`, `soil_color`, `grass_color`,
+`variation` (0–1), `rocks` und `city_width`.
+Farben als HTML-Farbwert. Ungültige Uferwerte lassen die vorhandene Landschaft
+intakt. Böschungen erzeugen keine laufenden Prozesse; Löschen/Neuaufbau des Wassers
+räumt sie zusammen mit den Wasserflächen auf.
+
+Vergleichsbilder: `route_hills.tscn` erzeugt zusätzlich `wasserlauf-ufer.png`;
+mit `-- --city` entstehen die Bilder unter `wasserlauf-stadt-*.png`.
 
 ## Wasserläufe: Wasser sucht sich den Weg selbst
 
