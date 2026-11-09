@@ -22,6 +22,12 @@ func check(cond: bool, msg: String) -> void:
 
 
 func _ready() -> void:
+	var expired := YtProjectile.new()
+	var caster := YtUnit.new()
+	expired._caster = caster
+	caster.free()
+	expired.update(0.01)
+	check(expired._cleanup_done and expired.is_queued_for_deletion(), "Geschoss mit freigegebenem Schützen wird vor der Zielsuche bereinigt")
 	RunHistory.path = "user://test_run_history.json"
 	Profile.dir = "user://test_profile_youtd"
 	Profile.reset_cache()

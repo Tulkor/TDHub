@@ -107,6 +107,11 @@ func _ready():
 #########################
 
 func update(delta: float):
+	# Ein bereits bereinigtes Geschoss kann noch im aktuellen Welt-Update-Snapshot stehen.
+	# Nach Verkauf/Upgrade darf es keinen freigegebenen Schützen mehr an die Zielsuche übergeben.
+	if _cleanup_done or not YtUtils.unit_is_valid(_caster):
+		_cleanup()
+		return
 	if _target_unit != null:
 		_target_pos = _target_unit.get_position_wc3() + UNIT_Z_OFFSET
 
