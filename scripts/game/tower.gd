@@ -1199,7 +1199,7 @@ func _finish_visual() -> void:
 
 ## Neon: Licht in der Farbe des Gems statt des pinken Bodenscheins, dazu ein Lichtfleck auf dem Feld.
 func _gem_glow() -> void:
-	_set_layer(_visual)
+	_gem_layer(_visual)
 	var pool := MeshInstance3D.new()
 	pool.name = "GemPool"
 	var plane := PlaneMesh.new()
@@ -1215,11 +1215,11 @@ func _gem_glow() -> void:
 	_visual.add_child(pool)
 
 
-func _set_layer(n: Node) -> void:
+func _gem_layer(n: Node) -> void:
 	if n is VisualInstance3D:
 		n.layers = GEM_LAYER
 	for c in n.get_children():
-		_set_layer(c)
+		_gem_layer(c)
 
 
 ## Roguelike-Boni übernehmen ({damage, speed, range}, leer = keine); der Reichweitenring wächst mit.
