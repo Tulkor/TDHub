@@ -57,6 +57,7 @@ extends Node
 ##   --nacht                 Nachtversion des Spielfeld-Stils (FieldStyle.night, z. B. Shopping Maul im Mondlicht,
 ##                           eeveTD ist ohnehin nachts)
 ##   --tag                   eeveTD bei Tag statt Nacht
+##   --uhrzeit=H             eeveTD/YouTD: Tageszeit H (0–24, z. B. 19 Sonnenuntergang, 6.5 Sonnenaufgang), steht still
 ##   --bonusfelder           eeveTD: Bonusfelder (Lava, Eis, Marmor) auslegen, drei davon unter Towern des Plans
 ##   --ende                  eeveTD: Endbildschirm mit Wertung (Sieg)
 ##   --alle_wege             Koop (Shopping Maul, GemTD-Maul-Karten): auch die Gegnerwege der Mitspieler zeigen
@@ -140,6 +141,8 @@ func _ready() -> void:
 		Display.style_filter = opts.filter != "aus"
 	if opts.has("tag"):
 		Session.eeve_choice["night"] = false
+	# Tageszeit (eeveTD, YouTD) steht fürs Bild still: --uhrzeit=H, sonst Nacht bzw. mit --tag Mittag
+	DayCycle.fixed_hour = float(opts.get("uhrzeit", DayCycle.DAY_HOUR if opts.has("tag") else DayCycle.NIGHT_HOUR))
 	if opts.has("turmlicht"):
 		Tower.eeve_accent = "" if opts.turmlicht == "aus" else str(opts.turmlicht)
 	if opts.has("koop"):
