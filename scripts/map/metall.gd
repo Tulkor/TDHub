@@ -2,7 +2,7 @@ class_name Metall
 extends RefCounted
 ## Gemeinsamer Metall-Look aller Modi (Lukas 2026-11-09, "Metall-Shader verbessern"):
 ## - Spiegelungen: die Himmel-Shader rechnen nur in den Umgebungs-Würfel Studiolicht dazu
-##   (assets/shaders/metall_himmel.gdshaderinc), Stärke und Farbe je Modus über himmel_werte();
+##   (Block "Studiolicht" in stil_himmel/skybox/daemmerung_himmel.gdshader), Stärke und Farbe je Modus über himmel_werte();
 ##   Szenen mit einfarbigem Hintergrund bekommen über spiegel_himmel() einen unsichtbaren Himmel nur dafür.
 ## - Material: veredeln() gibt Metall eine fleckige Rauheit (Roughness-Variation, geteilte Rauschtextur),
 ##   Kantenglanz über eine dünne Klarlack-Schicht (Fresnel, auch auf vollem Metall sichtbar) und
@@ -72,7 +72,7 @@ static func _modell_material(m: BaseMaterial3D) -> void:
 	veredeln(m)
 
 
-## Geteilte Rauschtextur für die Rauheit (nahtlos, hell = rau).
+## Geteilte Rauschtextur für die Rauheit (nahtlos, hell = rau, Werte 0,62–1,0).
 static func rauheit() -> Texture2D:
 	if _rauheit == null:
 		var noise := FastNoiseLite.new()
@@ -149,3 +149,4 @@ static func stufe_anwenden(root: Node) -> void:
 	_alle = rest
 	for we in root.find_children("*", "WorldEnvironment", true, false):
 		himmel(we.environment)
+

@@ -37,7 +37,7 @@ const ENV_DEFAULT := {
 	"ssao": 1.0, "ssao_radius": 0.8, "ssil": 0.0, "vol_fog": 0.0,
 	# Ränder abdunkeln und leicht tönen (CameraRig, screen_post.gdshader), 0 = aus
 	"vignette": 0.45, "vignette_color": Color(0.12, 0.04, 0.22),
-	# Studiolicht nur für Metall-Spiegelungen (Metall, metall_himmel.gdshaderinc): Stärke, Softboxen oben,
+	# Studiolicht nur für Metall-Spiegelungen (Metall, Studiolicht-Block der Himmel-Shader): Stärke, Softboxen oben,
 	# Streifen am Horizont. Arcade: rosa Softboxen und Cyan-Streifen wie Neonröhren
 	"metall": 0.9, "metall_farbe": Color("ffb0e0"), "metall_farbe2": Color("70f0ff"),
 }
