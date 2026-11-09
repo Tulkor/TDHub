@@ -73,6 +73,7 @@ func rebuild() -> void:
 		_floor_mat.set_shader_parameter("tint", _tint_texture(mm))
 		_floor_mat.set_shader_parameter("tint_floor", 1.0)
 		_floor_mat.set_shader_parameter("tint_lines", 0.0)
+		_floor_mat.set_shader_parameter("paving", _paving_texture(mm))
 
 
 
@@ -97,4 +98,17 @@ func _tint_texture(mm: MaulMap) -> ImageTexture:
 		col.a = TINT_OWN if i == own_zone else TINT
 		var r: Rect2i = mm.zones[i].rect.intersection(Rect2i(0, 0, mm.width, mm.height))
 		img.fill_rect(r, col)
+	return ImageTexture.create_from_image(img)
+
+
+## Bodenbelag je Feld: R = Gang außerhalb der Spielergebiete und der Stadt (Petrol statt Kalkstein).
+func _paving_texture(mm: MaulMap) -> ImageTexture:
+	var img := Image.create(mm.width, mm.height, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 0, 0))
+	for z in mm.zones:
+		img.fill_rect(z.rect.intersection(Rect2i(0, 0, mm.width, mm.height)), Color.BLACK)
+	for y in mm.height:
+		for x in mm.width:
+			if _floor_plain(Vector2i(x, y)):
+				img.set_pixel(x, y, Color.BLACK)
 	return ImageTexture.create_from_image(img)

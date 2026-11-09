@@ -24,7 +24,7 @@ extends Node
 ##                           (oder --punkt=x,y), Abstand --abstand=34;
 ##                           --sandbox, --gold=N, --reiter=xpert|main (Ladenreiter), --einheit (erste Einheit wählen),
 ##                           --profi (Filialwahl: Reiter Profi-Filialen), --profil (Filialwahl: Profil-Fenster offen),
-##                           --bauen=h01P,h02O (diese Tower zuerst)
+##                           --bauen=h01P,h02O (diese Tower zuerst), --neigung=-25 Kamera flacher (Grad)
 ##   --map=<id>              Map aus data/maps (Standard classic)
 ##   --runden=N              N Runden automatisch spielen (Gems am Weg setzen, ersten behalten, Welle 8× laufen)
 ##   --tower=ruby:2,opal:0   diese Gems in der nächsten Runde setzen (Reihenfolge = Platzierung)
@@ -694,6 +694,8 @@ func _prepare_maul(game: Node) -> void:
 	if opts.has("punkt"):
 		var pk := String(opts.punkt).split(",")
 		look = (Vector2(float(pk[0]), float(pk[1])) + Vector2(0.5, 0.5)) * Board3D.CELL
+	if opts.has("neigung"):  # flacher auf die Stadt schauen, z. B. --neigung=-25
+		game.camera_rig.pitch = deg_to_rad(float(opts.neigung))
 	game.camera_rig.look_at_point(look, float(opts.get("abstand", "34")))
 	var t := 0.0
 	var wait := float(opts.get("warten", "1"))
