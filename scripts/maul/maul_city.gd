@@ -32,6 +32,11 @@ const SKY_CHANCE := 0.42
 const SKY_HEIGHT := Vector2(10.0, 17.0)
 ## Wandfarben (Kalkstein, gemischt), Gesims und Lisenen in Messing
 const WALLS := [Color("b0b0b0"), Color("9aa8a8"), Color("c2beb2"), Color("a9a59a"), Color("bab5a8"), Color("a0a6a2")]
+## Farbige Fassaden (Lukas, 2026-11-09: „mehr farbliche Gebäude“): Ziegelrot, Terrakotta, Ocker, Jadegrün,
+## Petrol, Taubenblau, Lachs (Miami), Mint, Sandgelb; COLORED_SHARE der Gebäude bekommt eine davon
+const COLORED := [Color("a8523a"), Color("c0704a"), Color("c49a52"), Color("3d7a5e"), Color("2f6e74"),
+		Color("4f6c9c"), Color("d08a78"), Color("8cc0a6"), Color("d8bf7a")]
+const COLORED_SHARE := 0.4
 const CORNICE := Color("b0904f")
 ## Statuen und Laternen; A = 0: Fläche ohne Fenster (city.gdshader)
 const PLINTH := Color(0.56, 0.44, 0.44, 0.0)
@@ -281,7 +286,7 @@ func _building(r: Rect2i, d: float, rng: RandomNumberGenerator, walls: Array, co
 	var size := Vector2(r.size) * Board3D.CELL - Vector2(INSET, INSET) * 2.0
 	var center := (Vector2(r.position) + Vector2(r.size) / 2.0) * Board3D.CELL
 	var total := minf(H_BASE + maxf(d - GAP, 0.0) * H_STEP, H_MAX) * rng.randf_range(0.55, 1.3)
-	var col: Color = WALLS[rng.randi() % WALLS.size()]
+	var col := _facade(rng)
 	var tiers := 1
 	if total > 0.9:
 		tiers = rng.randi_range(1, 3)
@@ -358,7 +363,7 @@ func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, o: Dictionary)
 	var foot := Vector2(r.size) * Board3D.CELL - Vector2(0.1, 0.1)
 	var c := (Vector2(r.position) + Vector2(r.size) / 2.0) * Board3D.CELL
 	var total := rng.randf_range(SKY_HEIGHT.x, SKY_HEIGHT.y) * clampf(d / 40.0, 0.6, 1.0)
-	var col: Color = WALLS[rng.randi() % WALLS.size()]
+	var col := _facade(rng)
 	var m := minf(foot.x, foot.y)
 	var kind := rng.randi() % 9
 	# Sockel (Kaufhaus-Geschoss) bei allen außer der Scheibe
@@ -534,6 +539,13 @@ func _skyscraper(r: Rect2i, d: float, rng: RandomNumberGenerator, o: Dictionary)
 			_band(o, c, s, s, y)
 			_brass(o, c, Vector3(s * 0.4, 0.5, s * 0.4), y)
 			_pyr(o, c, Vector3(0.08, 0.9, 0.08), y + 0.5, CORNICE)
+
+
+## Fassadenfarbe: meist Kalkstein, ein Teil farbig.
+func _facade(rng: RandomNumberGenerator) -> Color:
+	if rng.randf() < COLORED_SHARE:
+		return COLORED[rng.randi() % COLORED.size()]
+	return WALLS[rng.randi() % WALLS.size()]
 
 
 func _wall(o: Dictionary, p: Vector2, size: Vector3, y0: float, col: Color, yaw := 0.0) -> void:
