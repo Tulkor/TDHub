@@ -80,17 +80,15 @@ static func rauheit() -> Texture2D:
 		noise.frequency = 0.012
 		noise.fractal_octaves = 4
 		noise.seed = 7
-		var ramp := Gradient.new()
-		ramp.set_color(0, Color(0.62, 0.62, 0.62))
-		ramp.set_color(1, Color(1.0, 1.0, 1.0))
-		var t := NoiseTexture2D.new()
-		t.width = 256
-		t.height = 256
-		t.seamless = true
-		t.noise = noise
-		t.color_ramp = ramp
-		t.generate_mipmaps = true
-		_rauheit = t
+		# sofort als Bild rechnen: NoiseTexture2D rechnet in einem Thread, der beim Beenden (Tests) noch hängen kann
+		var img := noise.get_seamless_image(256, 256)
+		img.convert(Image.FORMAT_L8)
+		for y in 256:
+			for x in 256:
+				var v := 0.62 + 0.38 * img.get_pixel(x, y).r
+				img.set_pixel(x, y, Color(v, v, v))
+		img.generate_mipmaps()
+		_rauheit = ImageTexture.create_from_image(img)
 	return _rauheit
 
 
