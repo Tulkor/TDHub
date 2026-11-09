@@ -25,6 +25,7 @@ const ROCK_MAX_HEIGHT := 0.75
 const ROCK_SHADER := preload("res://assets/shaders/rock.gdshader")
 ## Neon: Shader für Röhren (innen weiß, außen farbig) und das Gitter-Feld.
 const NEON_SHADER := preload("res://assets/shaders/neon.gdshader")
+const MARKER_RING_SHADER := preload("res://assets/shaders/marker_ring.gdshader")
 const NEON_FLOOR_SHADER := preload("res://assets/shaders/neon_floor.gdshader")
 ## Dasselbe Feld beleuchtet und deckend (FieldStyle "floor_lit", z. B. Marmor in Art déco).
 const LIT_FLOOR_SHADER := preload("res://assets/shaders/neon_floor_lit.gdshader")
@@ -94,6 +95,8 @@ var _ground_mat: ShaderMaterial
 var _floor: MeshInstance3D
 ## Spiegelung auf dem Feld (FieldStyle "reflect"), gleiche Fläche wie _floor
 var _reflect: MeshInstance3D
+## Farbiger Dunst knapp über dem Feld (FieldStyle "haze", ab Grafik Mittel)
+var _haze: MeshInstance3D
 var _floor_mat: ShaderMaterial
 var _cliffs: MeshInstance3D  ## Felswände der Schlucht (nur mit path_depth > 0)
 var _rocks: Array = []  ## je Variante ein MultiMeshInstance3D
@@ -205,6 +208,21 @@ func _ready() -> void:
 		_reflect.material_override = rm
 		_reflect.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_reflect)
+	var haze: Dictionary = style.get("haze", {})
+	if not haze.is_empty() and Display.quality >= Display.MEDIUM:
+		var hm := ShaderMaterial.new()
+		hm.shader = preload("res://assets/shaders/ground_mist.gdshader")
+		hm.set_shader_parameter("mist_color", haze.color)
+		hm.set_shader_parameter("density", haze.density)
+		hm.set_shader_parameter("scale", haze.scale)
+		hm.set_shader_parameter("edge", 0.08)
+		hm.set_shader_parameter("octaves", 2)
+		hm.render_priority = 1
+		_haze = MeshInstance3D.new()
+		_haze.name = "Haze"
+		_haze.material_override = hm
+		_haze.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_haze)
 	ground_alpha = maxf(ground_alpha, style.ground_alpha)
 	for path in ROCK_MODELS:
 		var m := ModelLoader.mesh_with_transform(path, ROCK_SIZE, true, ROCK_MAX_HEIGHT)
@@ -278,6 +296,12 @@ func _rock_material() -> Material:
 			return m
 	var glass := ShaderMaterial.new()
 	glass.shader = ROCK_SHADER
+	# Schein der Neonlinien auf die unteren Flanken (FieldStyle "rock_glow")
+	glass.set_shader_parameter("floor_glow", float(style.get("rock_glow", 0.0)))
+	# Grundfarbe des Glases (FieldStyle "rock_color", Lukas 2026-11-09: türkis) und dunkler Kern dazu
+	if style.has("rock_color"):
+		glass.set_shader_parameter("color", style.rock_color)
+		glass.set_shader_parameter("core_color", style.rock_core)
 	return glass
 
 
@@ -402,6 +426,11 @@ func _rebuild_floor() -> void:
 	if _reflect != null:
 		_reflect.mesh = _floor.mesh
 		_reflect.position = _floor.position + Vector3(0, 0.001, 0)
+	if _haze != null:
+		var hp := PlaneMesh.new()
+		hp.size = size
+		_haze.mesh = hp
+		_haze.position = to_3d(size / 2.0, float(style.haze.height))
 	var img := Image.create(map.width, map.height, false, Image.FORMAT_RGBA8)  # RGBA8: L8 mit ungerader Breite wird im GL-Renderer verschoben hochgeladen
 	var origin := Vector2i(map.width, map.height)  # erstes freies Feld (oben links)
 	for y in map.height:
@@ -732,6 +761,23 @@ func _process(delta: float) -> void:
 
 ## Wegpunkt als Neonröhren-Ring: nur die Kontur, mit überhelltem Kern, der im Glow leuchtet.
 func _add_marker(c: Vector2i, text: String, col: Color) -> void:
+	if FieldStyle.is_neon():
+		# Neon: flache Leuchtlinie wie das Feld (marker_ring.gdshader) statt einer Röhre
+		var flat := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2.ONE * 1.55
+		flat.mesh = plane
+		var fm := ShaderMaterial.new()
+		fm.shader = MARKER_RING_SHADER
+		fm.set_shader_parameter("color", col)
+		fm.set_shader_parameter("energy", style.marker_energy)
+		fm.render_priority = 1
+		flat.material_override = fm
+		flat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flat.position = to_3d(cell_center(c), 0.012 + ground_y(cell_center(c)))
+		_markers.add_child(flat)
+		_add_marker_label(c, text, col)
+		return
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.38
@@ -743,6 +789,10 @@ func _add_marker(c: Vector2i, text: String, col: Color) -> void:
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ring.position = to_3d(cell_center(c), 0.04 + ground_y(cell_center(c)))
 	_markers.add_child(ring)
+	_add_marker_label(c, text, col)
+
+
+func _add_marker_label(c: Vector2i, text: String, col: Color) -> void:
 	if text == "" or not marker_labels:
 		return
 	var label := Label3D.new()

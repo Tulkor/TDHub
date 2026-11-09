@@ -13,6 +13,8 @@ uniform vec2 wind = vec2(0.05, 0.02);
 uniform float seed = 0.0;
 /// ab diesem Abstand vom Rand (UV, 0..0,5) volle Dichte
 uniform float edge = 0.35;
+/// Rauschlagen je Schwade (4 = fein, 2 = billiger für große Flächen wie den Dunst über dem GemTD-Feld)
+uniform int octaves = 4;
 
 varying vec2 world_xz;
 
@@ -30,7 +32,7 @@ float noise(vec2 p) {
 float fbm(vec2 p) {
 	float v = 0.0;
 	float a = 0.55;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < octaves; i++) {
 		v += a * noise(p);
 		p = p * 2.03 + vec2(1.7, 9.2);
 		a *= 0.5;

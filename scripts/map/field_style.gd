@@ -28,6 +28,9 @@ const ENV_DEFAULT := {
 	"sun": Color(1.0, 0.96, 0.88), "sun_energy": 0.55, "sun_pitch": -38.0, "sun_yaw": -35.0,
 	"sun_specular": 1.0, "shadow_blur": 1.5, "shadow_opacity": 1.0,
 	"fill": Color(0.55, 0.45, 1.0), "fill_energy": 0.0, "fill_pitch": -25.0,
+	# Schein des leuchtenden Bodens von unten (wie das Pilzlicht, das die Mauern färbt): Licht ohne Schatten,
+	# das schräg nach oben scheint und Unterseiten und Flanken von Towern, Steinen und Gegnern färbt, 0 = aus
+	"under": Color(1.0, 0.36, 0.86), "under_energy": 0.0, "under_pitch": 62.0,
 	"fog": Color.BLACK, "fog_density": 0.0,
 	"glow_threshold": 1.0, "glow_intensity": 0.9, "glow_bloom": 0.0,
 	"tonemap": Environment.TONE_MAPPER_FILMIC, "exposure": 0.9, "white": 1.0,
@@ -77,16 +80,25 @@ const STYLES := {
 		"ground_alpha": 0.0,
 		# Vulkan mischt in linearem Licht: Fläche durchsichtiger und Linien etwas schwächer,
 		# sonst wirkt der Boden heller als im alten Renderer
+		# Glühen nach dem Prinzip der Pilze (Pilzhof): blasser, fast weißer Kern, breiter gesättigter Schein
 		"floor": {"floor_color": Color("040208"), "floor_alpha": 0.6, "halo_width": 0.05, "major_energy": 1.15, "line_energy": 0.55, "minor_energy": 0.26, "cell_energy": 0.12,
-				"core_white": 0.45, "edge_energy": 2.0},
+				"core_white": 0.6, "edge_energy": 2.0, "glow_halo": 0.28, "glow_width": 0.18, "glow_sat": 0.85,
+				"zone_holo": 1.0},
+		# dünner farbiger Dunst knapp über dem Boden (Board3D, ground_mist.gdshader), ab Grafik Mittel
+		"haze": {"color": Color("7a1aa0"), "density": 0.075, "height": 0.22, "scale": 0.16},
 		"path": Color("2ef2e0"), "path_energy": 2.2,
 		"marker": Color("ff36d8"), "marker_energy": 2.2,
 		"rock": "glass",
+		# Felsen bekommen unten einen pinken Schein vom Boden (rock.gdshader floor_glow)
+		"rock_glow": 0.3,
+		# türkises Rauchglas mit dunkel petrolfarbenem Kern (Lukas, 2026-11-09)
+		"rock_color": Color(0.02, 0.72, 0.7), "rock_core": Color(0.0, 0.05, 0.06),
 		"base": "glass",
 		# Glasboden: Gems und Gegner spiegeln sich (Board3D, floor_reflect.gdshader)
 		"reflect": 0.35,
 		# violettes Gegenlicht von hinten: Gems und Felsen bekommen eine Lichtkante
-		"env": {"fill": Color("b070ff"), "fill_energy": 0.35, "fill_pitch": -20.0},
+		# dazu der Schein der pinken Linien von unten auf Gems, Felsen und Gegner
+		"env": {"fill": Color("b070ff"), "fill_energy": 0.35, "fill_pitch": -20.0, "under_energy": 0.9},
 	},
 	DRUID: {
 		"ground_alpha": 1.0,

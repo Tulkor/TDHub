@@ -70,6 +70,15 @@ uniform float tint_shade = 0.8;
 // 1: Stich auf den Boden (Shopping Maul); tint_lines 1: Gitterlinien und Ränder ganz in der Stichfarbe (GemTD-Maul-Karten)
 uniform float tint_floor = 1.0;
 uniform float tint_lines = 0.0;
+/// Glühen wie die Pilze im Pilzhof: weiter, gesättigter Schein um Hauptlinien und Ränder, während der Kern
+/// blass bis weiß bleibt (0 = aus). glow_width = Abklingweite in Einheiten, glow_sat = wie stark die Farbe
+/// des Scheins zur reinen Farbe hin gezogen wird (1 = schwächster Kanal ganz heraus)
+uniform float glow_halo = 0.0;
+/// Sperrzone als Hologramm (0 = schlichte rote Fläche): wandernde Scanlinien, feines Rautengitter,
+/// leichtes Flimmern, die Fläche wird zum Rand hin dichter
+uniform float zone_holo = 0.0;
+uniform float glow_width = 0.22;
+uniform float glow_sat = 0.8;
 
 #ifdef LIT
 /// Nur beleuchtetes Feld: Helligkeit der Fläche vor dem Licht (das Licht hellt sie wieder auf)
@@ -108,6 +117,21 @@ vec4 tube(float d, float width, vec3 col, float energy, float aa) {
 	vec3 c = mix(col, vec3(1.0), core_ * core_white / 0.7) * energy;
 	float a = max(body, halo);
 	return vec4(mix(col * energy * 0.6, c, body), a);
+}
+
+// Gesättigte Fassung einer Farbe: schwächsten Kanal abziehen, Helligkeit des stärksten behalten
+vec3 saturate_col(vec3 c, float k) {
+	float lo = min(c.r, min(c.g, c.b));
+	float hi = max(c.r, max(c.g, c.b));
+	vec3 s = c - lo * k;
+	return s * hi / max(max(s.r, max(s.g, s.b)), 0.001);
+}
+
+// Weiter, gesättigter Schein (glow_halo) auf col legen; d = Abstand zur Linie
+void glow(inout vec3 col, inout float alpha, float d, vec3 lc, float energy) {
+	float g = exp(-d / glow_width) * glow_halo;
+	col = mix(col, saturate_col(lc, glow_sat) * energy, g);
+	alpha = max(alpha, g);
 }
 
 float is_zone(ivec2 c) {
@@ -213,6 +237,9 @@ void fragment() {
 			if (major_double > 0.5) {
 				dmm = abs(dmm - line_width * 3.0);
 			}
+			if (glow_halo > 0.0) {
+				glow(col, alpha, dmm, lc, line_energy * major_energy);
+			}
 			vec4 m = tube(dmm, line_width * 1.2, lc, line_energy * major_energy, aa);
 			m.a *= major_alpha;
 			col = mix(col, m.rgb, m.a);
@@ -249,13 +276,28 @@ void fragment() {
 		}
 		// Sperrzone um die Wegpunkte: rote Fläche, Neonrand zu bebaubaren Feldern
 		if (is_zone(c) > 0.5) {
-			col = mix(col, zone_color.rgb, zone_alpha);
-			alpha = max(alpha, zone_alpha + floor_alpha * 0.5);
 			float dz = 10.0;
 			if (is_zone(c + ivec2(-1, 0)) < 0.5) dz = min(dz, f.x);
 			if (is_zone(c + ivec2(1, 0)) < 0.5) dz = min(dz, 1.0 - f.x);
 			if (is_zone(c + ivec2(0, -1)) < 0.5) dz = min(dz, f.y);
 			if (is_zone(c + ivec2(0, 1)) < 0.5) dz = min(dz, 1.0 - f.y);
+			float za = zone_alpha;
+			vec3 zcol = zone_color.rgb;
+			if (zone_holo > 0.0) {
+				// Hologramm: dünner Grundschleier, zum Rand hin dichter, darin wandernde Scanlinien
+				// und ein feines Rautengitter, das ganze flimmert leicht
+				float rim = exp(-dz * cell / 0.35);
+				float scan = pow(0.5 + 0.5 * sin((world_xz.y + world_xz.x * 0.3) * 38.0 - TIME * 3.0), 6.0);
+				float sweep = pow(fract((world_xz.y - TIME * 0.6) * 0.25), 10.0);
+				vec2 dia = abs(fract(vec2(world_xz.x + world_xz.y, world_xz.x - world_xz.y) * 2.5) - 0.5);
+				float mesh = 1.0 - smoothstep(0.0, 0.06, min(dia.x, dia.y));
+				float flick = 0.88 + 0.12 * sin(TIME * 23.0 + hash(vec2(c)) * 6.28) * sin(TIME * 7.3);
+				za = (zone_alpha * 0.45 + rim * 0.35 + scan * 0.18 + mesh * 0.16 + sweep * 0.3) * flick * zone_holo
+						+ zone_alpha * (1.0 - zone_holo);
+				zcol = mix(zone_color.rgb, mix(zone_color.rgb, vec3(1.0, 0.75, 0.8), 0.5) * 1.6, scan * 0.6 + sweep * 0.5);
+			}
+			col = mix(col, zcol, clamp(za, 0.0, 1.0));
+			alpha = max(alpha, clamp(za, 0.0, 1.0) + floor_alpha * 0.5);
 			vec3 zc = zone_edge_color.a > 0.0 ? zone_edge_color.rgb : zone_color.rgb;
 			vec4 z = tube(dz * cell, line_width * 1.8, zc, zone_edge_energy, aa);
 			col = mix(col, z.rgb, z.a);
@@ -268,6 +310,9 @@ void fragment() {
 		if (is_blocked(c + ivec2(1, 0)) > 0.5) de = min(de, 1.0 - f.x);
 		if (is_blocked(c + ivec2(0, -1)) > 0.5) de = min(de, f.y);
 		if (is_blocked(c + ivec2(0, 1)) > 0.5) de = min(de, 1.0 - f.y);
+		if (glow_halo > 0.0) {
+			glow(col, alpha, de * cell, ec, edge_energy * 0.6);
+		}
 		vec4 e = tube(de * cell, line_width * 1.6, ec, edge_energy, aa);
 		col = mix(col, e.rgb, e.a);
 		alpha = max(alpha, e.a);

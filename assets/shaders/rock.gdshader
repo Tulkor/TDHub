@@ -13,11 +13,21 @@ uniform float core_falloff = 1.6;
 uniform float vein_strength = 0.12;
 varying vec3 rock_pos;
 varying float variation;
+/// Schein des leuchtenden Bodens auf den unteren Flanken (wie Pilzlicht auf den Mauern), 0 = aus
+uniform vec4 floor_glow_color : source_color = vec4(0.85, 0.12, 0.7, 1.0);
+uniform float floor_glow = 0.0;
+/// Höhe in Einheiten, über die der Schein nach oben ausklingt
+uniform float floor_glow_height = 0.35;
+
+varying float world_y;
+varying float world_ny;
 
 void vertex() {
 	rock_pos = VERTEX;
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	variation = fract(sin(dot(origin.xz, vec2(12.9898, 78.233))) * 43758.5453);
+	world_y = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
+	world_ny = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz).y;
 }
 
 void fragment() {
@@ -33,4 +43,9 @@ void fragment() {
 	SPECULAR = 0.4;
 	// schwacher violetter Saum, damit die Kontur vor dem dunklen Feld sichtbar bleibt
 	EMISSION = tint * (rim * 0.8 + vein * vein_strength);
+	if (floor_glow > 0.0) {
+		// Flanken und Unterseiten nahe am Boden; nach oben zeigende Flächen kaum
+		float side = clamp(0.6 - world_ny * 0.6, 0.0, 1.0);
+		EMISSION += floor_glow_color.rgb * floor_glow * exp(-max(world_y, 0.0) / floor_glow_height) * side;
+	}
 }
