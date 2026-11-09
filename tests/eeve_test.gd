@@ -251,7 +251,11 @@ func _debug_tests() -> void:
 		"Debug-Auswahl hat Element-Tower, Fallen und Dual-Tower")
 	var sc: EeveScenery = game.scenery
 	check(sc != null and sc.get_child_count() > 20, "Wald und Laternen um die Karte")
-	check(FieldStyle.night and sc._lights[0].visible, "eeveTD startet nachts")
+	check(sc.cycle != null and absf(sc.cycle.hour - DayCycle.START) < 0.05 and sc.cycle.speed > 0.0,
+		"eeveTD startet kurz vor Sonnenuntergang, die Tageszeit läuft")
+	sc.cycle.set_hour(19.0)
+	var dusk: Color = sc.sun().light_color
+	check(dusk.r > dusk.b + 0.2 and sc.sun().rotation_degrees.x >= -DayCycle.MIN_PITCH - 1.0, "Sonnenuntergang: warmes, flaches Licht")
 	sc.set_night(false)
 	var day_sun: float = sc.sun().light_energy
 	sc.set_night(true)

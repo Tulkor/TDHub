@@ -93,6 +93,8 @@ func _ready() -> void:
 			p.gold = int(rules.get("start_gold", 200))
 		level_pause = float(rules.get("first_pause", 45))
 	scenery = EeveScenery.add_to(self)
+	# Tageszeit läuft (Lukas 2026-11-09): Start kurz vor Sonnenuntergang, mit „Tag“ in der Wahl zur Mittagszeit
+	scenery.start_cycle(DayCycle.START if FieldStyle.night else DayCycle.DAY_HOUR)
 	bonus_view = EeveBonusTiles.new()
 	add_child(bonus_view)
 	bonus_view.show_tiles(bonus_tiles)
@@ -142,8 +144,10 @@ func _setup_debug() -> void:
 	for n in [1, 5]:
 		hud.debug_button_in(row, "+%d" % n, func(): _debug_add("points", n))
 	row = hud.add_debug_row("Tageszeit")
-	hud.debug_button_in(row, "Tag", func(): scenery.set_night(false))
-	hud.debug_button_in(row, "Nacht", func(): scenery.set_night(true))
+	for t in [["Morgen", 6.4], ["Tag", DayCycle.DAY_HOUR], ["Abend", 18.9], ["Nacht", DayCycle.NIGHT_HOUR]]:
+		hud.debug_button_in(row, t[0], func(): scenery.cycle.set_hour(t[1]))
+	var fast := hud.debug_button_in(row, "×30", func(): scenery.cycle.speed = 30.0 if scenery.cycle.speed < 2.0 else 1.0)
+	fast.tooltip_text = "Tageszeit 30-mal so schnell (nochmal: normal)"
 	row = hud.add_debug_row("Elemente")
 	var all := hud.debug_button_in(row, tr("Alle auf %d") % int(rules.get("point_max", 8)), _debug_max_elements)
 	all.tooltip_text = "Alle sechs Elemente auf die höchste Stufe, schaltet alle Tower, Fallen und Dual-Tower frei"
