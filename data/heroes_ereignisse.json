@@ -1,0 +1,945 @@
+{
+	"_info": "Ereignis-Pool für Bollwerk (System timed_events, alle 5 min). kind = Ablauf in HdEvents (haendler, karawane, blutmond, gefangener, schrein, jagd, ueberleben, regen, sammeln, halten, segen, wahl). reward/each: gold (Zahl oder [Basis, je Welle]), wood, xp, item (Stufe ins Lager), lives, heal (Anteil), repair, perma {Werte}, buff {stats, time}, ally {time, hp, damage}, upgrade. enemy: base (Gegner-id oder wave_normal/wave_elite) plus Änderungen; hp ist Faktor. weight, from, to (Welle) steuern die Auswahl. vorbild = Event der Ursprungsmap.",
+	"list": [
+		{
+			"id": "haendler",
+			"name": "Wanderhändler",
+			"kind": "haendler",
+			"desc": "Verkauft 60 s lang drei seltene Items.",
+			"time": 60.0,
+			"count": 3,
+			"tiers": [
+				3,
+				4
+			],
+			"markup": 1.15,
+			"weight": 1.0
+		},
+		{
+			"id": "karawane",
+			"name": "Goldene Karawane",
+			"kind": "karawane",
+			"desc": "Schütze die Karawane. Erreicht sie das Ziel, gibt es Gold je nach ihrem Leben.",
+			"hp": 2600,
+			"speed": 2.4,
+			"gold": [
+				250,
+				20
+			],
+			"raiders": "karawanenraeuber",
+			"raid": [
+				3,
+				0.2
+			],
+			"raid_every": 9.0,
+			"weight": 1.0
+		},
+		{
+			"id": "blutmond",
+			"name": "Blutmond",
+			"kind": "blutmond",
+			"desc": "Abstimmung: Die nächste Welle wird doppelt so stark, gibt aber doppelte Belohnung.",
+			"hp": 2.0,
+			"damage": 1.25,
+			"reward": 2.0,
+			"weight": 1.0
+		},
+		{
+			"id": "gefangener",
+			"name": "Gefangener Held",
+			"kind": "gefangener",
+			"desc": "Besiege die Wachen und befreie den Gefangenen. Er kämpft zwei Wellen lang mit.",
+			"guards": "kerkerwache",
+			"guard_count": 3,
+			"waves": 2,
+			"hp": 1800,
+			"damage": 45,
+			"range": 9.0,
+			"interval": 0.9,
+			"free_time": 2.0,
+			"weight": 1.0
+		},
+		{
+			"id": "schrein",
+			"name": "Verderbter Schrein",
+			"kind": "schrein",
+			"desc": "Opfere Feste-Leben oder Gold für einen starken Segen über drei Wellen.",
+			"lives": 5,
+			"gold": [
+				150,
+				15
+			],
+			"waves": 3,
+			"bonus": {
+				"damage": 0.25,
+				"hp_regen": 5.0
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "bergkoenig",
+			"name": "Zorn des Bergkönigs",
+			"kind": "ueberleben",
+			"desc": "Ein unbesiegbarer Bergkönig erscheint im Steinkreis. Bleib im Kreis und überlebe: Gold für jede Sekunde.",
+			"vorbild": "Muradin-Event",
+			"time": 60.0,
+			"radius": 10.0,
+			"enemy": {
+				"base": "arenawaechter",
+				"name": "Bergkönig Thorgrim",
+				"hp": 99999,
+				"color": "8a7a5a",
+				"size": [
+					1.6,
+					1.8,
+					1.6
+				],
+				"speed": 4.2
+			},
+			"per_sec": {
+				"gold": [
+					6,
+					0.6
+				]
+			},
+			"leave": 3.0,
+			"weight": 1.0
+		},
+		{
+			"id": "farmgrund",
+			"name": "Kobold-Farmgrund",
+			"kind": "jagd",
+			"desc": "In einer Ecke wimmelt es 60 s lang von Kobolden. Jeder Kill gibt Gold und Holz extra.",
+			"vorbild": "Farm-Event",
+			"time": 60.0,
+			"where": "ecke",
+			"count": 24,
+			"respawn": true,
+			"enemy": {
+				"base": "pruefling",
+				"name": "Kobold",
+				"color": "b8a040"
+			},
+			"each": {
+				"gold": [
+					4,
+					0.4
+				]
+			},
+			"each_wood_every": 6,
+			"fail": false,
+			"weight": 1.0
+		},
+		{
+			"id": "ring_hauptmann",
+			"name": "Ring des Hauptmanns",
+			"kind": "jagd",
+			"desc": "Hauptmann Varos und zwei Leibwachen lagern vor einem Vorwerk. Besiege ihn für seinen Ring.",
+			"vorbild": "Ring-Event",
+			"time": 120.0,
+			"where": "vorwerk",
+			"enemy": {
+				"base": "moorhauptmann",
+				"name": "Hauptmann Varos",
+				"color": "5a6fa0",
+				"hp": 2.2
+			},
+			"guards": {
+				"base": "kerkerwache",
+				"count": 2
+			},
+			"reward": {
+				"item": 4,
+				"gold": [
+					100,
+					10
+				]
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "blitzklinge",
+			"name": "Die Blitzklinge",
+			"kind": "jagd",
+			"desc": "Kapitän Brandor trägt die Blitzklinge. Seine Leibgarde heilt ihn, erst die Garde, dann er.",
+			"vorbild": "Schwert-Event",
+			"time": 150.0,
+			"where": "feld",
+			"enemy": {
+				"base": "knochenritter",
+				"name": "Kapitän Brandor",
+				"color": "c0c8e0",
+				"hp": 2.6
+			},
+			"guards": {
+				"base": "totenrufer",
+				"count": 2,
+				"heal": true
+			},
+			"reward": {
+				"item": 5
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "spiegelbild",
+			"name": "Spiegelbild",
+			"kind": "jagd",
+			"desc": "Dein Schattenzwilling steigt aus dem Boden, mit deinen Werten. Besiege ihn für dauerhafte Stärke.",
+			"vorbild": "Heldenabbild-Event",
+			"time": 90.0,
+			"where": "held",
+			"enemy": {
+				"base": "arenawaechter",
+				"name": "Schattenzwilling",
+				"color": "30304a",
+				"mirror": true
+			},
+			"reward": {
+				"perma": {
+					"damage": 0.08,
+					"hp": 120
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "frostinfernal",
+			"name": "Frost-Infernal",
+			"kind": "jagd",
+			"desc": "Ein Frost-Infernal schlägt auf der Karte ein. Langsam, zäh und eisig. Belohnung: Rüstung für immer.",
+			"vorbild": "Frost-Infernal",
+			"time": 150.0,
+			"where": "feld",
+			"impact": true,
+			"enemy": {
+				"base": "lavawalze",
+				"name": "Frost-Infernal",
+				"rank": "elite",
+				"color": "8fd0ff",
+				"hp": 5.0,
+				"speed": 2.2,
+				"size": [
+					2.4,
+					2.6,
+					2.4
+				]
+			},
+			"reward": {
+				"perma": {
+					"armor": 3.0
+				},
+				"item": 3
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "geisterbestie",
+			"name": "Geisterbestie",
+			"kind": "jagd",
+			"desc": "Eine Geisterbestie streift umher und flieht, sobald sie dich sieht. Erwisch sie in 60 s.",
+			"vorbild": "Geisterbestie",
+			"time": 60.0,
+			"where": "feld",
+			"flee": true,
+			"enemy": {
+				"base": "haingeist",
+				"name": "Geisterbestie",
+				"rank": "elite",
+				"color": "a0ffe0",
+				"hp": 3.0,
+				"speed": 7.5
+			},
+			"reward": {
+				"perma": {
+					"speed": 0.06
+				},
+				"wood": 3
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "questboss",
+			"name": "Kopfgeld: Moorschlund",
+			"kind": "jagd",
+			"desc": "Ein Questboss hat sich im Holzhain eingenistet. Wer ihn erlegt, kassiert das Kopfgeld.",
+			"vorbild": "Quest-Bosse",
+			"time": 180.0,
+			"where": "hain",
+			"enemy": {
+				"base": "giftkroete",
+				"name": "Moorschlund",
+				"rank": "elite",
+				"color": "4a7a3a",
+				"hp": 12.0,
+				"size": [
+					2.6,
+					1.4,
+					2.6
+				]
+			},
+			"reward": {
+				"gold": [
+					300,
+					25
+				],
+				"wood": 4
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "kopfgeld",
+			"name": "Kopfgeld",
+			"kind": "jagd",
+			"desc": "Ein markierter Elite zieht über eine Straße. 60 s Zeit, Belohnung ein seltenes Item.",
+			"time": 60.0,
+			"where": "strasse",
+			"enemy": {
+				"base": "wave_elite",
+				"name": "Gesuchter"
+			},
+			"reward": {
+				"item": 3
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "schatzgoblin",
+			"name": "Schatzgoblin",
+			"kind": "jagd",
+			"desc": "Ein Goblin mit prallem Sack flieht über die Karte. Jeder Treffer wirft Gold ab.",
+			"time": 45.0,
+			"where": "feld",
+			"flee": true,
+			"hit_gold": [
+				3,
+				0.3
+			],
+			"enemy": {
+				"base": "sumpfling",
+				"name": "Schatzgoblin",
+				"color": "e0c040",
+				"hp": 6.0,
+				"speed": 6.5
+			},
+			"reward": {
+				"gold": [
+					150,
+					12
+				]
+			},
+			"fail": false,
+			"weight": 1.0
+		},
+		{
+			"id": "rammbock",
+			"name": "Rammbock",
+			"kind": "jagd",
+			"desc": "Ein gepanzerter Rammbock rollt auf ein Torwerk zu. Halte ihn auf, bevor er es einreißt.",
+			"time": 0.0,
+			"where": "strasse",
+			"enemy": {
+				"base": "lavawalze",
+				"name": "Rammbock",
+				"rank": "elite",
+				"color": "6a4a2a",
+				"hp": 4.0,
+				"speed": 2.6,
+				"abilities": []
+			},
+			"reward": {
+				"wood": 3,
+				"repair": true
+			},
+			"leak_penalty": {
+				"lives": 3
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "hexenzirkel",
+			"name": "Hexenzirkel",
+			"kind": "jagd",
+			"desc": "Drei Hexen beschwören am Waldrand Gegner, bis sie fallen.",
+			"time": 90.0,
+			"where": "feld",
+			"count": 3,
+			"enemy": {
+				"base": "sumpfhexer",
+				"name": "Zirkelhexe",
+				"color": "8a3aa0",
+				"hp": 3.0
+			},
+			"reward": {
+				"buff": {
+					"stats": {
+						"cdr": 0.2,
+						"mana_regen": 3.0
+					},
+					"time": 120.0
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "riese",
+			"name": "Verirrter Riese",
+			"kind": "jagd",
+			"desc": "Ein Riese verirrt sich vor die Feste. Er greift nur an, wenn man ihn reizt. Fällt er, schenkt das Dorf Feste-Leben.",
+			"time": 120.0,
+			"where": "feld",
+			"passive": true,
+			"enemy": {
+				"base": "moorbrute",
+				"name": "Verirrter Riese",
+				"rank": "elite",
+				"color": "9a8a7a",
+				"hp": 8.0,
+				"size": [
+					2.6,
+					3.0,
+					2.6
+				]
+			},
+			"reward": {
+				"lives": 2
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "pluenderer",
+			"name": "Plünderer im Hain",
+			"kind": "jagd",
+			"desc": "Plünderer fällen den Holzhain. Vertreib sie, bevor sie mit dem Holz verschwinden.",
+			"time": 60.0,
+			"where": "hain",
+			"count": 5,
+			"enemy": {
+				"base": "karawanenraeuber",
+				"name": "Plünderer"
+			},
+			"reward": {
+				"wood": 5
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "knochenhort",
+			"name": "Knochenhort",
+			"kind": "jagd",
+			"desc": "Ein Grabwächter bewacht einen Hort. Er steht zweimal wieder auf.",
+			"time": 90.0,
+			"where": "feld",
+			"revive": 2,
+			"enemy": {
+				"base": "grabwaechter",
+				"name": "Hortwächter",
+				"rank": "elite",
+				"hp": 3.0
+			},
+			"reward": {
+				"gold": [
+					200,
+					15
+				],
+				"xp": [
+					200,
+					30
+				]
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "meteorregen",
+			"name": "Meteorregen",
+			"kind": "regen",
+			"desc": "30 s lang schlagen Meteore ein. Sie treffen auch Gegner. Wer höchstens zweimal getroffen wird, sammelt Splitter (Holz).",
+			"time": 30.0,
+			"every": 0.7,
+			"radius": 3.0,
+			"windup": 1.4,
+			"damage": 0.12,
+			"foe_damage": [
+				120,
+				10
+			],
+			"max_hits": 2,
+			"reward": {
+				"wood": 4
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "eisregen",
+			"name": "Eisregen",
+			"kind": "regen",
+			"desc": "Eisbrocken fallen und lassen Frostflächen zurück. Übersteh 30 s mit wenig Treffern für einen Frostpanzer.",
+			"time": 30.0,
+			"every": 0.8,
+			"radius": 2.6,
+			"windup": 1.2,
+			"damage": 0.08,
+			"slow": 0.4,
+			"max_hits": 3,
+			"reward": {
+				"buff": {
+					"stats": {
+						"armor": 6.0
+					},
+					"time": 180.0
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "gewitter",
+			"name": "Gewittersturm",
+			"kind": "regen",
+			"desc": "Blitze schlagen zufällig ein, auch in Gegner. Wer ausweicht, wird aufgeladen.",
+			"time": 30.0,
+			"every": 0.5,
+			"radius": 2.0,
+			"windup": 1.0,
+			"damage": 0.1,
+			"foe_damage": [
+				160,
+				12
+			],
+			"max_hits": 2,
+			"reward": {
+				"buff": {
+					"stats": {
+						"attack_speed": 0.3
+					},
+					"time": 150.0
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "glutfontaenen",
+			"name": "Glutfontänen",
+			"kind": "regen",
+			"desc": "Rund um die Feste brechen Glutfontänen auf. Unbeschadet durch 25 s gibt es Gold.",
+			"time": 25.0,
+			"every": 0.4,
+			"radius": 2.4,
+			"windup": 1.1,
+			"damage": 0.1,
+			"around": "feste",
+			"max_hits": 1,
+			"reward": {
+				"gold": [
+					180,
+					15
+				]
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "sternsplitter",
+			"name": "Sternsplitter",
+			"kind": "sammeln",
+			"desc": "Acht Sternsplitter fallen auf die Karte. Jeder gibt Erfahrung, 60 s Zeit.",
+			"time": 60.0,
+			"count": 8,
+			"color": "9ad8ff",
+			"each": {
+				"xp": [
+					60,
+					8
+				]
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "vorraete",
+			"name": "Verlorene Vorräte",
+			"kind": "sammeln",
+			"desc": "Kisten einer Karawane liegen verstreut. Manche sind Mimiks.",
+			"time": 60.0,
+			"count": 6,
+			"color": "c08a40",
+			"each": {
+				"gold": [
+					25,
+					3
+				]
+			},
+			"mimic": 0.25,
+			"mimic_enemy": {
+				"base": "moorklauer",
+				"name": "Mimik",
+				"color": "a06a30",
+				"hp": 2.0
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "seelenlichter",
+			"name": "Seelenlichter",
+			"kind": "sammeln",
+			"desc": "Seelen gefallener Wächter schweben umher. Jede gibt dauerhaft ein wenig Lebensregeneration.",
+			"time": 50.0,
+			"count": 5,
+			"color": "e0e0ff",
+			"drift": true,
+			"each": {
+				"perma": {
+					"hp_regen": 0.6
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "runensteine",
+			"name": "Runensteine",
+			"kind": "sammeln",
+			"desc": "Vier Runensteine leuchten auf. Alle vier in 60 s berühren: dauerhaft mehr Schaden.",
+			"time": 60.0,
+			"count": 4,
+			"color": "ff7ae0",
+			"all": true,
+			"reward": {
+				"perma": {
+					"damage": 0.06
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "leuchtfeuer",
+			"name": "Leuchtfeuer",
+			"kind": "halten",
+			"desc": "Entzünde das Leuchtfeuer: 25 s im Kreis stehen, während Gegner anstürmen.",
+			"time": 25.0,
+			"limit": 60.0,
+			"radius": 4.0,
+			"every": 5.0,
+			"spawn": {
+				"base": "wave_normal",
+				"count": 3
+			},
+			"reward": {
+				"buff": {
+					"stats": {
+						"damage": 0.25
+					},
+					"time": 180.0
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "altar",
+			"name": "Altar weihen",
+			"kind": "halten",
+			"desc": "Ein alter Altar am Wegrand. Weihe ihn 20 s lang, die Feste erhält Leben zurück.",
+			"time": 20.0,
+			"limit": 50.0,
+			"radius": 3.5,
+			"every": 6.0,
+			"spawn": {
+				"base": "wave_normal",
+				"count": 2
+			},
+			"reward": {
+				"lives": 3
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "brunnen",
+			"name": "Brunnen reinigen",
+			"kind": "halten",
+			"desc": "Ein vergifteter Brunnen. 15 s reinigen, dann heilt er dich und gibt Regeneration.",
+			"time": 15.0,
+			"limit": 45.0,
+			"radius": 3.0,
+			"every": 4.0,
+			"spawn": {
+				"base": "giftkroete",
+				"count": 1
+			},
+			"reward": {
+				"heal": 1.0,
+				"buff": {
+					"stats": {
+						"hp_regen": 8.0
+					},
+					"time": 180.0
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "arena_woelfe",
+			"name": "Wolfsgrube",
+			"kind": "ueberleben",
+			"desc": "Im Kreis greifen Wölfe in Rudeln an. 45 s im Kreis überleben: dauerhaft mehr Leben.",
+			"time": 45.0,
+			"radius": 9.0,
+			"leave": 3.0,
+			"packs": {
+				"base": "moorklauer",
+				"name": "Grubenwolf",
+				"color": "7a7a7a",
+				"count": 3,
+				"every": 7.0,
+				"speed": 6.0
+			},
+			"reward": {
+				"perma": {
+					"hp": 150
+				}
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "rueckenwind",
+			"name": "Rückenwind",
+			"kind": "segen",
+			"desc": "Ein kräftiger Wind: 90 s lang schneller laufen.",
+			"stats": {
+				"speed": 0.25
+			},
+			"time": 90.0,
+			"weight": 1.0
+		},
+		{
+			"id": "kriegstrommeln",
+			"name": "Kriegstrommeln",
+			"kind": "segen",
+			"desc": "Aus der Feste dröhnen Trommeln: 90 s lang schneller angreifen.",
+			"stats": {
+				"attack_speed": 0.3
+			},
+			"time": 90.0,
+			"weight": 1.0
+		},
+		{
+			"id": "klarer_geist",
+			"name": "Klarer Geist",
+			"kind": "segen",
+			"desc": "Die Sterne stehen günstig: 60 s lang kürzere Abklingzeiten.",
+			"stats": {
+				"cdr": 0.3
+			},
+			"time": 60.0,
+			"weight": 1.0
+		},
+		{
+			"id": "blutdurst",
+			"name": "Blutdurst",
+			"kind": "segen",
+			"desc": "Rote Nebel ziehen auf: 90 s lang Lebensraub.",
+			"stats": {
+				"lifesteal": 0.15
+			},
+			"time": 90.0,
+			"weight": 1.0
+		},
+		{
+			"id": "finsternis",
+			"name": "Finsternis",
+			"kind": "segen",
+			"desc": "Die Sonne verdunkelt sich: 120 s lang sind Gegner schneller, geben aber 50 % mehr Gold.",
+			"time": 120.0,
+			"foes": {
+				"speed": 1.2
+			},
+			"gold": 1.5,
+			"weight": 1.0
+		},
+		{
+			"id": "goldrausch",
+			"name": "Goldrausch",
+			"kind": "segen",
+			"desc": "60 s lang doppeltes Gold für jeden Kill.",
+			"time": 60.0,
+			"gold": 2.0,
+			"weight": 1.0
+		},
+		{
+			"id": "erschoepfung",
+			"name": "Erschöpfte Horde",
+			"kind": "segen",
+			"desc": "Die Gegner sind ausgelaugt: 90 s lang machen sie 30 % weniger Schaden.",
+			"time": 90.0,
+			"foes": {
+				"damage": 0.7
+			},
+			"weight": 1.0
+		},
+		{
+			"id": "seuchenwind",
+			"name": "Seuchenwind",
+			"kind": "segen",
+			"desc": "Ein Seuchenwind stärkt die Gegner (Leben +30 %), dafür gibt es 120 s lang doppelte Erfahrung.",
+			"time": 120.0,
+			"foes": {
+				"hp": 1.3
+			},
+			"xp": 2.0,
+			"weight": 1.0
+		},
+		{
+			"id": "ahnengaben",
+			"name": "Gaben der Ahnen",
+			"kind": "wahl",
+			"desc": "Die Ahnen bieten eine Gabe an. Wähle eine.",
+			"options": [
+				{
+					"text": "Kraft",
+					"reward": {
+						"perma": {
+							"damage": 0.06
+						}
+					}
+				},
+				{
+					"text": "Ausdauer",
+					"reward": {
+						"perma": {
+							"hp": 160
+						}
+					}
+				},
+				{
+					"text": "Eile",
+					"reward": {
+						"perma": {
+							"speed": 0.05,
+							"attack_speed": 0.05
+						}
+					}
+				}
+			],
+			"weight": 1.0
+		},
+		{
+			"id": "gaukler",
+			"name": "Spieltisch des Gauklers",
+			"kind": "wahl",
+			"desc": "Ein Gaukler bietet ein Spiel an: Gold setzen und vielleicht verdoppeln.",
+			"options": [
+				{
+					"text": "Hälfte des Golds setzen (50 %: doppelt)",
+					"stake": 0.5,
+					"chance": 0.5
+				},
+				{
+					"text": "Sicheres Trinkgeld",
+					"reward": {
+						"gold": [
+							40,
+							4
+						]
+					}
+				},
+				{
+					"text": "Weitergehen",
+					"reward": {}
+				}
+			],
+			"weight": 1.0
+		},
+		{
+			"id": "soeldner",
+			"name": "Söldnerlager",
+			"kind": "wahl",
+			"desc": "Ein Söldnertrupp bietet seine Klingen an, zwei Minuten lang.",
+			"options": [
+				{
+					"text": "Anheuern",
+					"cost": [
+						120,
+						12
+					],
+					"reward": {
+						"ally": {
+							"time": 120.0,
+							"hp": 1500,
+							"damage": 40
+						}
+					}
+				},
+				{
+					"text": "Ablehnen",
+					"reward": {}
+				}
+			],
+			"weight": 1.0
+		},
+		{
+			"id": "wanderschmied",
+			"name": "Wandernder Schmied",
+			"kind": "wahl",
+			"desc": "Ein Schmied veredelt ein Item am Helden um eine Stufe, für Holz oder gratis mit Risiko.",
+			"options": [
+				{
+					"text": "Für 2 Holz veredeln",
+					"wood_cost": 2,
+					"reward": {
+						"upgrade": 1
+					}
+				},
+				{
+					"text": "Gratis (50 % Erfolg)",
+					"chance": 0.5,
+					"reward": {
+						"upgrade": 1
+					}
+				},
+				{
+					"text": "Ablehnen",
+					"reward": {}
+				}
+			],
+			"weight": 1.0
+		},
+		{
+			"id": "schattenpakt",
+			"name": "Schattenpakt",
+			"kind": "wahl",
+			"desc": "Ein Schatten flüstert: Feste-Leben gegen dauerhafte Macht.",
+			"options": [
+				{
+					"text": "2 Feste-Leben opfern",
+					"cost_lives": 2,
+					"reward": {
+						"perma": {
+							"damage": 0.15
+						}
+					}
+				},
+				{
+					"text": "Ablehnen",
+					"reward": {}
+				}
+			],
+			"weight": 1.0
+		},
+		{
+			"id": "bautrupp",
+			"name": "Bautrupp",
+			"kind": "wahl",
+			"desc": "Ein Bautrupp bietet an: alle Torwerke reparieren oder Holz liefern.",
+			"options": [
+				{
+					"text": "Torwerke reparieren",
+					"reward": {
+						"repair": true
+					}
+				},
+				{
+					"text": "3 Holz",
+					"reward": {
+						"wood": 3
+					}
+				}
+			],
+			"weight": 1.0
+		}
+	]
+}

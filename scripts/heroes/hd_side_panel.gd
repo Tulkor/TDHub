@@ -79,7 +79,7 @@ func _signature() -> String:
 	var parts: Array = [z.hero_zone(), shop.gold / 10, shop.wood, shop.marks, str(shop.inv), str(shop.merchant), gem_pick,
 		str(ev.choice.get("id", "")), ceili(float(ev.choice.get("until", 0.0)) - game.play_time), ev.status(),
 		z.arena_wins, z.arena_fight != null, z.lumberjacks, str(z.trial.get("kills", "")), ceili(float(z.trial.get("t", 0.0))),
-		str(z.trial_done), game.wave, game.boss_warned]
+		str(z.trial_done), game.wave, game.boss_warned, str(game.final.lines()), _clock_text()]
 	if z.arena_fight != null:
 		parts.append(roundi(z.arena_fight.hp / z.arena_fight.max_hp * 20.0))
 	return str(parts)
@@ -96,6 +96,10 @@ func refresh(force := false) -> void:
 	for c in _box.get_children():
 		c.queue_free()
 	var any := false
+	if game.final.active:
+		_fill_final()
+		_panel_node.visible = true
+		return
 	any = _fill_event() or any
 	var zid: String = game.zones.hero_zone()
 	if zid != "":
@@ -110,13 +114,13 @@ func refresh(force := false) -> void:
 
 func _fill_event() -> bool:
 	var ev: HdEvents = game.events
-	var id := str(ev.choice.get("id", ev.active.get("id", "")))
-	var st := ev.status()
+	var id := str(ev.choice.get("id", ev.active.get("id", ev.kinds.task.get("id", ""))))
+	var st = ev.status()
 	if id == "" and st == "":
 		return false
 	UiTheme.caption("Ereignis", _box)
 	if id != "":
-		var d := ev.def(id)
+		var d = ev.def(id)
 		_label(tr(str(d.name)), _box, 17, UiTheme.GOLD, true)
 		_label(tr(str(d.get("desc", ""))), _box, 12, UiTheme.MUTED, false, true)
 	if not ev.choice.is_empty():
@@ -130,6 +134,8 @@ func _fill_event() -> bool:
 				why = tr("Die Feste hat zu wenig Leben")
 			elif str(ev.choice.id) == "schrein" and i == 1 and shop.gold < ev._shrine_gold():
 				why = tr("Zu wenig Gold")
+			elif str(ev.def(str(ev.choice.id)).get("kind", "")) == "wahl":
+				why = ev.kinds.can_pick(ev.def(str(ev.choice.id)), i)
 			var b := _button(str(opts[i]), _box, why, func(): _say(shop.act({"kind": "event", "pick": k})), i == 0)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for i in shop.merchant.size():
@@ -150,6 +156,23 @@ func _fill_event() -> bool:
 	if st != "":
 		_label(st, _box, 12, UiTheme.TEXT, true, true)
 	return true
+
+
+## Restzeit bis zum nächsten Ereignis („" = Uhr steht).
+func _clock_text() -> String:
+	var c = game.systems.get("timed_events")
+	if c == null or not c.running():
+		return ""
+	var r := ceili(c.remaining())
+	return tr("Nächstes Ereignis in %d:%02d") % [r / 60, r % 60]
+
+
+## Endgebiet: Challenges, Weckuhr des Verschlingers (vorläufig, Mockup folgt).
+func _fill_final() -> void:
+	UiTheme.caption("Endgebiet", _box)
+	var lines: Array = game.final.lines()
+	for i in lines.size():
+		_label(str(lines[i]), _box, 17 if i == 0 else 13, UiTheme.GOLD if i == 0 else UiTheme.TEXT, i == 0, true)
 
 
 func _fill_zone(zid: String) -> void:
@@ -261,13 +284,19 @@ func _fill_forge() -> void:
 
 ## Ausblick: nächster Kriegsherr (Welle, Straße ab der Ansage) und offene Sonderzonen.
 func _fill_outlook(any: bool) -> bool:
+	var ct := _clock_text()
+	if ct != "":
+		if any:
+			_sep()
+		_label(ct, _box, 12, UiTheme.CYAN, true)
+		any = true
 	var next := 0
 	for n in range(game.wave + 1, game.wave_count() + 1):
 		if game.is_boss_wave(n):
 			next = n
 			break
 	if next == 0 or next - game.wave > 3:
-		return false
+		return ct != ""
 	if any:
 		_sep()
 	UiTheme.caption("Kriegsherr", _box)

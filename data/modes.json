@@ -183,7 +183,7 @@
 			"scene": "res://scenes/heroes_game.tscn",
 			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
 			"needs_map": false,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory"],
+			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory", "timed_events", "challenges"],
 			"system_cfg": {
 				"run_record": {
 					"profile": "heroes"
@@ -195,6 +195,14 @@
 				"targeting": {
 					"position": "xz",
 					"radius": "radius"
+				},
+				"timed_events": {
+					"interval": 300.0,
+					"pool": "res://data/heroes_ereignisse.json"
+				},
+				"challenges": {
+					"data": "res://data/heroes_endgebiet.json",
+					"awaken": 480.0
 				}
 			}
 		},

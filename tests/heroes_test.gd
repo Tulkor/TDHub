@@ -46,6 +46,8 @@ func _ready() -> void:
 	await _bosses()
 	await _zones()
 	await _events()
+	await _timed_events()
+	await _final_area()
 	for held in ["torvik", "unrat", "vesna", "zix"]:
 		await _bot_run(0, held)
 	print("FERTIG, Fehler: %d" % failures)
@@ -728,13 +730,33 @@ func _stage3_data() -> void:
 			check(ids.has(str(g[0])), "Welle %d: Gegner %s existiert" % [i + 1, g[0]])
 		if bool(w.get("boss", false)):
 			bosses.append(i + 1)
-	check(bosses == [10, 20, 30, 40], "Kriegsherren in Welle 10/20/30, Endboss 40 (%s)" % [bosses])
+	check(bosses == [10, 20, 30], "Kriegsherren in Welle 10/20/30, Welle 40 Großangriff (%s)" % [bosses])
 	for z in ["arena", "hain", "schmiede", "pruefung"]:
 		var found := false
 		for x in cfg.zones.list:
 			found = found or str(x.id) == z
 		check(found, "Sonderzone %s" % z)
-	check(cfg.events.list.size() == 5, "5 Ereignisse")
+	var pool: Dictionary = Database.load_json("res://data/heroes_ereignisse.json")
+	var ev_ids := {}
+	var bad: Array = []
+	for d in pool.list:
+		ev_ids[str(d.id)] = true
+		var kind := str(d.get("kind", ""))
+		if not (kind in HdEventKinds.KINDS or kind in ["haendler", "karawane", "blutmond", "gefangener", "schrein"]):
+			bad.append(d.id)
+		for k in ["enemy", "guards", "mimic_enemy", "packs", "spawn"]:
+			var base := str(d.get(k, {}).get("base", "")) if d.get(k) is Dictionary else ""
+			if base != "" and not base.begins_with("wave_") and not _enemy_exists(cfg, base):
+				bad.append("%s:%s" % [d.id, base])
+	check(ev_ids.size() == pool.list.size() and ev_ids.size() >= 40, "Ereignis-Pool: mindestens 40 verschiedene (%d)" % ev_ids.size())
+	check(bad.is_empty(), "Ereignis-Pool: bekannte Arten und Gegner %s" % [bad])
+
+
+func _enemy_exists(cfg: Dictionary, id: String) -> bool:
+	for e in cfg.enemies:
+		if str(e.id) == id:
+			return true
+	return false
 
 
 func _factions() -> void:
@@ -844,36 +866,15 @@ func _bosses() -> void:
 	# Kriegsherren-Händler
 	check(g.shop.act({"kind": "buy", "id": "moorkrone"}) == "" and g.shop.trophies == 0, "Trophäe kauft die Moorkrone")
 	check(g.shop.can_buy("glutherz") != "", "Ohne Trophäe kein weiteres Trophäen-Item")
-	# Endboss: landet vor der Feste, belagert, Phasen
+	# Welle 40: Großangriff ohne Endboss, danach Endgebiet (eigener Test _final_area)
 	for e in g.enemies:
 		g._remove(e)
 	g.spawn_queue.clear()
 	g.start_wave(40)
-	_run(g, 7.0)
-	var v = null
-	for e in g.enemies:
-		if e.id == "verschlinger":
-			v = e
-	check(v != null and v.zone == "siege" and v.position.distance_to(g.fortress_pos) < 16.0, "Verschlinger landet vor der Feste")
-	if v:
-		for e in g.enemies:
-			if e != v:
-				g._remove(e)
-		g.spawn_queue.clear()
-		var lives0 := g.lives
-		_run(g, 9.0)
-		check(g.lives < lives0, "Endboss ohne Ziel belagert die Feste")
-		v.shield = 0.0
-		v.take(v.max_hp * 0.36)
-		check(v.phase == 1 and v.extra_abilities.has("verschl_speere") and g.spawn_queue.size() >= 5 * g.roads.size(), "Phase 2: neue Fähigkeit, Gegner über alle Straßen")
-		v.take(v.max_hp * 0.35)
-		check(v.phase == 2 and v.cd_mult < 0.65, "Phase 3: schnellere Fähigkeiten")
-		g.spawn_queue.clear()
-		g.hero_hit(v, 99999999.0, "test")
-		for e in g.enemies:
-			g._remove(e)
-		_run(g, 0.5)
-		check(g.state == "over" and g.lives > 0, "Sieg nach dem Endboss")
+	var has_v := false
+	for sq in g.spawn_queue:
+		has_v = has_v or str(sq.id) == "verschlinger"
+	check(not has_v and not g.is_boss_wave(40), "Welle 40 ist ein Großangriff ohne Verschlinger")
 	g.queue_free()
 	await get_tree().process_frame
 
@@ -970,7 +971,7 @@ func _zones() -> void:
 
 func _events() -> void:
 	var g := await _new_game()
-	var ev := g.events
+	var ev = g.events
 	_park_hero(g)
 	g.wave = 4
 	# Wanderhändler
@@ -1040,4 +1041,172 @@ func _events() -> void:
 	g.start_wave(g.wave + 3)
 	check(ev.active.is_empty() and not is_instance_valid(ally) or ally.is_queued_for_deletion(), "Befreite zieht nach 2 Wellen weiter")
 	g.queue_free()
+	await get_tree().process_frame
+
+
+## Ereignis-Uhr (System timed_events): alle 5 Minuten eins, nicht während ein Kriegsherr lebt; jedes Ereignis
+## des Pools läuft einmal an und lässt sich abschließen; einige Arten mit Belohnung durchgespielt.
+func _timed_events() -> void:
+	var g := await _new_game()
+	var clock = g.systems.get("timed_events")
+	check(clock != null and clock.pool.size() >= 40 and is_equal_approx(clock.interval(), 300.0), "Ereignis-Uhr: Pool geladen, alle 300 s")
+	_park_hero(g)
+	g.wave = 4
+	g.wave_time = 0.0
+	clock.reset()
+	g.wave_limit = 0
+	var h0: int = clock.history.size()
+	for k in int(299.0 / 0.5):
+		clock.tick(0.5)
+	check(clock.history.size() == h0, "vor 5 Minuten kein Ereignis")
+	clock.tick(1.0)
+	check(clock.history.size() == h0 + 1, "nach 5 Minuten ein Ereignis (%s)" % [clock.history])
+	g.events.kinds.clear()
+	g.events.choice = {}
+	g.events.active = {}
+	# alle Ereignisse einmal anstoßen
+	var broken: Array = []
+	for d in clock.pool:
+		var id := str(d.id)
+		if id in ["karawane", "gefangener", "haendler", "blutmond", "schrein"]:
+			continue
+		for x in g.enemies.duplicate():
+			g._remove(x)
+		g.spawn_queue.clear()
+		g.hero.hp = g.hero.max_hp
+		g.events.start(id)
+		var started: bool = g.events.busy() or not g.event_buffs.is_empty() or not g.event_mods.is_empty()
+		_run(g, 2.0)
+		if not g.events.choice.is_empty():
+			g.events._decide(g.events.choice.options.size() - 1)
+		g.events.kinds.clear()
+		g.event_buffs.clear()
+		g.event_mods.clear()
+		if not started or g.state != "play":
+			broken.append(id)
+	check(broken.is_empty(), "alle Ereignisse starten und enden sauber %s" % [broken])
+	# Segen: Werte auf Zeit
+	var as0 := g.hero.b("attack_speed")
+	g.events.start("kriegstrommeln")
+	check(g.hero.b("attack_speed") > as0 + 0.2, "Kriegstrommeln: Angriffstempo")
+	_run(g, 91.0)
+	check(absf(g.hero.b("attack_speed") - as0) < 0.001, "Segen endet nach seiner Zeit")
+	# Jagd: Ziel besiegen → Item ins Lager
+	for x in g.enemies.duplicate():
+		g._remove(x)
+	g.spawn_queue.clear()
+	var free0 := g.shop.count_free("stash")
+	g.events.start("kopfgeld")
+	var tg: Array = g.events.kinds.event_enemies()
+	check(tg.size() == 1 and tg[0].event_tag == "kopfgeld", "Kopfgeld: ein markierter Gegner")
+	for e in tg:
+		g.hero_hit(e, 1e9, "test")
+	_run(g, 1.0)
+	check(not g.events.kinds.busy() and g.shop.count_free("stash") == free0 - 1, "Kopfgeld: Item ins Lager")
+	# Sammeln: über alle Lichter laufen
+	var xp0 := g.hero.xp + g.hero.level * 1000.0
+	g.events.start("sternsplitter")
+	for o in g.events.kinds.task.orbs.duplicate():
+		g.hero.position = o.node.position
+		_run(g, 0.1)
+	check(not g.events.kinds.busy() and g.hero.xp + g.hero.level * 1000.0 > xp0, "Sternsplitter: alle gesammelt, Erfahrung")
+	# Halten: im Kreis stehen
+	var lives0 := g.lives
+	g.lives = g.max_lives - 5
+	lives0 = g.lives
+	g.events.start("altar")
+	var at: Vector3 = g.events.kinds.task.pos
+	for k in int(21.0 / DT):
+		g.hero.position = at
+		g.hero.hp = g.hero.max_hp
+		g.step(DT)
+	check(not g.events.kinds.busy() and g.lives == lives0 + 3, "Altar weihen: +3 Feste-Leben (%d → %d)" % [lives0, g.lives])
+	# Wahl: Gaben der Ahnen
+	var d0 := g.hero.b("damage")
+	g.events.start("ahnengaben")
+	check(g.shop.act({"kind": "event", "pick": 0}) == "" and g.hero.b("damage") > d0, "Gaben der Ahnen: Kraft dauerhaft")
+	# Uhr steht, während ein Kriegsherr lebt
+	for x in g.enemies.duplicate():
+		g._remove(x)
+	g.events.kinds.clear()
+	g.start_wave(10)
+	_run(g, 25.0)
+	var c0: float = clock.clock
+	_run(g, 5.0)
+	check(not g.boss_alive() or is_equal_approx(clock.clock, c0), "Uhr steht, solange der Kriegsherr lebt")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+## Endgebiet „Der Schlund“: nach der letzten Welle hinüber, Challenges schaffen, Endboss geschwächt, Sieg.
+func _final_area() -> void:
+	var g := await _new_game()
+	var ch = g.systems.get("challenges")
+	check(ch != null and ch.list.size() >= 5, "Endgebiet: Challenges geladen")
+	g.wave = 40
+	g.wave_limit = 0
+	g.spawn_queue.clear()
+	for x in g.enemies.duplicate():
+		g._remove(x)
+	_run(g, 0.5)
+	check(g.final.active and ch.open and g.hero.position.distance_to(g.final.start_pos()) < 3.0, "nach der letzten Welle ins Endgebiet")
+	check(g.bounds() != g.cfg.arena.bounds, "eigenes Spielfeld im Endgebiet")
+	# Wagnis: Station betreten → sofort Item ins Lager, Fluch für den Endkampf
+	var free0 := g.shop.count_free("stash")
+	for k in int(1.3 / DT):
+		g.hero.position = g.final.station_pos("fluchschrein")
+		g.step(DT)
+	check(ch.state_of("fluchschrein") == "done" and g.shop.count_free("stash") == free0 - 1, "Fluchschrein: legendäres Item")
+	# Siegel: in der Reihenfolge der Tafel
+	g.hero.position = g.final.start_pos()
+	check(g.final.begin("siegel") == "", "Siegelsteine beginnen")
+	var run: Dictionary = g.final.run
+	var order: Array = run.order.duplicate()
+	for k in order:
+		g.hero.position = run.stones[k].pos
+		_run(g, 0.2)
+		g.hero.position = g.final.start_pos()
+		_run(g, 0.1)
+	check(ch.state_of("siegel") == "done", "Siegelsteine in richtiger Reihenfolge gelöst")
+	# Echos: alle Kriegsherren-Echos besiegen
+	check(g.final.begin("echos") == "", "Echos beginnen")
+	for k in 3:
+		_run(g, 0.2)
+		var cur = g.final.run.get("cur")
+		if cur != null:
+			g.hero_hit(cur, 1e9, "test")
+	_run(g, 0.3)
+	check(ch.state_of("echos") == "done", "Echos der Kriegsherren besiegt")
+	check(g.shop.trophies == 0, "Echos geben keine Trophäen")
+	# Endboss durch das Tor
+	for k in int(1.8 / DT):
+		g.hero.position = g.final.gate_pos()
+		g.step(DT)
+	check(ch.boss_started and g.final.boss != null, "Tor startet den Endkampf")
+	var v: HdEnemy = g.final.boss
+	check(not v.abilities().has("verschl_hagel"), "Siegel: Verschlinger ohne Leerenhagel")
+	var plain := float(g.enemy_defs["verschlinger"].hp) * float(g.diff().hp) * float(g.scaling().hp) * (1.0 + float(g.cfg.waves.scale_hp) * 39)
+	check(absf(v.max_hp - plain * 0.85) < 2.0, "Echos: Verschlinger −15 % Leben")
+	check(g.hero.has_buff("endkampf"), "Fluch gilt im Endkampf")
+	var lives0 := g.lives
+	for k in int(9.0 / DT):
+		g.hero.hp = g.hero.max_hp
+		g.step(DT)
+	check(g.lives == lives0, "Verschlinger belagert im Schlund keine Feste (%d → %d)" % [lives0, g.lives])
+	v.shield = 0.0
+	v.take(v.max_hp * 0.36)
+	check(v.phase == 1 and g.spawn_queue.is_empty(), "Phase 2 ruft Gegner im Schlund, nicht über die Straßen")
+	g.hero_hit(v, 1e10, "test")
+	_run(g, 0.5)
+	check(g.state == "over" and g.lives > 0, "Sieg nach dem Verschlinger")
+	# Weckuhr: ohne Tor erwacht er von selbst
+	var g2 := await _new_game()
+	var ch2 = g2.systems.get("challenges")
+	g2.final.enter()
+	g2.hero.position = g2.final.start_pos()
+	for k in int((float(ch2.cfg.awaken) + 1.0) / 1.0):
+		ch2.tick(1.0)
+	check(ch2.boss_started and ch2.boss_reason == "awaken", "Verschlinger erwacht nach %d s von selbst" % int(ch2.cfg.awaken))
+	g.queue_free()
+	g2.queue_free()
 	await get_tree().process_frame

@@ -542,6 +542,23 @@ func _prepare_heroes(game: Node) -> void:
 		game.start_wave(int(opts.welle))
 	if opts.has("ereignis"):
 		game.events.start(str(opts.ereignis))
+		if opts.has("ereignis_zeit"):
+			for k in int(float(opts.ereignis_zeit) * 30.0):
+				game.step(1.0 / 30.0)
+	if opts.has("endgebiet"):
+		game.spawn_queue.clear()
+		for e in game.enemies.duplicate():
+			game._remove(e)
+		game.wave = int(game.cfg.waves.count)
+		game.final.enter()
+		var eg := str(opts.endgebiet)
+		if eg == "boss":
+			game.systems.challenges.start_boss("gate")
+		elif eg != "1":
+			game.final.begin(eg)
+			game.hero.position = game.final.station_pos(eg) + Vector3(2.5, 0, 2.5)
+		for k in 45:
+			game.step(1.0 / 30.0)
 	if opts.has("zone"):
 		var zid := str(opts.zone)
 		if game.wave < 13:

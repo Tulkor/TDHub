@@ -1,44 +1,56 @@
 class_name HdEvents
 extends RefCounted
-## Ereignisse zwischen den Wellen (Bollwerk Etappe 3, Design Abschnitt 8), etwa jede 3.–4. Welle eines,
-## nie in einer Kriegsherrn-Welle:
-## - Wanderhändler: 60 s lang 3 seltene Items zum Festpreis (HdShop.merchant).
-## - Goldene Karawane: zieht quer über die Karte, Räuber greifen sie gezielt an; am Ziel Gold nach Leben.
-## - Blutmond: Abstimmung (allein entscheidet die eigene Stimme), die nächste Welle doppelt so stark mit
-##   doppelter Belohnung.
-## - Gefangener Held: Wachen besiegen, kurz am Käfig stehen → kämpft waves Wellen mit (HdAlly).
-## - Verderbter Schrein: Feste-Leben oder Gold opfern für einen Segen über mehrere Wellen (game.blessing).
-## Entscheidungen über act({"kind": "event", "pick": i}); ohne Antwort gilt nach choose_time „Nein“.
+## Ereignisse während der Wellen (Bollwerk, Lukas 2026-11-09): alle 5 Minuten eins aus einem Pool von über
+## 40 (data/heroes_ereignisse.json). Die Uhr und die Auswahl macht das gemeinsame System timed_events
+## (scripts/systems/timed_events/, Haken event_* in HdGame), die Abläufe stehen hier:
+## - die fünf aus Etappe 3 (Wanderhändler, Karawane, Blutmond, Gefangener, Schrein) direkt hier,
+## - alle übrigen Arten (jagd, ueberleben, regen, sammeln, halten, segen, wahl) in HdEventKinds.
+## Entscheidungen über act({"kind": "event", "pick": i}); ohne Antwort gilt nach choose_time die letzte Option.
 
 var game  ## HdGame
-var cfg: Dictionary
-var next_at := 3
+var cfg: Dictionary            ## heroes.json → events (choose_time)
+var kinds: HdEventKinds
 var last_id := ""
-var active: Dictionary = {}          ## laufendes Ereignis {id, def, ...}
+var active: Dictionary = {}          ## laufendes Ereignis aus Etappe 3 {id, def, ...}
 var choice: Dictionary = {}          ## offene Entscheidung {id, options: [text], until}
 var history: Array = []                  ## [Welle, id] (Tests, Auswertung)
-var force := ""                      ## Tests/Bilder: dieses Ereignis als nächstes
 var _nodes: Array = []
 
 
 func _init(g) -> void:
 	game = g
 	cfg = game.cfg.events
-	next_at = int(cfg.first)
+	kinds = HdEventKinds.new(g)
+
+
+## Die Ereignis-Uhr (System timed_events), null in Tests ohne System.
+func clock():
+	return game.systems.get("timed_events")
+
+
+## Tests/Bilder: dieses Ereignis als nächstes.
+var force: String:
+	get:
+		return clock().force if clock() else ""
+	set(v):
+		if clock():
+			clock().force = v
 
 
 func def(id: String) -> Dictionary:
-	for e in cfg.list:
-		if str(e.id) == id:
-			return e
-	return {}
+	return clock().def(id) if clock() else {}
 
 
 func blood() -> Dictionary:
 	return def("blutmond")
 
 
-## Neue Welle n: laufende Ereignisse prüfen, ggf. ein neues auswürfeln.
+## Läuft gerade etwas, das kein neues Ereignis zulässt?
+func busy() -> bool:
+	return not active.is_empty() or not choice.is_empty() or kinds.busy()
+
+
+## Neue Welle n: laufende Etappe-3-Ereignisse und Segen prüfen (neue Ereignisse kommen über die Uhr).
 func on_wave(n: int) -> void:
 	if str(active.get("id", "")) == "gefangener":
 		if active.has("ally") and n > int(active.until):
@@ -48,21 +60,15 @@ func on_wave(n: int) -> void:
 	if not game.blessing.is_empty() and n > int(game.blessing.until):
 		game.blessing = {}
 		game.shop._changed()
-	if n < next_at or game.is_boss_wave(n) or not active.is_empty() or not choice.is_empty() or n >= game.wave_count():
-		return
-	var ids: Array = []
-	for e in cfg.list:
-		var id := str(e.id)
-		if id == last_id:
-			continue
-		if id == "blutmond" and (game.is_boss_wave(n + 1) or n + 1 > game.wave_count()):
-			continue
-		ids.append(id)
-	var pick: String = force if force != "" else ids[game.rng.randi() % ids.size()]
-	force = ""
-	var ev: Array = cfg.every
-	next_at = n + game.rng.randi_range(int(ev[0]), int(ev[1]))
-	start(pick)
+
+
+## Darf das Ereignis jetzt kommen? (Blutmond nicht vor einer Kriegsherrn-Welle oder nach der letzten)
+func allowed(d: Dictionary) -> bool:
+	if str(d.id) == "blutmond":
+		return not game.is_boss_wave(game.wave + 1) and game.wave + 1 <= game.wave_count()
+	if str(d.get("kind", "")) == "jagd" and str(d.get("where", "")) == "strasse" and game.roads.is_empty():
+		return false
+	return true
 
 
 func start(id: String) -> void:
@@ -70,6 +76,14 @@ func start(id: String) -> void:
 	history.append([game.wave, id])
 	var d := def(id)
 	game.message.emit(tr("Ereignis: %s") % tr(str(d.name)))
+	var kind := str(d.get("kind", id))
+	if kind in HdEventKinds.KINDS:
+		if kind == "wahl":
+			_ask(id, kinds.options(d))
+		else:
+			kinds.start(d)
+		game.changed.emit()
+		return
 	match id:
 		"haendler":
 			_start_merchant(d)
@@ -91,6 +105,7 @@ func _ask(id: String, options: Array) -> void:
 func step(dt: float) -> void:
 	if not choice.is_empty() and game.play_time >= float(choice.until):
 		_decide(choice.options.size() - 1)
+	kinds.step(dt)
 	match str(active.get("id", "")):
 		"haendler":
 			if game.play_time >= float(active.until):
@@ -116,6 +131,10 @@ func act(cmd: Dictionary) -> String:
 			return tr("Die Feste hat zu wenig Leben")
 		if i == 1 and game.shop.gold < _shrine_gold():
 			return tr("Zu wenig Gold")
+	elif str(def(str(choice.id)).get("kind", "")) == "wahl":
+		var why := kinds.can_pick(def(str(choice.id)), i)
+		if why != "":
+			return why
 	_decide(i)
 	return ""
 
@@ -123,6 +142,10 @@ func act(cmd: Dictionary) -> String:
 func _decide(i: int) -> void:
 	var id := str(choice.id)
 	choice = {}
+	if str(def(id).get("kind", "")) == "wahl":
+		kinds.pick(def(id), i)
+		game.changed.emit()
+		return
 	match id:
 		"blutmond":
 			if i == 0:
@@ -172,7 +195,7 @@ func _start_merchant(d: Dictionary) -> void:
 # ---------------------------------------------------------------- Karawane
 
 func _start_caravan(d: Dictionary) -> void:
-	var b: Array = game.cfg.arena.bounds
+	var b: Array = game.bounds()
 	var z := 36.0 if game.rng.randf() < 0.5 else -36.0
 	var x0 := float(b[0]) + 4.0
 	var x1 := float(b[2]) - 4.0
@@ -237,6 +260,8 @@ func on_ally_down(a: HdAlly) -> void:
 
 
 func on_kill(e: HdEnemy) -> bool:
+	if kinds.on_kill(e):
+		return true
 	return e.zone == "raid" or e.zone == "kerker"
 
 
@@ -318,6 +343,9 @@ func _end_prisoner(text: String) -> void:
 
 ## Zeile für die Seitenleiste ("" = nichts).
 func status() -> String:
+	var card := kinds.card()
+	if not card.is_empty():
+		return "%s: %s" % [card.title, card.line]
 	match str(active.get("id", "")):
 		"haendler":
 			return tr("Wanderhändler: noch %d s") % ceili(float(active.until) - game.play_time)

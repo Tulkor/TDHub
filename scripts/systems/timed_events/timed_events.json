@@ -1,0 +1,8 @@
+{
+	"_info": "Basiswerte der Ereignis-Uhr. interval: Sekunden Spielzeit zwischen Ereignissen. first: bis zum ersten (0 = interval). pool: JSON-Datei mit list. no_repeat: so viele zuletzt gezogene nicht wiederholen. busy_wait: Nachstellen, wenn der Modus gerade keins starten kann. Ein Modus überschreibt sie in data/modes.json unter system_cfg.timed_events; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"interval": 300.0,
+	"first": 0.0,
+	"pool": "",
+	"no_repeat": 8,
+	"busy_wait": 10.0
+}

@@ -205,6 +205,9 @@ func bonus() -> Dictionary:
 	var extra: Array = [game.perma]
 	if not game.blessing.is_empty() and game.wave <= int(game.blessing.until):
 		extra.append(game.blessing.stats)
+	for eb in game.event_buffs:
+		if game.play_time < float(eb.until):
+			extra.append(eb.stats)
 	for d in extra:
 		for k in d:
 			out[k] = float(out.get(k, 0.0)) + float(d[k])

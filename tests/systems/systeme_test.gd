@@ -1,6 +1,6 @@
 extends Node
 ## Lauf: einzeln (Name systeme)
-## Modi: kern, system:run_record, system:difficulty, system:targeting, system:economy, system:save, system:waves, system:coop, system:inventory, system:leveling, system:build, system:controls
+## Modi: kern, system:run_record, system:difficulty, system:targeting, system:economy, system:save, system:waves, system:coop, system:inventory, system:leveling, system:build, system:controls, system:timed_events, system:challenges
 ## Gemeinsame Spielsysteme (scripts/systems/, tools/systeme.py): jedes System im Katalog lässt sich ohne Modus
 ## anlegen, die Kaskade Basiswerte → Modus-Daten (modes.json system_cfg) mischt wie CSS (Modus gewinnt, tief),
 ## und jeder Modus bekommt seine angekreuzten Systeme als Kind-Knoten.

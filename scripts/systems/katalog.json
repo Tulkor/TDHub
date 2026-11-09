@@ -111,6 +111,18 @@
 			"etappe": 7,
 			"eigen": [],
 			"haken": ["_on_click", "_update_hover", "_box_select", "select", "_select", "set_user_paused", "_on_pause_toggled", "paused_input"]
+		},
+		"timed_events": {
+			"titel": "Ereignis-Uhr: alle N Sekunden ein Ereignis aus einem Pool",
+			"etappe": 0,
+			"eigen": [],
+			"haken": ["event_clock_running", "event_progress", "event_busy", "event_allowed", "event_rng", "start_event"]
+		},
+		"challenges": {
+			"titel": "Endgebiet mit Challenges und Endboss-Tor",
+			"etappe": 0,
+			"eigen": [],
+			"haken": ["challenge_begin", "challenge_finished", "challenge_abort", "final_boss_start"]
 		}
 	}
 }

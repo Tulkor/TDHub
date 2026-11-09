@@ -73,6 +73,9 @@ var fly := false               ## Flieger: gerade Linie zur Feste, über Felsen 
 var fly_road  ## HdRoad: gerade Fluglinie (road bleibt die Straße, über die er kam)
 var shield := 0.0              ## Leerenschild: schluckt Schaden vor dem Leben
 var max_shield := 0.0
+var immortal := false          ## Ereignis „Bergkönig“: nimmt keinen Schaden
+var flee := false              ## Ereignis: flieht vor dem Helden statt anzugreifen
+var event_tag := ""            ## Ereignis, zu dem der Gegner gehört (HdEventKinds)
 var traits: Array = []         ## Elite-Eigenschaften (ids aus elites.traits)
 var lifesteal := 0.0           ## Vampir: Anteil des Angriffsschadens als Heilung
 var risen := false             ## Knochenheer: schon einmal wieder aufgestanden
@@ -158,6 +161,8 @@ func path():
 
 ## Schaden nach Rüstung anwenden: erst der Leerenschild, dann das Leben. Löst Bossphasen aus.
 func take(dmg: float) -> float:
+	if immortal:
+		return 0.0
 	if shield > 0.0:
 		var soak := minf(shield, dmg)
 		shield -= soak
@@ -281,6 +286,10 @@ func step(dt: float, now: float) -> void:
 	attack_cd -= dt
 	reaggro_block -= dt
 	wants_move = false
+	if flee:
+		_flee(dt, now)
+		_check_stuck(dt, now)
+		return
 	_choose_target()
 	if _try_ability(now):
 		return
@@ -305,6 +314,26 @@ func step(dt: float, now: float) -> void:
 	else:
 		_follow_road(dt, now)
 	_check_stuck(dt, now)
+
+
+## Fliehen: vom Helden weg, sonst ziellos um home streifen (Schatzgoblin, Geisterbestie).
+func _flee(dt: float, now: float) -> void:
+	var h = game.hero
+	var v := Vector3.ZERO
+	if h and h.alive() and _flat_dist(h.position) < float(def.get("aggro", 9.0)) + 4.0:
+		v = position - h.position
+		var b: Array = game.bounds()
+		if absf(position.x) > float(b[2]) - 8.0 or absf(position.z) > float(b[3]) - 8.0:
+			v += -position * 0.6
+	else:
+		if _flat_dist(home) < 2.0:
+			var b2: Array = game.bounds()
+			var p := position + Vector3(game.rng.randf_range(-14, 14), 0, game.rng.randf_range(-14, 14))
+			p.x = clampf(p.x, float(b2[0]) + 8.0, float(b2[2]) - 8.0)
+			p.z = clampf(p.z, float(b2[1]) + 8.0, float(b2[3]) - 8.0)
+			home = game.free_point(p, radius)
+		v = home - position
+	_move(v, dt, now)
 
 
 func _follow_road(dt: float, now: float) -> void:
