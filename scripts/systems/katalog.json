@@ -111,6 +111,11 @@
 			"etappe": 7,
 			"eigen": [],
 			"haken": ["_on_click", "_update_hover", "_box_select", "select", "_select", "set_user_paused", "_on_pause_toggled", "paused_input"]
+		},
+		"mazes": {
+			"titel": "Maze-Vorlagen",
+			"etappe": 8,
+			"eigen": []
 		}
 	}
 }

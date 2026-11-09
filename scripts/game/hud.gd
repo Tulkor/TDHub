@@ -66,6 +66,7 @@ var debug_option: OptionButton
 var debug_button: Button
 var paths_button: Button = null  ## Mehrspieler: Wege der Mitspieler ein/aus (add_paths_toggle)
 var lights_button: Button = null  ## Lichtpfad ein/aus (add_lights_toggle)
+var maze_panel: Control = null
 var auto_button: Button = null    ## Nächste Welle automatisch (add_auto_toggle)
 var pause_button: Button          ## Pause (Taste P), nur im Einzelspiel sichtbar
 var pause_banner: PanelContainer
@@ -269,6 +270,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				extra_chance_panel.hide()
 			elif help_panel.visible:
 				help_panel.hide()
+			elif maze_panel != null and maze_panel.get("expanded"):
+				maze_panel.call("close")
 			else:
 				return
 		KEY_SPACE:
@@ -279,6 +282,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if lights_button == null:
 				return
 			lights_button.button_pressed = not lights_button.button_pressed
+		KEY_M:
+			if maze_panel == null:
+				return
+			maze_panel.call("toggle")
 		_:
 			return
 	get_viewport().set_input_as_handled()
@@ -442,6 +449,14 @@ func add_lights_toggle(on: bool, on_toggled: Callable) -> void:
 	lights_button.set_pressed_no_signal(on)
 	lights_button.toggled.connect(on_toggled)
 	key_badge(lights_button, "L")
+
+
+## Fenster Maze-Vorlagen (System mazes) in der linken Spalte unter den nächsten Wellen. Zugeklappt nur eine Zeile
+## mit Vorlage und Fortschritt; Taste M oder Klick klappt es auf (die obere Leiste ist bei UI 100 % schon voll).
+func add_maze_panel(panel: Control) -> void:
+	maze_panel = panel
+	left_col.add_child(panel)
+	left_col.move_child(panel, waves_panel.get_index() + 1)
 
 
 ## Schalter „Auto“ links neben dem Tempo: nächste Welle ohne Pause starten (eeveTD, YouTD, Randgruppen).
