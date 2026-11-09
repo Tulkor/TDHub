@@ -79,6 +79,14 @@ var _pools: Array[MeshInstance3D] = []
 var _glass_mat: StandardMaterial3D
 var _fireflies: CPUParticles3D
 var _mist_mats: Array[ShaderMaterial] = []
+## Laternen mit eigenem Flackern: [Licht, Glasmaterial, Lichtfleck-Material oder null, Startwert]
+var _lamps: Array = []
+var _fires: Array[Feuer] = []
+## Tageszeit, die im Spiel weiterläuft (DayCycle); null = fest Tag oder Nacht wie bisher
+var cycle: DayCycle
+var _night := 1.0  ## wie viel Nacht gerade ist (0 Tag … 1 Nacht)
+var _lamp := 1.0   ## wie hell die Laternen gerade brennen (0 aus … 1 Nacht)
+var _ambience := ""
 var _rng := RandomNumberGenerator.new()
 var bezirk: BezirkUeberwuchert  ## Hof „Überwuchert“ statt Friedhof, wenn die Map district = "ueberwuchert" hat
 
@@ -115,6 +123,7 @@ func _ready() -> void:
 	_add_mine()
 	_add_mist()
 	_add_lanterns()
+	_add_fires()
 	_add_fireflies()
 	# Laternen beleuchten Tower und Gegner, den Boden nur über ihren Lichtfleck (Ebene 2 ausgenommen)
 	board._ground.layers = 2
@@ -123,16 +132,60 @@ func _ready() -> void:
 
 
 func _on_quality_changed() -> void:
-	_apply(FieldStyle.night)
+	_apply_mix(_night)
+
+
+## Tageszeit laufen lassen (eeveTD, YouTD): Licht, Himmel, Nebel und Bildfilter folgen der Uhr, die Szenerie
+## (Laternen, Wald, Glühwürmchen) der Dunkelheit. Startet bei hour (Standard kurz vor Sonnenuntergang).
+func start_cycle(hour := DayCycle.START) -> void:
+	if cycle == null:
+		cycle = DayCycle.new()
+		cycle.name = "DayCycle"
+		add_child(cycle)
+		cycle.on_night = _apply_mix
+	cycle.hour = hour
+	if DayCycle.fixed_hour >= 0.0:
+		cycle.hour = DayCycle.fixed_hour
+		cycle.speed = 0.0
+	_attach_cycle()
+
+
+func _attach_cycle() -> void:
+	var made := {"env": _env, "sun": sun(), "fill": null}
+	for l in _lights_env:
+		if not l.shadow_enabled:
+			made.fill = l
+	cycle.attach(made, get_parent())
+	if made.fill == null:
+		_lights_env.append(cycle.fill)
+
+
+## Laternen flackern: Licht, Glas und Lichtfleck im selben Takt, jede Laterne eigen.
+func _process(_delta: float) -> void:
+	if _lamp <= 0.02:
+		return
+	var t := Time.get_ticks_msec() * 0.001
+	for l in _lamps:
+		var f := Feuer.flicker(t, l[3])
+		var light: OmniLight3D = l[0]
+		if light.visible:
+			light.light_energy = light.get_meta("energy", light.light_energy) * f * _lamp
+		if l[1] != null:
+			l[1].emission_energy_multiplier = lerpf(0.35, 2.2, _lamp) * (0.75 + 0.25 * f)
+		if l[2] != null:
+			l[2].set_shader_parameter("strength", 0.42 * _lamp * f)
 
 
 func _exit_tree() -> void:
 	Sfx.set_ambience("")
 
 
-## Zwischen Tag und Nacht umschalten (Debug-Menü, später z. B. Einstellungen oder Tageszeit-Wechsel):
-## Licht und Himmel baut CameraRig.add_environment neu aus FieldStyle.env().
+## Zwischen Tag und Nacht umschalten (Debug-Menü, Tests): mit laufender Tageszeit springt die Uhr auf
+## Mitternacht bzw. Mittag, sonst baut CameraRig.add_environment Licht und Himmel neu aus FieldStyle.env().
 func set_night(on: bool) -> void:
+	if cycle != null:
+		cycle.set_hour(DayCycle.NIGHT_HOUR if on else DayCycle.DAY_HOUR)
+		return
 	if on != FieldStyle.night:
 		FieldStyle.night = on
 		var game := get_parent()
@@ -157,36 +210,58 @@ func sun() -> DirectionalLight3D:
 
 
 func _apply(on: bool) -> void:
-	var look: Dictionary = NIGHT_EXTRA if on else {}
+	_apply_mix(1.0 if on else 0.0)
+
+
+## Szenerie zur Dunkelheit n (0 Tag, 1 Nacht; Tageszeit mischt dazwischen): Boden, Wald, Nebel, Laternen.
+func _apply_mix(n: float) -> void:
+	_night = n
+	var on := n >= 0.5
 	# Hintergrund: Vögel am Tag, tiefes Geisterheulen in der Nacht (data/sfx.json)
-	Sfx.set_ambience("amb_night" if on else "amb_forest")
+	var amb := "amb_night" if on else "amb_forest"
+	if amb != _ambience:
+		_ambience = amb
+		Sfx.set_ambience(amb)
 	if _env != null:
-		_env.fog_height = look.get("fog_height", 0.0)
-		_env.fog_height_density = look.get("fog_height_density", 0.0)
+		_env.fog_height = lerpf(0.0, NIGHT_EXTRA.fog_height, n)
+		_env.fog_height_density = lerpf(0.0, NIGHT_EXTRA.fog_height_density, n)
 	var gm: ShaderMaterial = board._ground_mat
-	gm.set_shader_parameter("tint", _ground_day[0] * look.get("ground_tint", Vector3.ONE))
-	gm.set_shader_parameter("brightness", _ground_day[1] * look.get("ground_brightness", 1.0))
-	gm.set_shader_parameter("grass_contrast", maxf(_ground_day[2], look.get("ground_contrast", 0.0)))
-	gm.set_shader_parameter("macro", look.get("ground_macro", _ground_day[3]))
+	gm.set_shader_parameter("tint", _ground_day[0] * Vector3.ONE.lerp(NIGHT_EXTRA.ground_tint, n))
+	gm.set_shader_parameter("brightness", _ground_day[1] * lerpf(1.0, NIGHT_EXTRA.ground_brightness, n))
+	gm.set_shader_parameter("grass_contrast", lerpf(_ground_day[2], maxf(_ground_day[2], NIGHT_EXTRA.ground_contrast), n))
+	gm.set_shader_parameter("macro", lerpf(_ground_day[3], NIGHT_EXTRA.ground_macro, n))
+	var forest: Color = Color.WHITE.lerp(NIGHT_EXTRA.forest_tint, n)
 	for m in _forest_mats:
-		m[0].albedo_color = m[1] * look.get("forest_tint", Color.WHITE)
+		m[0].albedo_color = m[1] * forest
 	# Grafik „Niedrig“: Laternen ohne echtes Licht (jedes Licht zeichnet die Modelle in seiner Nähe noch einmal),
 	# der Lichtfleck am Boden bleibt; Bäume ohne Schatten
 	var low := Display.quality == Display.LOW
+	# Laternen gehen in der Dämmerung an (ab etwa einem Drittel Dunkelheit), voll erst in der Nacht
+	var lamp := clampf((n - 0.25) / 0.6, 0.0, 1.0)
 	for l in _lights:
-		l.visible = on and not low
+		if not l.has_meta("energy"):
+			l.set_meta("energy", l.light_energy)
+		l.visible = lamp > 0.0 and not low
+		l.light_energy = l.get_meta("energy") * lamp
 	for m in _shadow_mmis:
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if low else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for p in _pools:
-		p.visible = on
-	_glass_mat.emission_energy_multiplier = 3.2 if on else 0.35
-	_fireflies.emitting = on
-	_fireflies.visible = on
+		p.visible = lamp > 0.0
+	for l in _lamps:
+		if l[1] != null:
+			l[1].emission_energy_multiplier = lerpf(0.35, 2.2, lamp)
+		if l[2] != null:
+			l[2].set_shader_parameter("strength", 0.42 * lamp)
+	_lamp = lamp
+	for f in _fires:
+		# Feuer brennen immer, ihr Licht sieht man erst, wenn es dunkel wird
+		f.set_lit(clampf(0.25 + n, 0.0, 1.0))
+	_fireflies.emitting = n > 0.6
+	_fireflies.visible = n > 0.6
 	for m in _mist_mats:
-		if bezirk != null:
-			m.set_shader_parameter("mist_color", BezirkUeberwuchert.NEBEL_NACHT if on else BezirkUeberwuchert.NEBEL_TAG)
-		else:
-			m.set_shader_parameter("mist_color", MIST_NIGHT if on else MIST_DAY)
+		var tag := BezirkUeberwuchert.NEBEL_TAG if bezirk != null else MIST_DAY
+		var nacht := BezirkUeberwuchert.NEBEL_NACHT if bezirk != null else MIST_NIGHT
+		m.set_shader_parameter("mist_color", tag.lerp(nacht, n))
 
 
 func _size() -> Vector2:
@@ -386,6 +461,66 @@ func _add_mine() -> void:
 		_lights.append(_lamp_light(Vector3(lamp.x, 1.55, lamp.y)))
 
 
+## Feuer (Feuer, WoW-Stil): zwei Feuerschalen vor dem Friedhofstor und ein Lagerfeuer am Bergwerk.
+func _add_fires() -> void:
+	var iron := StandardMaterial3D.new()
+	iron.albedo_color = Color("2c2a30")
+	iron.metallic = 0.7
+	iron.roughness = 0.5
+	var coal := StandardMaterial3D.new()
+	coal.albedo_color = Color("1a0c08")
+	coal.emission_enabled = true
+	coal.emission = Color("ff4a10")
+	coal.emission_energy_multiplier = 1.6
+	coal.roughness = 1.0
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color("3a2a1e")
+	wood.roughness = 0.9
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color("55524e")
+	stone.roughness = 0.95
+	var i := 0
+	for side in [-1.0, 1.0]:
+		var at := _gy(side * 1.35, 0.3)
+		var root := Node3D.new()
+		root.position = Vector3(at.x, 0, at.y)
+		add_child(root)
+		# Schale auf drei Beinen
+		for k in 3:
+			var a := TAU * k / 3.0 + 0.4
+			var leg := _part(root, _box(Vector3(0.05, 0.62, 0.05)), iron, Vector3(cos(a) * 0.17, 0.3, sin(a) * 0.17))
+			leg.rotation = Vector3(sin(a) * 0.22, 0, -cos(a) * 0.22)
+		_part(root, _cyl(0.3, 0.16, 0.18), iron, Vector3(0, 0.66, 0))
+		_part(root, _cyl(0.26, 0.26, 0.04), coal, Vector3(0, 0.74, 0))
+		ContactShadow.add(root, 0.3)
+		var f := Feuer.make(0.95, 7.0 + i * 3.3, 5.0, 4.5)
+		f.position.y = 0.72
+		root.add_child(f)
+		# Lichtfleck auf den Boden, nicht auf die Schale
+		f.pool.position.y = 0.03 - 0.72
+		_fires.append(f)
+		i += 1
+	# Lagerfeuer: Steinkreis, gekreuzte Scheite, Glut
+	var at := _my(2.0, 1.9)
+	var camp := Node3D.new()
+	camp.position = Vector3(at.x, 0, at.y)
+	add_child(camp)
+	for k in 9:
+		var a := TAU * k / 9.0
+		var st := _part(camp, _box(Vector3(0.16, 0.1, 0.12)), stone, Vector3(cos(a) * 0.36, 0.05, sin(a) * 0.36))
+		st.rotation.y = -a
+	for k in 4:
+		var a := TAU * k / 4.0 + 0.3
+		var log := _part(camp, _cyl(0.035, 0.045, 0.5), wood, Vector3(cos(a) * 0.1, 0.12, sin(a) * 0.1))
+		log.basis = Basis(Vector3.UP, -a) * Basis(Vector3.BACK, 1.15)
+	_part(camp, _cyl(0.2, 0.24, 0.05), coal, Vector3(0, 0.03, 0))
+	ContactShadow.add(camp, 0.45)
+	var cf := Feuer.make(1.1, 21.0, 6.0, 5.5)
+	cf.position.y = 0.05
+	camp.add_child(cf)
+	_fires.append(cf)
+
+
 ## Nebelschwaden über Friedhof und Bergwerk (eine Fläche über beide Lichtungen, mehrere Schichten übereinander).
 func _add_mist() -> void:
 	var a := _gy(-CLEARING.x - 0.5, 0.8)
@@ -416,6 +551,7 @@ func _lamp_light(at: Vector3) -> OmniLight3D:
 	light.omni_range = 3.5
 	light.position = at
 	add_child(light)
+	_lamps.append([light, null, null, float(_lamps.size()) * 1.7 + 0.3])
 	return light
 
 
@@ -507,7 +643,8 @@ func _add_lanterns() -> void:
 	brass.metallic = 0.75
 	brass.roughness = 0.4
 	_glass_mat = StandardMaterial3D.new()
-	_glass_mat.albedo_color = Color("ffa050")
+	_glass_mat.albedo_color = Color(1.0, 0.63, 0.31, 0.55)
+	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_glass_mat.emission_enabled = true
 	_glass_mat.emission = LANTERN_LIGHT
 	var pool_shader: Shader = load(POOL_SHADER)
@@ -534,7 +671,12 @@ func _add_lanterns() -> void:
 		beam.rotation.y = atan2(arm.x, arm.y)
 		_part(root, _cyl(0.008, 0.008, 0.1), wood, lamp + Vector3(0, 0.19, 0))
 		_part(root, _box(Vector3(0.16, 0.035, 0.16)), brass, lamp + Vector3(0, -0.12, 0))
-		_part(root, _box(Vector3(0.12, 0.2, 0.12)), _glass_mat, lamp)
+		# Glas je Laterne (eigenes Flackern), halb durchsichtig: drinnen brennt eine kleine Flamme
+		var glass := _glass_mat.duplicate() as StandardMaterial3D
+		_part(root, _box(Vector3(0.12, 0.2, 0.12)), glass, lamp)
+		var flame := Feuer.make(0.13, float(n) * 2.9 + 0.5, 0.0, 0.0, false)
+		flame.position = lamp + Vector3(0, -0.085, 0)
+		root.add_child(flame)
 		for sx in [-1, 1]:
 			for sz in [-1, 1]:
 				_part(root, _box(Vector3(0.022, 0.22, 0.022)), brass, lamp + Vector3(sx * 0.068, 0, sz * 0.068))
@@ -565,6 +707,9 @@ func _add_lanterns() -> void:
 		# Der Boden ist durchsichtig (ALPHA) und wird nach Abstand sortiert: Lichtflecken immer danach zeichnen
 		pm.render_priority = 2
 		pool.material_override = pm
+		# Flackern übernimmt _process (gleicher Takt wie Licht und Glas)
+		pm.set_shader_parameter("flicker", 0.0)
+		_lamps.append([light, glass, pm, float(n) * 2.9 + 0.5])
 		pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		pool.position = Vector3(foot.x + arm.x, 0.03, foot.y + arm.y)
 		add_child(pool)
