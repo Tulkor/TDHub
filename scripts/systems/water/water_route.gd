@@ -583,14 +583,18 @@ static func _regions(g: _Grid, pieces: Array, spec: Dictionary, width: float) ->
 				run_start = -1
 		var s := 0
 		for f in falls:
+			var top: Vector3 = pts[f[0]]
+			var bottom: Vector3 = pts[f[1]]
+			# Fallrichtung = senkrecht zur Kante (bergab am Gelände), nicht schräg wie der Rasterweg.
+			var flat := _downhill(g, top, Vector2(bottom.x - top.x, bottom.z - top.z).normalized())
+			var reach := maxf(Vector2(bottom.x - top.x, bottom.z - top.z).dot(flat), g.t.step * 0.5)
+			bottom = Vector3(top.x + flat.x * reach, bottom.y, top.z + flat.y * reach)
+			pts[f[1]] = bottom
 			if f[0] - s >= 1:
-				add.call("river", {"points": _sample(pts, s, f[0], width, g.t.step), "width": width})
+				add.call("river", {"points": _approach(_sample(pts, s, f[0], width, g.t.step), top, flat, maxf(width, 1.0)), "width": width})
 			elif pool_before == null or s > 0:
 				# Fall direkt an der Quelle: kleiner Quelltopf, damit der Fall oben aus Wasser kommt.
 				add.call("pool", _small_pool(pts[f[0]], width))
-			var top: Vector3 = pts[f[0]]
-			var bottom: Vector3 = pts[f[1]]
-			var flat := Vector2(bottom.x - top.x, bottom.z - top.z).normalized()
 			add.call("waterfall", {"points": [[top.x, top.y, top.z], [bottom.x, bottom.y, bottom.z]], "width": width, "right": [flat.y, 0.0, -flat.x]})
 			s = f[1]
 		if pts.size() - 1 - s >= 1:
@@ -600,6 +604,36 @@ static func _regions(g: _Grid, pieces: Array, spec: Dictionary, width: float) ->
 			add.call("river", tail)
 		elif not falls.is_empty() and pool_after == null:
 			add.call("pool", _small_pool(pts[-1], width))
+	return out
+
+
+## Richtung des steilsten Gefälles an einer Fallkante (waagrecht, normiert); fallback ohne Gefälle.
+static func _downhill(g: _Grid, at: Vector3, fallback: Vector2) -> Vector2:
+	var e := g.t.step
+	var grad := Vector2(g.t.ground(at.x + e, at.z) - g.t.ground(at.x - e, at.z), g.t.ground(at.x, at.z + e) - g.t.ground(at.x, at.z - e))
+	if grad.length() < 0.01:
+		return fallback
+	var down := -grad.normalized()
+	# Achsnahe Kanten genau senkrecht anlaufen (Rauschen im Gelände kippt die Richtung sonst leicht).
+	if absf(down.x) < 0.2:
+		down = Vector2(0.0, signf(down.y))
+	elif absf(down.y) < 0.2:
+		down = Vector2(signf(down.x), 0.0)
+	return down
+
+
+## Fluss läuft auf den letzten length Einheiten gerade und senkrecht auf die Fallkante zu (top, dir).
+static func _approach(points: Array, top: Vector3, dir: Vector2, length: float) -> Array:
+	var out := [points[0]]
+	for k in range(1, points.size() - 1):
+		var p := Vector2(float(points[k][0]), float(points[k][2]))
+		if (Vector2(top.x, top.z) - p).dot(dir) > length * 1.4:
+			out.append(points[k])
+	var lead := Vector2(top.x, top.z) - dir * length
+	var first := Vector2(float(out[-1][0]), float(out[-1][2]))
+	if first.distance_to(lead) > 0.05 and first.distance_to(Vector2(top.x, top.z)) > length * 0.5:
+		out.append([lead.x, lerpf(float(out[-1][1]), top.y, 0.8), lead.y])
+	out.append([top.x, top.y, top.z])
 	return out
 
 
