@@ -75,7 +75,9 @@ const STYLES := {
 		"marker": Color("ff36d8"), "marker_energy": 2.2,
 		"rock": "glass",
 		# Felsen bekommen unten einen pinken Schein vom Boden (rock.gdshader floor_glow)
-		"rock_glow": 0.55,
+		"rock_glow": 0.3,
+		# türkises Rauchglas mit dunkel petrolfarbenem Kern (Lukas, 2026-11-09)
+		"rock_color": Color(0.02, 0.72, 0.7), "rock_core": Color(0.0, 0.05, 0.06),
 		"base": "glass",
 		# Glasboden: Gems und Gegner spiegeln sich (Board3D, floor_reflect.gdshader)
 		"reflect": 0.35,

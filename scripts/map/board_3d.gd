@@ -286,6 +286,10 @@ func _rock_material() -> Material:
 	glass.shader = ROCK_SHADER
 	# Schein der Neonlinien auf die unteren Flanken (FieldStyle "rock_glow")
 	glass.set_shader_parameter("floor_glow", float(style.get("rock_glow", 0.0)))
+	# Grundfarbe des Glases (FieldStyle "rock_color", Lukas 2026-11-09: türkis) und dunkler Kern dazu
+	if style.has("rock_color"):
+		glass.set_shader_parameter("color", style.rock_color)
+		glass.set_shader_parameter("core_color", style.rock_core)
 	return glass
 
 

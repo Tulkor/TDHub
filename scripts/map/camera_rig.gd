@@ -355,6 +355,8 @@ static func add_environment(parent: Node, look: Dictionary = {}, filter := true)
 		under.light_energy = look.under_energy
 		under.light_specular = 0.4
 		under.shadow_enabled = false
+		# Tower (Tower.GEM_LAYER) leuchten von unten in ihrer eigenen Farbe, nicht pink
+		under.light_cull_mask = 0xFFFFF & ~Tower.GEM_LAYER
 		parent.add_child(under)
 	_add_outline(parent, look)
 	_add_post(parent, look)

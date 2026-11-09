@@ -9,6 +9,13 @@ const GEM_SHADER := preload("res://assets/shaders/gem.gdshader")
 const GEM_OPACITY_TEXTURED := 0.85
 ## Helligkeit der Lichtscheibe im Sockel (über 1 = leuchtet im Glow)
 const BASE_LIGHT_ENERGY := 1.3
+## Ebene der Tower-Modelle im Neon-Stil: der pinke Bodenschein (CameraRig "FloorGlow") lässt sie aus,
+## Gems leuchten von unten in ihrer eigenen Farbe (gem.gdshader under_light, Lichtfleck GEM_POOL)
+const GEM_LAYER := 1 << 11
+const GEM_POOL := preload("res://assets/shaders/gem_pool.gdshader")
+## Größe des Lichtflecks (Vielfaches der Sockelbreite) und Stärke
+const POOL_SIZE := 2.2
+const POOL_STRENGTH := 0.32
 ## Drehgeschwindigkeit der Gems (rad/s): zur Auswahl in dieser Runde, und fixiert
 const SPIN_NEW := 0.425
 const SPIN_FIXED := 0.325
@@ -1180,12 +1187,39 @@ func _glass_material() -> StandardMaterial3D:
 
 func _finish_visual() -> void:
 	ContactShadow.add(_visual, footprint_size() * Board3D.CELL)
+	if FieldStyle.is_neon():
+		_gem_glow()
 	_new_ring = _ring(0.48, 0.05, Color(1, 1, 1, 0.9))
 	_new_ring.visible = is_new
 	_select_ring = _ring(0.52, 0.06, Color.YELLOW)
 	# Fallen zeigen ihre Fläche über die Platte, der Ring nur Luft- oder Aurareichweite
 	_range_ring = _ring(ring_radius(stats, is_trap()) * range_mult(), 0.05, Color(1, 1, 1, 0.6))
 	set_selected(selected)
+
+
+## Neon: Licht in der Farbe des Gems statt des pinken Bodenscheins, dazu ein Lichtfleck auf dem Feld.
+func _gem_glow() -> void:
+	_set_layer(_visual)
+	var pool := MeshInstance3D.new()
+	pool.name = "GemPool"
+	var plane := PlaneMesh.new()
+	plane.size = Vector2.ONE * footprint_size() * Board3D.CELL * POOL_SIZE
+	pool.mesh = plane
+	var m := ShaderMaterial.new()
+	m.shader = GEM_POOL
+	m.set_shader_parameter("color", color)
+	m.set_shader_parameter("strength", POOL_STRENGTH)
+	pool.material_override = m
+	pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	pool.position.y = 0.006
+	_visual.add_child(pool)
+
+
+func _set_layer(n: Node) -> void:
+	if n is VisualInstance3D:
+		n.layers = GEM_LAYER
+	for c in n.get_children():
+		_set_layer(c)
 
 
 ## Roguelike-Boni übernehmen ({damage, speed, range}, leer = keine); der Reichweitenring wächst mit.
