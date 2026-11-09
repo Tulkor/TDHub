@@ -247,6 +247,9 @@ func _ready() -> void:
 		_enter_build()
 	else:
 		SaveGame.apply(self, saved)
+	if systems.has("mazes"):
+		systems.mazes.start()
+		hud.add_maze_panel(MazePanel.new(systems.mazes))
 	get_tree().auto_accept_quit = false
 	Net.game = self
 	if not coop_info.is_empty():
@@ -594,6 +597,8 @@ func _update_hover() -> void:
 		return  # beim Ziehen eines Items markiert inv_drop den Tower unter der Maus
 	var c := NO_CELL
 	var size := Board3D.TOWER_CELLS
+	if _maze_hover():
+		return
 	if moving != null and not moving.is_trap():
 		c = occupied.get(board.mouse_cell(camera_rig.camera), NO_CELL)
 	elif moving != null:
@@ -601,11 +606,31 @@ func _update_hover() -> void:
 		c = board.mouse_anchor(camera_rig.camera, size)
 	elif stage() == Phase.BUILD and not occupied.has(board.mouse_cell(camera_rig.camera)):
 		c = board.mouse_anchor(camera_rig.camera)
+		if systems.has("mazes"):
+			c = systems.mazes.snap(board.mouse_cell(camera_rig.camera), c)
 	if c != board.hover_cell or size != board.hover_size:
 		board.hover_cell = c
 		board.hover_size = size
 		board.hover_ok = (can_swap(moving, c) if not moving.is_trap() else can_move_trap(moving, c)) if moving != null else can_place(c)
 		board.refresh_hover()
+
+
+## Planen (System mazes): Bauvorschau zeigt, ob an der Maus ein Block der Vorlage hinpasst (rot = entfernen oder
+## geht nicht). true = Hover erledigt.
+func _maze_hover() -> bool:
+	if not systems.has("mazes") or not systems.mazes.editing:
+		return false
+	var cell := board.mouse_cell(camera_rig.camera)
+	var m: Node = systems.mazes
+	var remove: bool = m.has_block_at(cell)
+	var a: Vector2i = m.block_at(cell) if remove else m.plan_target(cell, board.mouse_anchor(camera_rig.camera))
+	var ok: bool = not remove and m.can_plan(a)
+	if a != board.hover_cell or ok != board.hover_ok:
+		board.hover_cell = a
+		board.hover_size = Board3D.TOWER_CELLS
+		board.hover_ok = ok
+		board.refresh_hover()
+	return true
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -655,6 +680,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## c: Feld unter der Maus, anchor: wo ein neuer Tower hinkäme. add (Strg): Stein zur Auswahl hinzufügen/abwählen.
 func _on_click(c: Vector2i, anchor: Vector2i, add := false) -> void:
+	if systems.has("mazes"):
+		if systems.mazes.plan_click(c, anchor):
+			return
+		anchor = systems.mazes.snap(c, anchor)
 	if moving != null and not moving.is_trap():
 		var other: Vector2i = occupied.get(c, NO_CELL)
 		if can_swap(moving, other):

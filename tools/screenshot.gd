@@ -77,6 +77,9 @@ extends Node
 ##   --grafik=0|1|2          Grafikqualität Niedrig/Mittel/Hoch (Standard Hoch; Xvfb würde sonst als Software-Grafik Niedrig wählen)
 ##   --ep=N                  (mit --auswahl) der gewählte Tower hat N EP (Level-System, leveling.gd);
 ##                           --level_demo: Beispiel-Freischaltungen (Reichweite ab 3, Krit ab 5), --leveltip: Level-Tooltip offen
+##   --maze=<id>             GemTD: Maze-Vorlage (data/mazes/<map>.json oder eigene) als Overlay zeigen;
+##                           --maze_bauen=N die ersten N Blöcke als Steine setzen, --planen Planen an,
+##                           --maze_fenster Fenster Maze-Vorlagen offen
 ##   --sprache=de|en
 ##   --aus=<ordner>          Standard /mnt/project-files/screens/auto
 ##   --name=<präfix>         Dateiname <präfix>_<winkel>.png, Standard bild
@@ -455,6 +458,24 @@ func _prepare(game: Node) -> void:
 							list.append(o)
 							break
 				r.offers[0] = list
+	if opts.has("maze") and "systems" in game and game.systems.has("mazes"):
+		var m = game.systems.mazes
+		m.show_template(m.find(str(opts.maze)))
+		var n := int(opts.get("maze_bauen", "0"))
+		for b in m.active.get("blocks", []):
+			var a := Vector2i(int(b[0]), int(b[1]))
+			if n <= 0:
+				break
+			if game.can_place(a):
+				game.rocks[a] = true
+				game._occupy(a, true, true)
+				n -= 1
+		game._update_paths()
+		game.board.refresh_rocks()
+		if opts.has("planen"):
+			m.set_editing(true)
+		if opts.has("maze_fenster") and game.hud.maze_panel != null:
+			game.hud.maze_panel.open()
 	if opts.has("auswahl"):
 		if not game.round_towers.is_empty():
 			game._select(game.round_towers[0])

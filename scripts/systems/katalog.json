@@ -124,6 +124,11 @@
 			"eigen": [],
 			"klasse": "WaterSystem",
 			"haken": ["water_regions"]
+		},
+		"mazes": {
+			"titel": "Maze-Vorlagen",
+			"etappe": 8,
+			"eigen": []
 		}
 	}
 }

@@ -10,7 +10,7 @@
 			"scene": "res://scenes/game.tscn",
 			"hint": "Gems setzen, kombinieren, Labyrinth bauen. 50 Wellen, Rezepte und Spezial-Tower.",
 			"needs_map": true,
-			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory", "visuals", "water"],
+			"systems": ["run_record", "difficulty", "targeting", "economy", "save", "waves", "coop", "leveling", "build", "controls", "inventory", "visuals", "water", "mazes"],
 			"system_cfg": {
 				"economy": {
 					"income_from_balance": true

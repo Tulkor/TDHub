@@ -1,0 +1,6 @@
+{
+	"_info": "Basiswerte der Maze-Vorlagen (Overlay auf dem Boden). opacity: Deckkraft der Platten (0.1–1), show_done: gebaute Blöcke schwach grün weiter zeigen, snap: Bauvorschau rastet auf offene Blöcke der Vorlage ein. Was der Spieler im Maze-Fenster einstellt, gilt danach (user://mazes/einstellungen.json). Ein Modus überschreibt die Basiswerte in data/modes.json unter system_cfg.mazes; was er angibt, gewinnt, auch verschachtelt (wie CSS).",
+	"opacity": 0.35,
+	"show_done": true,
+	"snap": true
+}
