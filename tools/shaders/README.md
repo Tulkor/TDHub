@@ -1,5 +1,32 @@
 # Gemeinsame Shader
 
+## Gelände: Normalen und Reflexion
+
+Die Materialprüfung unterscheidet Bild-Maps und berechnete Oberflächen:
+
+| Oberfläche | Normalen | Specular/Rauheit |
+|---|---|---|
+| Grundboden und Baum-Erde | vorhandene Normalbilder je Belag | abgeleitete `ground/*_specular.png`, passend zum Belag |
+| Städtisches Flussufer | echtes `cobble_normal.jpg`, triplanar mit aus UV-Ableitungen berechneter Tangentenbasis | echtes `cobble_specular.png` |
+| Natürliches Ufer und Ufersteine | dezentes berechnetes Mikrorelief (`natural_bank.gdshader`) | berechnet; feuchter innerer Ufersaum weniger rau, stärkere dielektrische Reflexion |
+| Neon-/Glasfelsen | berechnetes, kleines Relief entlang vorhandener Adern | räumlich berechnet, ursprünglicher Glasstil bleibt |
+| Maul-Kalkstein und Fenster | berechnete Körnung und Fenstervertiefung | rauer Kalkstein gegenüber glatteren Glasfenstern |
+| Beleuchteter Marmor-/Messingboden | berechnetes Mikrorelief | berechnete Variation um vorhandene Stilparameter |
+| Wasser und Wasserfall | animierte Normalbilder, Brunnen mit analytischen Wellen | vorhandener dielektrischer Glanz/Fresnel; keine künstlichen Ersatzbilder |
+| Gischt/Kantenschaum | transparente, unbeleuchtete Effektfläche | kein beleuchteter Festkörper, keine bedeutungslosen Normal-/Spec-Bilder |
+
+`terrain_relief.gdshaderinc` berechnet Oberflächengradienten ohne vorausgesetzte
+Mesh-Tangenten. Bitmap-Normalen werden mit den tatsächlichen UV-Ableitungen in
+den Sichtraum gedreht; vertikale und spiegelverkehrte Uferflächen bleiben korrekt.
+Prozedurale Felder sind ausdrücklich keine vorgetäuschten Bitmap-Maps. Farben,
+Neonlicht, Glas-/Marmorstil und geometrische Konturen werden beibehalten.
+
+GPU-Probe: `tools/render_windows.ps1 -Scene res://tools/shaders/terrain_probe.tscn
+-Godot <exe> -Name terrain-materials`, Bild `.godot/terrain-material-probe.png`.
+Echte Ufer: `tools/water/route_hills.tscn`, optional `--city`, Nahbilder
+`.godot/wasserlauf[-stadt]-ufer.png`. Gesamtabdeckung und Herkunft der statischen
+Bilddaten stehen im Bericht des Werkzeugs `tools/terrain_materials.py`.
+
 `VisualFx` liegt unter `scripts/systems/visuals/`. Basiswerte aus `visuals.json`
 werden von `data/modes.json` → `system_cfg.visuals` überschrieben.
 Es werden ausschließlich Darstellungen verändert, keine Treffer oder Zufallswürfe.

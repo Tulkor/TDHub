@@ -4,6 +4,9 @@
 shader_type spatial;
 render_mode cull_back, specular_schlick_ggx;
 
+#include "res://assets/shaders/terrain_relief.gdshaderinc"
+uniform float relief_strength : hint_range(0.0, 1.0) = 0.45;
+
 uniform vec4 window_color : source_color = vec4(1.0, 0.82, 0.55, 1.0);
 uniform float window_energy = 0.9;
 /// Anteil der erleuchteten Fenster
@@ -36,6 +39,7 @@ void vertex() {
 void fragment() {
 	vec3 col = COLOR.rgb;
 	float emit = 0.0;
+	float window_mask = 0.0;
 	if (world_nrm.y > 0.5) {
 		col *= roof_light;
 	} else if (world_nrm.y > -0.5) {
@@ -47,13 +51,19 @@ void fragment() {
 		float win = step(abs(f.x), window_size.x * 0.5) * step(abs(f.y), window_size.y * 0.5);
 		// keine Fenster im Erdgeschoss-Streifen direkt am Boden
 		win *= step(0.12, world_pos.y) * step(0.5, COLOR.a);
+		window_mask = win;
 		float lit = step(1.0 - window_lit, hash(id + seed * 91.0 + world_nrm.xz * 7.0));
 		col = mix(col, window_dark.rgb, win * 0.6);
 		emit = win * lit;
 		col *= mix(foot_dark, 1.0, smoothstep(0.0, 0.5, local_y));
 	}
 	ALBEDO = col;
-	ROUGHNESS = 0.75;
-	SPECULAR = 0.3;
+	// Limestone grains and recessed glass follow the existing procedural window mask.
+	float grain = terrain_grain(world_pos * 1.5);
+	float relief = grain * 0.0025 - window_mask * 0.006;
+	float detail_visible = 1.0 - smoothstep(0.05, 0.2, length(fwidth(world_pos)));
+	NORMAL = terrain_relief_normal(NORMAL, VERTEX, relief, relief_strength * detail_visible);
+	ROUGHNESS = mix(mix(0.76, 0.86, grain), 0.2, window_mask);
+	SPECULAR = mix(mix(0.32, 0.4, grain), 0.5, window_mask);
 	EMISSION = window_color.rgb * emit * window_energy;
 }

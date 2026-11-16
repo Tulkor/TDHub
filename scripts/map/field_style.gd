@@ -62,16 +62,16 @@ const POSTER_TEXTURES := {
 
 ## Art déco (Maul) bei Nacht: Mondlicht, dunkelblauer Himmel.
 const DECO_NIGHT := {
-	"metall": 0.55, "metall_farbe": Color("c0cce8"), "metall_farbe2": Color("6fb8c0"),
+	"metall": 0.22, "metall_farbe": Color("c0cce8"), "metall_farbe2": Color("6fb8c0"),
 	"sky_top": Color("02070e"), "sky_horizon": Color("0c2032"), "ground_bottom": Color("020507"),
-	"ambient": Color("5d7fa8"), "ambient_energy": 0.24, "ambient_sky": 0.0,
-	"sun": Color("a8c0ec"), "sun_energy": 0.7, "sun_pitch": -40.0, "sun_yaw": 55.0, "sun_specular": 0.3,
+	"ambient": Color("c4d3eb"), "ambient_energy": 0.16, "ambient_sky": 0.0,
+	"sun": Color("d4e1f5"), "sun_energy": 0.12, "sun_pitch": -40.0, "sun_yaw": 55.0, "sun_specular": 0.3,
 	"shadow_opacity": 0.75, "shadow_blur": 2.2,
-	"fill": Color("3a5a78"), "fill_energy": 0.25, "fill_pitch": -25.0,
-	"glow_threshold": 0.95, "glow_intensity": 0.65, "exposure": 1.05, "contrast": 1.05,
-	"tint": Color(1.0, 0.95, 0.86),
+	"fill": Color("aabedc"), "fill_energy": 0.035, "fill_pitch": -25.0,
+	"glow_threshold": 1.15, "glow_intensity": 0.36, "exposure": 0.8, "contrast": 1.05,
+	"tint": Color(0.94, 0.97, 1.0),
 	"vignette": 0.4, "vignette_color": Color(0.02, 0.06, 0.12),
-	"ssao": 1.5, "ssil": 0.5,
+	"ssao": 1.5, "ssil": 0.0,
 }
 
 ## Werte je Stil. "floor" sind Parameter für neon_floor.gdshader, "env" für CameraRig.add_environment.
@@ -179,16 +179,21 @@ const STYLES := {
 			# Platten im Schachmuster, jede zweite eine Spur dunkler
 			"checker": 0.06,
 			# polierter Stein: deutliches Glanzlicht der tief stehenden Sonne
-			"lit_albedo": 0.85, "line_glow": 0.3, "floor_roughness": 0.4, "floor_specular": 0.45,
+			"lit_albedo": 0.7, "line_glow": 0.12, "floor_roughness": 0.5, "floor_specular": 0.35,
+			"line_metallic": 0.95, "line_roughness": 0.22, "line_finish": 1.0,
 			# warme Bodenleuchten in den Messingrauten, auf hellem Stein nur ein kleiner Schein
-			"floor_lamp": 6.0, "lamp_color": Color("ffd08a"), "lamp_size": 0.07, "lamp_radius": 1.2, "lamp_pool": 0.3,
-			"major_glow": 0.35, "major_glow_color": Color("ffc35a"),
+			"floor_lamp": 5.12, "lamp_color": Color("ffc36b"), "lamp_size": 0.1, "lamp_radius": 1.2, "lamp_pool": 0.035, "lamp_falloff": 3.0, "lamp_recess": 1.0,
+			"lamp_type": 0, "lamp_half_distance": 0.6,
+			"lamp_silver_nonbuildable": 1.0, "lamp_silver_color": Color("d2e3ff"),
+			"major_glow": 0.12, "major_glow_color": Color("ffc35a"),
 			"tint_shade": 0.45,
 			"blocked_color": Color("15373a"), "blocked_alpha": 1.0,
 			"zone_color": Color("b4553f"), "zone_alpha": 0.3, "zone_edge_energy": 1.0,
 			"zone_edge_color": Color("c9a36a"),
 		},
 		"path": Color("c9a36a"), "path_energy": 1.25,
+		"zone_radiance_limit": 0.95,
+		"zone_surface_only": true,
 		"marker": Color("b08a4e"), "marker_energy": 1.2,
 		"zone_own": Color("e8c87a"), "zone_other": Color("4d7a78"), "zone_leak": Color("b4553f"),
 		"rock": "marble",
@@ -261,6 +266,28 @@ static func current_name() -> String:
 
 static func current() -> Dictionary:
 	return STYLES[current_name()]
+
+
+## Zugehörige PBR-Maps folgen der tatsächlich gewählten Albedo, auch bei Modus-Overrides.
+## Explizite Maps im Stil bleiben vorrangig; Datenmaps werden ohne Farbraumkonvertierung gelesen.
+static func surface_textures(defaults: Dictionary, overrides: Dictionary) -> Dictionary:
+	var textures := defaults.duplicate()
+	textures.merge(overrides, true)
+	for slot in ["grass_a", "grass_b", "dirt", "lawn_grass", "lawn_soil"]:
+		if not textures.has(slot):
+			continue
+		var base := str(textures[slot]).get_basename()
+		for suffix in ["_normal", "_specular"]:
+			var key: String = slot + suffix
+			if overrides.has(key):
+				continue
+			var path: String = base + suffix + (".jpg" if suffix == "_normal" else ".png")
+			if ResourceLoader.exists(path):
+				textures[key] = path
+			elif overrides.has(slot):
+				# Keine Default-Grasnormalen auf einer abweichenden Albedo ohne eigene Map.
+				textures.erase(key)
+	return textures
 
 
 ## Licht und Himmel des aktiven Stils, fehlende Werte aus ENV_DEFAULT (für CameraRig.add_environment).
