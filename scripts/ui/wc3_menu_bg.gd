@@ -26,6 +26,7 @@ var _tex_cache := {}
 const FOG_WALL := preload("res://scripts/ui/wc3_nebelwand.gdshader")
 const DETAIL := preload("res://assets/textures/ground/concrete.jpg")
 const DETAIL_NORMAL := preload("res://assets/textures/ground/concrete_normal.jpg")
+const DETAIL_SPECULAR := preload("res://assets/textures/ground/concrete_specular.png")
 const STONE := preload("res://scripts/ui/wc3_stein.gdshader")
 const GROUND := preload("res://scripts/ui/wc3_boden.gdshader")
 const CRYSTAL := preload("res://scripts/ui/wc3_kristall.gdshader")
@@ -140,6 +141,7 @@ func _ground() -> void:
 		var file: String = "grass_a" if k == "grass" else k
 		gm.set_shader_parameter(k, load(GT + file + ".jpg"))
 		gm.set_shader_parameter(k + "_n", load(GT + file + "_normal.jpg"))
+		gm.set_shader_parameter(k + "_s", load(GT + file + "_specular.png"))
 	gm.set_shader_parameter("plaza", Vector3(SHRINE.x, SHRINE.z, PLAZA_R))
 	gm.set_shader_parameter("path_pts", PackedVector2Array(PATH))
 	g.material_override = gm
@@ -408,6 +410,8 @@ func _texturize(n: Node, scale: float, moss: float) -> void:
 				m.set_shader_parameter("base_color", Color(c.r, c.g, c.b))
 				m.set_shader_parameter("detail", DETAIL)
 				m.set_shader_parameter("detail_n", DETAIL_NORMAL)
+				m.set_shader_parameter("detail_s", DETAIL_SPECULAR)
+				m.set_shader_parameter("moss_s", load(GT + "grass_b_specular.png"))
 				m.set_shader_parameter("tex_scale", scale)
 				m.set_shader_parameter("moss", moss)
 				if moss > 0.0:

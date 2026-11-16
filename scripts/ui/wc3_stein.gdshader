@@ -5,8 +5,10 @@ shader_type spatial;
 uniform vec3 base_color : source_color = vec3(0.6);
 uniform sampler2D detail : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D detail_n : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D detail_s : filter_linear_mipmap, repeat_enable;
 uniform sampler2D moss_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D moss_n : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D moss_s : filter_linear_mipmap, repeat_enable;
 uniform float tex_scale = 0.12;
 uniform float tex_strength = 0.45;
 uniform float brightness = 0.45;
@@ -48,6 +50,7 @@ void fragment() {
 	float lum = dot(tri(detail, p, w).rgb, vec3(0.333));
 	vec3 col = base_color * brightness * mix(1.0, lum * 1.9, tex_strength);
 	vec3 nm = tri(detail_n, p, w).rgb;
+	SPECULAR = tri(detail_s, p, w).r;
 	if (moss > 0.0) {
 		// grobes, weiches Rauschen: große zusammenhängende Polster statt Sprenkel (Lukas 2026-11-02)
 		float n = vnoise(wpos * 0.9) * 0.75 + vnoise(wpos * 2.3) * 0.25;
@@ -61,6 +64,7 @@ void fragment() {
 		col = mix(col, mc, m);
 		nm = mix(nm, mix(vec3(0.5, 0.5, 1.0), tri(moss_n, wpos * 0.35, w).rgb, 0.4), m);
 		ROUGHNESS = mix(0.85, 1.0, m);
+		SPECULAR = mix(SPECULAR, tri(moss_s, wpos * 0.35, w).r, m);
 	} else {
 		ROUGHNESS = 0.85;
 	}

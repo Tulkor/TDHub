@@ -20,6 +20,7 @@ const NAMEN := ["metal", "steel", "iron", "gold", "silver", "brass", "bronze", "
 
 static var _rauheit: Texture2D
 static var _alle: Array = []  ## veredelte Materialien (WeakRef), für den Wechsel der Grafikstufe
+static var _shader: Array = []
 static var _modelle := {}  ## Instanz-Id der Modell-Materialien, die schon geprüft sind
 
 
@@ -36,6 +37,17 @@ static func veredeln(m: BaseMaterial3D) -> BaseMaterial3D:
 	_stufe(m)
 	_alle.append(weakref(m))
 	return m
+
+
+## Dieselbe Rauheitskarte und Klarlack-Schicht für Metalllinien im Boden-Shader.
+static func linien(m: ShaderMaterial) -> void:
+	if m.has_meta("metall"):
+		return
+	m.set_meta("metall", true)
+	m.set_shader_parameter("metal_roughness", rauheit())
+	m.set_shader_parameter("line_finish", 1.0)
+	m.set_shader_parameter("line_clearcoat", 0.35 if Display.quality >= Display.MEDIUM else 0.0)
+	_shader.append(weakref(m))
 
 
 ## Metall in einem geladenen Modell verbessern. Modell-Materialien sind geteilt (alle Kopien eines Modells),
@@ -145,6 +157,13 @@ static func stufe_anwenden(root: Node) -> void:
 			_stufe(m)
 			rest.append(w)
 	_alle = rest
+	var shaders: Array = []
+	for w in _shader:
+		var m = w.get_ref()
+		if m != null:
+			m.set_shader_parameter("line_clearcoat", 0.35 if Display.quality >= Display.MEDIUM else 0.0)
+			shaders.append(w)
+	_shader = shaders
 	for we in root.find_children("*", "WorldEnvironment", true, false):
 		himmel(we.environment)
 

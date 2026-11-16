@@ -48,7 +48,7 @@ run_one() {  # name scene [args...]
   local name=$1 scene=$2; shift 2
   local log="$LOG_DIR/$name.log"
   local t0=$SECONDS
-  timeout 900 "$GODOT" --headless --path . "res://tests/$scene.tscn" "$@" >"$log" 2>&1
+  timeout 900 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" "$@" >"$log" 2>&1
   summary "$name" "$log" $? $t0
 }
 
@@ -63,10 +63,10 @@ run_fixed() {  # Balance-Tests mit fester Bildrate
 run_pair() {  # name scene: Host und Client als zwei Prozesse
   local name=$1 scene=$2
   local hl="$LOG_DIR/$name-host.log" cl="$LOG_DIR/$name-client.log" t0=$SECONDS
-  timeout 600 "$GODOT" --headless --path . "res://tests/$scene.tscn" -- --role=host >"$hl" 2>&1 &
+  timeout 600 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" -- --role=host >"$hl" 2>&1 &
   local hp=$!
   sleep 1
-  timeout 600 "$GODOT" --headless --path . "res://tests/$scene.tscn" -- --role=client >"$cl" 2>&1
+  timeout 600 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" -- --role=client >"$cl" 2>&1
   local cc=$?
   wait $hp; local hc=$?
   cat "$hl" "$cl" > "$LOG_DIR/$name.log"
@@ -76,12 +76,12 @@ run_pair() {  # name scene: Host und Client als zwei Prozesse
 run_trio() {  # name scene: Host und zwei Mitspieler (a, b) als drei Prozesse
   local name=$1 scene=$2
   local hl="$LOG_DIR/$name-host.log" al="$LOG_DIR/$name-a.log" bl="$LOG_DIR/$name-b.log" t0=$SECONDS
-  timeout 600 "$GODOT" --headless --path . "res://tests/$scene.tscn" -- --role=host >"$hl" 2>&1 &
+  timeout 600 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" -- --role=host >"$hl" 2>&1 &
   local hp=$!
   sleep 1
-  timeout 600 "$GODOT" --headless --path . "res://tests/$scene.tscn" -- --role=a >"$al" 2>&1 &
+  timeout 600 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" -- --role=a >"$al" 2>&1 &
   local ap=$!
-  timeout 600 "$GODOT" --headless --path . "res://tests/$scene.tscn" -- --role=b >"$bl" 2>&1
+  timeout 600 "$GODOT" --headless --audio-driver Dummy --path . "res://tests/$scene.tscn" -- --role=b >"$bl" 2>&1
   local bc=$?
   wait $ap; local ac=$?
   wait $hp; local hc=$?
@@ -149,6 +149,7 @@ do_test() {
     auswahl) run_check auswahl python3 tools/test_auswahl.py --pruefen ;;
     systeme_pruefen) run_check systeme_pruefen python3 tools/systeme.py pruefen ;;
     watertextures) run_check watertextures python3 tools/water/textures.py --check ;;
+    terrainmaterials) run_check terrainmaterials python3 tools/terrain_materials.py --check ;;
     bossdata) run_check bossdata python3 tools/heroes/bosse.py ;;
     balanceeditor) run_check balanceeditor node tools/balance_editor/pruefen.mjs ;;
     htmleditor) run_check htmleditor node tools/html_editor/pruefen.mjs ;;
@@ -179,9 +180,9 @@ if [ "$MODE" = geaendert ]; then
 fi
 case $MODE in
   # shellcheck disable=SC2046
-  schnell) set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen watertextures bossdata $(all_tests ohne_fest) ;;
+  schnell) set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen watertextures terrainmaterials bossdata $(all_tests ohne_fest) ;;
   # shellcheck disable=SC2046
-  alle)    set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen watertextures bossdata $(all_tests) ;;
+  alle)    set -- tabelle ui maps marken werkzeuge auswahl systeme_pruefen watertextures terrainmaterials bossdata $(all_tests) ;;
 esac
 # Prüfskripte, Smoke und die Host/Client-Paare (eigene Ports) laufen parallel, Balance-Läufe danach einzeln.
 PAR=(); SEQ=(); declare -A WEIGHT

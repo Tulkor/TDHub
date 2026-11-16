@@ -40,6 +40,9 @@ static func build(body: WaterBody, options: Dictionary, ground: Callable, neighb
 	var grass := Color(str(options.get("grass_color", "65704a")))
 	var city := str(options.get("style", "natural")) == "city"
 	var colors: Array[Color] = [soil.darkened(0.25), soil, soil.lerp(grass, 0.4), grass, grass, grass, grass]
+	# Alpha carries wetness for the opaque bank shader, independently of authored soil colors.
+	for index in colors.size():
+		colors[index].a = 0.8 if index == 0 else (0.25 if index == 1 else 0.0)
 	if city:
 		colors.assign([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
 	var count := 0
@@ -110,15 +113,14 @@ static func build(body: WaterBody, options: Dictionary, ground: Callable, neighb
 	var node := MeshInstance3D.new()
 	node.name = "RiverBanks"
 	node.mesh = st.commit()
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.vertex_color_is_srgb = true
-	material.roughness = 0.95
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://assets/shaders/natural_bank.gdshader")
 	if city:
 		var pavement := ShaderMaterial.new()
 		pavement.shader = preload("res://assets/shaders/water_pavement.gdshader")
 		pavement.set_shader_parameter("cobble_tex", preload("res://assets/textures/ground/cobble.jpg"))
+		pavement.set_shader_parameter("cobble_normal", preload("res://assets/textures/ground/cobble_normal.jpg"))
+		pavement.set_shader_parameter("cobble_specular", load("res://assets/textures/ground/cobble_specular.png"))
 		node.material_override = pavement
 	else:
 		node.material_override = material
@@ -179,9 +181,10 @@ static func _add_stones(parent: MeshInstance3D, transforms: Array[Transform3D]) 
 	mesh.height = 2
 	mesh.radial_segments = 7
 	mesh.rings = 4
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("72756c")
-	material.roughness = 0.95
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://assets/shaders/natural_bank.gdshader")
+	material.set_shader_parameter("vertex_colors", false)
+	material.set_shader_parameter("stone_color", Color("72756c"))
 	mesh.material = material
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
