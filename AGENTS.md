@@ -9,9 +9,11 @@
 
 ## Vorhandene Werkzeuge und Tests zuerst
 - Godot ist vom Nutzer generell freigegeben und darf für Projektaufgaben ohne erneute Rückfrage verwendet werden, insbesondere für Import, Tests, Rendern und Vorschauen (2026-11-09).
+- Godot bei Tests, Aufnahmen und Vorschauen immer stumm starten (`--audio-driver Dummy`, Nutzerwunsch 2026-11-10); der Windows-Aufnahme-Wrapper setzt dies automatisch.
 - Einstieg: `tools/lage.sh`; Werkzeugübersicht und weitere Regeln: `CLAUDE.md`, Details: `docs/claude/werkzeuge.md`.
 - Code gezielt lesen: `tools/gliederung.py`; Daten lesen/ändern: `tools/daten.py`, `tools/werte_setzen.py`.
 - Passende vorhandene Tests nutzen: `tools/run_tests.sh geaendert` oder gezielte Testnamen. Auswahl erklärt `tools/test_auswahl.py --erklaeren`; Zuordnung in `tests/bereiche.json` und den Testköpfen.
+- Grundregel (Lukas, 2026-11-11): Nur geänderte Bereiche und ihre unmittelbar betroffenen Abhängigkeiten testen. Bei gemeinsamen Systemen die tatsächlich betroffenen Modi einbeziehen. Keine vollständigen oder fachfremden Testläufe ohne konkreten Anlass; breitere Prüfungen nur bei ausdrücklichem Auftrag, verbindlicher Release-Prüfung oder einem bereichsübergreifenden Fehlerverdacht. Bereits grüne Prüfungen nur nach relevanten weiteren Änderungen oder neuen Fehlerhinweisen wiederholen.
 - Bei Fehlern `tools/log_auszug.sh <test>` verwenden. Tests nur bei neuem Verhalten oder fehlender Abdeckung ergänzen.
 - Vor PR/Merge den vorhandenen Ablauf `tools/vor_pr.sh` verwenden; lange Befehle über `tools/kurz.sh` ausführen.
 - Scripts sind überwiegend für Bash/Linux ausgelegt. Unter Windows die verfügbare Laufzeit prüfen; fehlende Voraussetzungen oder nicht ausgeführte Checks offen nennen.

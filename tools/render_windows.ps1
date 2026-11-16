@@ -18,7 +18,7 @@ $before = $env:APPDATA
 try {
     $env:APPDATA = Join-Path (Split-Path $repo -Parent) '.tdhub-test-profile'
     $options = @(ConvertFrom-Json $OptionsJson)
-    $arguments = @('--path', ('"' + $repo + '"'), '--resolution', '1600x1000', $Scene)
+    $arguments = @('--audio-driver', 'Dummy', '--path', ('"' + $repo + '"'), '--resolution', '1600x1000', $Scene)
     if ($options.Count) {
         $arguments += '--'
         foreach ($option in $options) {
@@ -29,8 +29,14 @@ try {
     $process = Start-Process -FilePath $Godot -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while (-not $process.WaitForExit(1000)) {
+        $parseErrors = @(Select-String -LiteralPath $stdout, $stderr -Pattern 'SCRIPT ERROR: Parse Error|Failed to load script' -ErrorAction SilentlyContinue)
+        if ($parseErrors.Count) {
+            $process.Kill($true)
+            $parseErrors | Select-Object -First 6 | ForEach-Object { Write-Output $_.Line }
+            throw "Godot-Parserfehler; Details in $stderr"
+        }
         if ([DateTime]::UtcNow -gt $deadline) {
-            $process.Kill()
+            $process.Kill($true)
             throw "Godot-Aufnahme: Timeout; Details in $stderr"
         }
     }

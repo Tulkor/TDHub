@@ -10,6 +10,7 @@ param(
     [string]$Tool = 'tools/run_tests.sh',
     [string[]]$ToolArgs = @('geaendert'),
     [string]$ProjectPath = '',
+    [string]$ProfilePath = '',
     [int]$Jobs = 4
 )
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,7 @@ try {
     $env:TDHUB_PYTHON = (Resolve-Path -LiteralPath $Python).Path.Replace('\', '/')
     $env:PYTHONUTF8 = '1'
     $env:APPDATA = Join-Path (Split-Path $repo -Parent) '.tdhub-test-profile'
+    if ($ProfilePath) { $env:APPDATA = [IO.Path]::GetFullPath($ProfilePath) }
     $env:JOBS = [string]$Jobs
     $env:LOG_DIR = (Join-Path $repo '.godot/test-logs').Replace('\', '/')
     New-Item -ItemType Directory -Force -Path $env:APPDATA | Out-Null
