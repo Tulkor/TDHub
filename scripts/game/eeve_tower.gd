@@ -20,6 +20,10 @@ var items: Array = []      ## eingesetzte Items (ids aus data/eeve_items.json), 
 var extra_slots := 0       ## zusätzliche Item-Plätze aus Erweiterungstränken
 
 
+func effect_script_native_scopes() -> Array:
+	return ["tower", "eeve"]
+
+
 func set_tower(id: String, t: int) -> void:
 	_cd.clear()
 	rage_left = 0.0
@@ -121,6 +125,9 @@ func _hit(e, dmg: float) -> void:
 	for ab in abilities():
 		var type := str(ab.get("type", ""))
 		if not type in EXTRA:
+			continue
+		# Gemeinsame Projektil-Ketten laufen im Tower-Kern; eeve-Ketten haben eigenen Schaden.
+		if type == "chain" and ab.has("count"):
 			continue
 		if ab.has("chance") and randf() >= float(ab.chance):
 			continue
