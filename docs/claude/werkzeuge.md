@@ -1,5 +1,6 @@
 # Spezialwerkzeuge (Build, Release, Editoren, Effekte, Modelle, WC3)
 
+- Getrennte Windows-Testläufe können `tools/windows.ps1 -ProfilePath <absoluter Ordner>` verwenden. Das trennt Test-Spielstände; Netztests mit festen Ports trotzdem nacheinander starten.
 - Windows lokal: vorhandenes `tools/build_windows.sh` über `tools/windows.ps1 -Godot <exe> -Python <exe> -Tool tools/build_windows.sh -ToolArgs --ziel,export/builds,--ohne-tag,--nummer,N` starten. Derselbe Export-/ZIP-Ablauf wie Linux; `setup_godot.sh` erkennt Git Bash und installiert über `windows_templates.py` nur die offizielle 4.3-Exportvorlage ins isolierte APPDATA. ZIP-Ziel überschreibt keine vorhandene Nummer. Auf Windows startet der Build zusätzlich die exportierte EXE headless; Logs `.godot/windows-export.log` und `windows-build-smoke.log`. `--ohne-tests` nur nach bereits bestandenem vollständigem Testlauf. Temporäre Build-Verzeichnisse werden vor dem Aufräumen auf `.godot/build.*` begrenzt.
 
 Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz automatisch ein, sobald ein Thread passende Dateien anfasst.
