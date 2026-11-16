@@ -25,6 +25,8 @@ const SCHEMA := {
 	"slow_aura": {"label": "Verlangsamungs-Aura (Gegner)", "params": {"radius": 2.0, "factor": 0.3}},
 	"armor_aura": {"label": "Rüstungs-Aura (Gegner)", "params": {"radius": 2.0, "amount": 3.0}},
 	"cone": {"label": "Kegel", "params": {"length": 4.0, "width_start": 0.5, "width_end": 1.5}},
+	"nova": {"label": "Nova", "params": {"chance": 0.1, "damage": 350.0, "radius": 0.78}},
+	"wave_damage": {"label": "Schaden pro Welle", "params": {"per_wave": 20.0}},
 	# Geschosse wie in Path of Exile, Reihenfolge bei jedem Treffer: Durchbohren → Gabeln → Verketten
 	"pierce": {"label": "Durchbohren (Pierce)", "params": {"count": 2, "factor": 1.0}},
 	"fork": {"label": "Gabeln (Fork)", "params": {"count": 1, "angle": 30.0, "reach": 3.0, "factor": 1.0}},
@@ -52,6 +54,7 @@ const PARAM_LABELS := {
 	"per_hit": "Schaden mehr je Treffer",
 	"death_damage": "Explosion beim Tod (0 = keine)",
 	"death_radius": "Explosionsradius (Towerbreiten)",
+	"per_wave": "Schaden pro Welle",
 }
 
 

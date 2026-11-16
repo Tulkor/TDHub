@@ -9,26 +9,27 @@ import { execFileSync } from "child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import { pathToFileURL } from "url";
 
 const require = createRequire(import.meta.url);
 let chromium;
-try { ({ chromium } = require("playwright")); } catch (e) { ({ chromium } = createRequire("/opt/node22/lib/node_modules/")("playwright")); }
+try { ({ chromium } = require("playwright")); } catch (e) { ({ chromium } = createRequire(path.join(process.env.TDHUB_NODE_MODULES || "/opt/node22/lib/node_modules/", "package.json"))("playwright")); }
 
 const tmp = mkdtempSync(path.join(tmpdir(), "html-editor-"));
 const html = path.join(tmp, "td_editor.html");
-execFileSync("python3", ["tools/html_editor/bauen.py", "--ziel=" + html]);
+execFileSync(process.env.TDHUB_PYTHON || "python3", ["tools/html_editor/bauen.py", "--ziel=" + html]);
 const shots = (process.argv.find((a) => a.startsWith("--bilder=")) || "").split("=")[1];
 
 let failed = 0;
 const loud = process.argv.includes("--laut");
 const check = (ok, text) => { if (!ok || loud) console.log((ok ? "OK     " : "FEHLER ") + text); if (!ok) failed++; };
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.TDHUB_CHROMIUM ? { executablePath:process.env.TDHUB_CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, acceptDownloads: true });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("dialog", (d) => d.accept());
-await page.goto("file://" + html);
+await page.goto(pathToFileURL(html).href);
 
 async function saved(button = "#b-save") {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click(button)]);
@@ -45,6 +46,7 @@ const bad = await page.evaluate(() => {
   return out;
 });
 check(bad.length === 0, "Format bleibt beim Schreiben gleich (" + (bad.length ? bad.slice(0, 5).join(", ") : "alle Maps und Tower") + ")");
+check(await page.evaluate(() => {const text=D.maps["data/maps/canyon.json"];if(!text)return true;loadMap(parseJson(text),"",text.endsWith("\n"));const name=M.obj.name;M.obj.name="Test";const changed=mapDirty();M.obj.name=name;return changed && !mapDirty() && mapText()===text;}), "Map-Änderung und Rücknahme bewahren kompaktes Originalformat und Dirty-Status");
 
 // 2. Map
 await page.click(".tab[data-tab=map]");
@@ -169,7 +171,7 @@ check(!("model" in t) && f.text.includes('"cooldown": 1.0'), "Leeres Modell entf
 
 // JSON-Feld
 await page.click("text=ERWEITERT (JSON)");
-const ta = page.locator("#tform textarea");
+const ta = page.locator("#tform details textarea").first();
 await ta.fill((await ta.inputValue()).replace('"Mein Turm"', '"Turm aus JSON"'));
 await page.click("#tform button:text-is(\"Übernehmen\")");
 const tn = await page.textContent(".tname");
@@ -187,12 +189,94 @@ await page.setInputFiles("#file", broken);
 await page.waitForFunction(() => document.getElementById("msg").textContent.includes("kaputt.json"), null, { timeout: 5000 }).catch(() => {});
 check((await page.textContent("#msg")).includes("keine gültige JSON-Datei"), "Kaputte Datei wird gemeldet");
 
+// 4. Script authoring: syntax feedback, blocked invalid export, persisted tower draft.
+check(await page.locator("#tform #invoke-refs").count() === 0, "Tower bietet keine Bollwerk-Invoke-Referenzen an");
+await page.fill("#tform .effect-script", "OnHit(30%, IceBall(AoE(10m, Damage(50), Slow(20%, 3s))))");
+check(await page.locator("#tform .effect-script").getAttribute("aria-invalid") === "false", "Tower-Skript gültig");
+await page.fill("#tform .effect-script", "OnHit(30%, Unknown(5))");
+await page.click("#b-save");
+check((await page.textContent("#msg")).includes("Effektskript"), "Ungültiges Tower-Skript verhindert Export");
+await page.fill("#tform .effect-script", "OnHit(30%, IceBall(AoE(10m, Damage(50), Slow(20%, 3s))))");
+
+// 5. Full item catalog workflow; existing recipes/wood survive a new scripted item.
+await page.click(".tab[data-tab=item]");
+const originalCatalog = await page.evaluate(() => {I.catalog.custom_catalog={keep:true}; I.catalog.items[0].custom_field={keep:[1,2]}; I.catalog.items[0].stats={...I.catalog.items[0].stats,future_stat:2.5}; return {count:I.catalog.items.length,wood:JSON.stringify(I.catalog.wood),shops:JSON.stringify(I.catalog.shops),items:JSON.stringify(I.catalog.items)};});
+await page.click("#i-new");
+await page.fill("#iform label:has(span:text-is('ID')) input", "eiskugel_test");
+await page.fill("#iform label:has(span:text-is('Name')) input", "Eiskugel-Test");
+await page.fill("#iform label:has(span:text-is('Gold / Rezeptgold')) input", "250");
+await page.fill("#iform label:has(span:text-is('Leben')) input", "100");
+await page.click("#i-add-ingredient");
+await page.fill("#iform .effect-script", "OnHit(30%, IceBall(AoE(10m, Damage(50), Slow(20%, 3s))))");
+await page.click("#invoke-refs summary");
+const gadgetReference=await page.evaluate(()=>D.invoke_catalog.findIndex(r=>r.group.startsWith("Gadgets")));
+await page.selectOption("#invoke-refs select",String(gadgetReference));
+const invokePreview=await page.inputValue("#invoke-refs input");
+await page.click("#invoke-refs button");
+check((await page.inputValue("#iform .effect-script")).includes(invokePreview) && await page.locator("#iform .effect-script").getAttribute("aria-invalid") === "false", "Echte Bollwerk-Gadget-ID als gültiger Invoke-Aufruf angehängt");
+check(await page.evaluate(()=>new Set(D.invoke_catalog.map(r=>r.group)).size>=3 && D.invoke_catalog.some(r=>r.group.startsWith("Gegnerfähigkeiten"))), "Invoke-Referenzen gruppieren Helden, Gadgets und freundliche Gegnerfähigkeiten");
+await page.reload();
+check(await page.evaluate(() => TAB === "item" && I.catalog.items.at(-1).id === "eiskugel_test" && T.obj.effect_script?.includes("IceBall") && itemDirty() && towerDirty()), "Itemkatalog und Tower-Skript überstehen Neuladen als Entwurf");
+await page.click("#i-copy");
+check(await page.evaluate(() => I.catalog.items.at(-1).id === "eiskugel_test_kopie"), "Item dupliziert mit eindeutiger ID");
+await page.evaluate(() => { I.catalog.items.at(-1).id = "eisenklinge"; renderItems(); });
+await page.click("#b-save");
+check((await page.textContent("#msg")).includes("Doppelte"), "Doppelte Item-ID verhindert Export");
+await page.fill("#iform label:has(span:text-is('ID')) input", "eiskugel_test_kopie");
+check(await page.evaluate(() => {const o=I.catalog.items.at(-1),recipe=o.recipe;o.recipe=["unbekannt"];const err=validateItems();o.recipe=recipe;return err.includes("unbekannte");}), "Unbekannte Rezeptzutat erkannt");
+check(await page.evaluate(() => {const o=I.catalog.items.at(-1),recipe=o.recipe;o.recipe=[o.id];const err=validateItems();o.recipe=recipe;return err.includes("Rezeptkreis");}), "Rezeptkreis erkannt");
+await page.fill("#iform label:has(span:text-is('Gold / Rezeptgold')) input", "-1");
+await page.click("#b-save");
+check((await page.textContent("#msg")).includes("price"), "Negative Kosten verhindern Export");
+await page.fill("#iform label:has(span:text-is('Gold / Rezeptgold')) input", "250");
+await page.fill("#iform .effect-script", "OnHit(200%, Damage(1))");
+await page.click("#b-save");
+check((await page.textContent("#msg")).includes("Effektskript"), "Ungültige Skriptchance verhindert Item-Export");
+await page.fill("#iform .effect-script", "OnHit(30%, IceBall(AoE(10m, Damage(50), Slow(20%, 3s))))");
+if (shots) await page.screenshot({path:path.join(shots,"item_editor.png"),fullPage:true});
+f=await saved();
+const catalog=JSON.parse(f.text);
+check(f.name === "heroes_items.json" && catalog.items.length === originalCatalog.count+2 && JSON.stringify(catalog.wood)===originalCatalog.wood && JSON.stringify(catalog.shops)===originalCatalog.shops, "Vollständiger Itemkatalog bewahrt Holz und Shops");
+check(JSON.stringify(catalog.items.slice(0,originalCatalog.count))===originalCatalog.items && catalog.custom_catalog.keep && catalog.items[0].stats.future_stat===2.5, "Vorhandene Items, unbekannte Felder und unbekannte Werte bleiben erhalten");
+check(catalog.items.at(-1).stats.hp === 100 && catalog.items.at(-1).price === 250 && catalog.items.at(-1).recipe.length === 1 && catalog.items.at(-1).effect_script.includes("IceBall"), "Itemwerte, Rezept und Skript exportiert");
+await page.setInputFiles("#file",f.path);
+await page.waitForFunction(() => document.getElementById("msg").textContent.includes("Geladen:"));
+check(await page.evaluate(() => !itemDirty() && I.catalog.items.at(-1).effect_script.includes("IceBall")), "Itemkatalog wieder importiert");
+const single=path.join(tmp,"einzelitem.json");
+writeFileSync(single,JSON.stringify({id:"einzelitem",name:"Einzelitem",tier:1,price:42}));
+await page.setInputFiles("#file",single);
+await page.waitForFunction(() => I.catalog.items.some(o=>o.id==="einzelitem"));
+check(await page.evaluate(() => itemDirty() && I.catalog.items.filter(o=>o.id==="einzelitem").length===1), "Einzelitem wird in vollständigen Katalog übernommen");
+
+// Switching to raw JSON must never revert more recent form/script edits.
+await page.fill("#iform label:has(span:text-is('Name')) input", "Aktueller Formularname");
+await page.fill("#iform .effect-script", "OnKill(Gold(7))");
+await page.click("#iform summary:text-is('ERWEITERT (JSON)')");
+await page.waitForFunction(()=>JSON.parse(document.querySelector("#iform .item-raw").value).name==="Aktueller Formularname");
+const currentRaw=JSON.parse(await page.inputValue("#iform .item-raw"));
+check(currentRaw.name==="Aktueller Formularname" && currentRaw.effect_script==="OnKill(Gold(7))", "Item-JSON öffnet den aktuellen Formular- und Skriptstand");
+currentRaw.custom_latest=true;
+await page.fill("#iform .item-raw",JSON.stringify(currentRaw));
+await page.click("#iform details:has(.item-raw) button:text-is('Übernehmen')");
+check(await page.evaluate(()=>I.catalog.items[I.selected].name==="Aktueller Formularname" && I.catalog.items[I.selected].effect_script==="OnKill(Gold(7))" && I.catalog.items[I.selected].custom_latest), "JSON-Übernahme erhält jüngste Formularwerte und Skript");
+
+// Bad metadata must be rejected before rendering or replacing the live catalog.
+const badCatalog=path.join(tmp,"katalog_fehler.json");
+writeFileSync(badCatalog,JSON.stringify(await page.evaluate(()=>({...I.catalog,shops:"keine Liste"}))));
+await page.setInputFiles("#file",badCatalog);
+await page.waitForFunction(()=>document.getElementById("msg").textContent.includes("katalog_fehler.json"));
+check((await page.textContent("#msg")).includes("shops-Liste") && await page.evaluate(()=>Array.isArray(I.catalog.shops) && I.catalog.items[I.selected].custom_latest), "Fehlerhafte Katalogmetadaten abgelehnt, aktuelle Daten erhalten");
+check(await page.evaluate(()=>[null,[],{id:"grund"}].every(entry=>validateItems({...I.catalog,shops:[entry]}).includes("shops")) && validateItems({...I.catalog,tiers:"falsch"}).includes("tiers") && !!validateItems({items:[{id:123,name:"Numerische ID",tier:1}]})), "Ungültige Shop-/Stufeneinträge und nichttextuelle IDs werden gemeldet");
+
 // Schmales Fenster: nichts ragt seitlich heraus
 await page.setViewportSize({ width: 420, height: 800 });
+await page.click("#iform summary:text-is('Hilfe und Beispiele')");
+check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "Items und offene Skripthilfe ohne seitliches Scrollen");
+if (shots) await page.screenshot({path:path.join(shots,"item_editor_mobile.png"),fullPage:true});
 await page.click(".tab[data-tab=map]");
 check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "Schmales Fenster ohne seitliches Scrollen");
 
 check(errors.length === 0, "Keine Fehler im Browser" + (errors.length ? ": " + errors.join(" | ") : ""));
 await browser.close();
-console.log(failed ? `NICHT OK: ${failed} Fehler` : "OK: Map- und Tower-Editor");
+console.log(failed ? `NICHT OK: ${failed} Fehler` : "OK: Map-, Tower- und Item-Editor");
 process.exit(failed ? 1 : 0);
