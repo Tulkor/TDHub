@@ -38,7 +38,8 @@ func _ready() -> void:
 		if not ResourceLoader.exists(path):
 			continue
 		var m: Node3D = load(path).instantiate()
-		Metall.modell(m)
+		if not path.contains("/gegner/"):
+			Metall.modell(m)  # wie im Spiel: nur Helden laden Metall.modell
 		if not ohne:
 			HdStoffe.modell(m)
 		add_child(m)

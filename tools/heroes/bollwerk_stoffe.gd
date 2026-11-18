@@ -16,7 +16,22 @@ func _init() -> void:
 	_save("fell", _fell(), 1.2, 5.0)
 	_save("knochen", _knochen(), 1.0, 3.0)
 	_save("chitin", _chitin(), 1.1, 6.0)
+	_save("metall", _metall(), 0.35, 3.0)
 	quit()
+
+
+## Metall: flache Hammerdellen, darüber feine Schleifspuren.
+func _metall() -> PackedFloat32Array:
+	var cn := _noise(FastNoiseLite.TYPE_CELLULAR, 0.03, 51, 1)
+	cn.fractal_type = FastNoiseLite.FRACTAL_NONE
+	cn.cellular_return_type = FastNoiseLite.RETURN_DISTANCE
+	var dents := _field(cn, SIZE, SIZE)
+	var brush := _field(_noise(FastNoiseLite.TYPE_SIMPLEX, 0.15, 52, 2), SIZE, SIZE / 16)
+	var out := PackedFloat32Array()
+	out.resize(SIZE * SIZE)
+	for i in out.size():
+		out[i] = 0.6 * sqrt(clampf(dents[i], 0.0, 1.0)) + 0.4 * brush[i]
+	return out
 
 
 ## Höhenkarte h (0..1) -> Detailkarte (Mittel MEAN, Kontrast) und Normalenkarte (Stärke).

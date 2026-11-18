@@ -15,10 +15,17 @@ const NAMEN := {
 	"chitin": "chitin", "schlacke": "chitin", "schlacke_hell": "chitin",
 	"holz": "holz", "rinde": "holz", "wurzel": "holz",
 	"stein": "bruchstein", "grabstein": "bruchstein",
+	"eisen": "metall", "stahl": "metall", "stahl_dunkel": "metall", "gold": "metall", "altgold": "metall",
+	"krone": "metall", "kupfer": "metall", "rost": "metall", "gruft": "metall",
+}
+## Metall nach Name: [metallic, roughness]; Helden-Metall behält seine Rauheit, Metallgrad mindestens 0.8.
+const METALL := {
+	"eisen": [0.85, 0.38], "stahl": [0.9, 0.32], "stahl_dunkel": [0.9, 0.36], "gold": [0.95, 0.3],
+	"altgold": [0.85, 0.48], "krone": [0.95, 0.28], "kupfer": [0.9, 0.4], "rost": [0.45, 0.78], "gruft": [0.75, 0.5],
 }
 ## Kacheln je Modelleinheit
-const SKALA := {"leder": 2.5, "stoff": 3.0, "fell": 2.0, "knochen": 1.5, "chitin": 3.0, "holz": 1.2, "bruchstein": 1.0}
-const NORMAL := {"leder": 0.7, "stoff": 0.35, "fell": 0.6, "knochen": 0.5, "chitin": 0.8, "holz": 0.6, "bruchstein": 0.7}
+const SKALA := {"leder": 2.5, "stoff": 3.0, "fell": 2.0, "knochen": 1.5, "chitin": 3.0, "holz": 1.2, "bruchstein": 1.0, "metall": 2.0}
+const NORMAL := {"leder": 0.7, "stoff": 0.35, "fell": 0.6, "knochen": 0.5, "chitin": 0.8, "holz": 0.6, "bruchstein": 0.7, "metall": 0.45}
 static var _tex: Dictionary = {}
 static var _done: Dictionary = {}
 
@@ -42,17 +49,27 @@ static func modell(root: Node) -> void:
 
 ## Art für ein Material: zuerst nach Name, bei Helden-Materialien (m_<farbe>) nach Farbe. "" = unverändert.
 static func art_fuer(m: StandardMaterial3D) -> String:
-	if m.emission_enabled or m.metallic >= 0.3 or m.albedo_texture != null:
+	if m.emission_enabled or m.albedo_texture != null:
 		return ""
+	var name := _name(m)
+	if NAMEN.has(name):
+		return NAMEN[name]
+	if m.metallic >= 0.3:
+		return "metall"
+	# Helden: glatte, nicht leuchtende Teile (Rüstplatten, Helme) sind im Modell oft ohne Metallgrad gebaut
+	if name.begins_with("m_") and m.roughness >= 0.25 and m.roughness <= 0.45:
+		return "metall"
+	if name.begins_with("m_"):
+		return art_nach_farbe(m.albedo_color)
+	return ""
+
+
+static func _name(m: Material) -> String:
 	var name := m.resource_name.to_lower()
 	var cut := name.find(".")
 	if cut > 0:
 		name = name.substr(0, cut)
-	if NAMEN.has(name):
-		return NAMEN[name]
-	if name.begins_with("m_"):
-		return art_nach_farbe(m.albedo_color)
-	return ""
+	return name
 
 
 ## Helden: Braun = Leder, Hautton = glatt, sehr dunkel/Grau = Stoff, alles Farbige = Stoff.
@@ -78,7 +95,13 @@ static func anwenden(m: StandardMaterial3D, art: String) -> void:
 	m.uv1_triplanar_sharpness = 4.0
 	m.uv1_scale = Vector3.ONE * float(SKALA[art])
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	if art == "leder":
+	if art == "metall":
+		var mr: Array = METALL.get(_name(m), [maxf(m.metallic, 0.8), clampf(m.roughness, 0.28, 0.45)])
+		m.metallic = float(mr[0])
+		m.roughness = float(mr[1])
+		m.metallic_specular = 0.6
+		Metall.veredeln(m)
+	elif art == "leder":
 		m.roughness = minf(m.roughness, 0.62)
 	elif art == "chitin":
 		m.roughness = minf(m.roughness, 0.45)
