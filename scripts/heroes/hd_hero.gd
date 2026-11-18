@@ -110,6 +110,7 @@ func _load_model() -> void:
 		c.visible = false
 	var m: Node3D = scene.instantiate()
 	Metall.modell(m)
+	HdStoffe.modell(m)
 	m.scale = Vector3.ONE * float(def.get("model_scale", 1.0))
 	_body.add_child(m)
 	var players := m.find_children("*", "AnimationPlayer", true, false)
