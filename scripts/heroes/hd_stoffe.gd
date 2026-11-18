@@ -104,7 +104,16 @@ static func anwenden(m: StandardMaterial3D, art: String) -> void:
 	elif art == "leder":
 		m.roughness = minf(m.roughness, 0.62)
 	elif art == "chitin":
-		m.roughness = minf(m.roughness, 0.45)
+		# Lukas: glatt mit leichtem, mattem Glanz. Kein Plattenmuster, nur eine weiche Lackschicht.
+		m.albedo_color = c
+		m.albedo_texture = null
+		m.normal_enabled = false
+		m.normal_texture = null
+		m.roughness = 0.5
+		m.metallic_specular = 0.55
+		m.clearcoat_enabled = true
+		m.clearcoat = 0.35
+		m.clearcoat_roughness = 0.45
 	m.set_meta("hd_stoff", art)
 
 
