@@ -47,6 +47,8 @@ aus einfachen Formen mit Skelett (jedes Teil starr an einem Knochen) und Animati
 [--posen=posen.png]` (Vorschau mit Cycles: Aufstellung bzw. je Held eine Reihe Ruhe/Laufen/Angriff/Zauber/Tod).
 Ein neuer Held = eine Funktion in `BAU` plus Eintrag in `STIL`/`animieren`. Im Spiel: `"model"` in `data/heroes_helden.json`.
 
+Skelette und Animationen beschleunigen: **[Riggen](RIGGEN.md)** (`python tools/riggen.py --help`). Gemeinsame Körperpunkt-Skelette, Hand-/Waffenanker, übertragbare Posen, Zielpunkt-IK und automatische Schneiden-/Handgelenkausrichtung. Torvik ist direkt angeschlossen; GLB-Clips lassen sich ohne Blender aktualisieren. Prüfung im vorhandenen Runner: `tools/run_tests.sh riggen`.
+
 Bezirk „Überwuchert“ (Pilzhof: Backsteinmauern mit Pilzkolonien, glühende Fenster und Runen, eigene Arbeit CC0):
 `<python mit bpy> -I tools/modelle/pilz_bau.py -- assets/models/bezirke/ueberwuchert [--nur=pilz_kiste] [--bild=bogen.png]`
 baut `pilz_einzel`, `pilz_bueschel`, `pilz_wand`, `pilz_wand_fenster`, `pilz_mauerecke`, `pilz_kiste`, `pilz_haus`,
@@ -57,3 +59,6 @@ Bild: `tools/screenshot.sh --map=eeve --bezirk=ueberwuchert --winkel=nah --punkt
 Bollwerk-Gegner (Moor): `<python mit bpy> -I tools/modelle/bollwerk_figuren.py -- assets/models/heroes/gegner [--nur=grolm]
 [--bogen=bogen.png] [--posen=posen.png] [--gruppe=reihe.png]`. Ein neuer Gegner = Funktion plus Einträge in `FIGUREN` (Höhe = size[1])
 und `STIL` (Angriffsart hieb/beide/wurf/stoss/stab/sprung); im Spiel `"model"` in `data/heroes.json`.
+# Weichere Bollwerk-Rigs
+
+`python tools/riggen.py weich [torvik unrat vesna zix]` ergänzt weiche Gelenkübergänge und gebackenen Nachlauf für Gewänder/Anhänge. Profile, Wiederaufbau und Prüfungen: [RIGGEN.md](RIGGEN.md). Wird beim vorhandenen Helden-Neubau automatisch angewendet.

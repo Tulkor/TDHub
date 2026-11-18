@@ -14,18 +14,155 @@
 			"armor": 3,
 			"speed": 6.5,
 			"radius": 0.7,
-			"attack": {"damage": 30, "interval": 0.8, "range": 2.6, "arc": 120},
-			"level": {"max": 25, "xp_base": 70, "xp_growth": 1.25, "hp": 55, "mana": 15, "damage": 0.08, "armor": 0.4},
-			"respawn": {"base": 5.0, "per_level": 1.0},
-			"dodge": {"distance": 5.5, "time": 0.22, "cooldown": 4.0},
-			"passive": {"name": "Sturmbrandung", "desc": "Grundangriffe lösen mit 20 % Chance einen Windstoß aus: 2 Zusatzangriffe (höchstens alle 1,5 s). Jeder Windstoß setzt mit 30 % Chance Donnerhieb zurück und verstärkt ihn um 25 %, der Blitz springt dann auf 2 weitere Gegner.", "chance": 0.2, "extra": 2, "icd": 1.5, "reset_chance": 0.3, "empower": 0.25, "empower_hops": 2, "hop_range": 6.0},
+			"attack": {
+				"damage": 30,
+				"interval": 0.8,
+				"range": 2.6,
+				"arc": 120,
+				"animations": [
+					"attack_cleave",
+					"attack_dual_strike",
+					"attack_overhead"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 55,
+				"mana": 15,
+				"damage": 0.08,
+				"armor": 0.4
+			},
+			"respawn": {
+				"base": 5.0,
+				"per_level": 1.0
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4.0
+			},
+			"passive": {
+				"name": "Sturmbrandung",
+				"desc": "Grundangriffe lösen mit 20 % Chance einen Windstoß aus: 2 Zusatzangriffe (höchstens alle 1,5 s). Jeder Windstoß setzt mit 30 % Chance Donnerhieb zurück und verstärkt ihn um 25 %, der Blitz springt dann auf 2 weitere Gegner.",
+				"chance": 0.2,
+				"extra": 2,
+				"icd": 1.5,
+				"reset_chance": 0.3,
+				"empower": 0.25,
+				"empower_hops": 2,
+				"hop_range": 6.0
+			},
 			"abilities": [
-				{"slot": 0, "id": "donnerhieb", "name": "Donnerhieb", "desc": "Zwei Blitzschläge mit beiden Äxten im Kegel vor Torvik, der zweite betäubt kurz.", "kind": "cone", "range": 3.6, "angle": 85, "damage": [55, 55], "stun": 0.6, "cooldown": 6.0, "mana": 20,
-					"ascended": {"name": "Windschlag", "desc": "Fernkampf-Windklinge, durchschlägt alle Gegner auf der Linie.", "kind": "line", "range": 8.0, "width": 1.8, "damage": [85], "cooldown": 3.0}},
-				{"slot": 1, "id": "glutnova", "name": "Glutnova", "desc": "Feuerwelle um Torvik, setzt Getroffene 3 s in Brand. Trifft sie 3 oder mehr Gegner, kostet die nächste nur die Hälfte.", "kind": "nova", "radius": 5.0, "damage": 85, "burn": 12, "burn_time": 3.0, "cooldown": 10.0, "mana": 60, "discount_hits": 3, "discount": 0.5},
-				{"slot": 2, "id": "erdschock", "name": "Erdschock", "desc": "Felsgeschoss in Zielrichtung, trifft den ersten Gegner und verlangsamt ihn 2 s um 40 %.", "kind": "skillshot", "range": 16.0, "width": 0.9, "speed": 24.0, "damage": 95, "slow": 0.4, "slow_time": 2.0, "cooldown": 8.0, "mana": 30},
-				{"slot": 3, "id": "windaufstieg", "name": "Windaufstieg", "desc": "15 s Luftelementar: Donnerhieb wird zu Windschlag, Abklingzeit halbiert, doppelte Windstoß-Chance. Beim Verwandeln schleudert ein Windstoß Gegner im Umkreis zurück und betäubt sie 1 s.", "kind": "form", "unlock": 6, "duration": 15.0, "radius": 5.0, "stun": 1.0, "knockback": 4.0, "cooldown": 60.0, "mana": 100, "gust_mult": 2.0}
-			]
+				{
+					"slot": 0,
+					"id": "donnerhieb",
+					"name": "Donnerhieb",
+					"desc": "Zwei Blitzschläge mit beiden Äxten im Kegel vor Torvik, der zweite betäubt kurz.",
+					"kind": "cone",
+					"range": 3.6,
+					"angle": 85,
+					"damage": [
+						55,
+						55
+					],
+					"stun": 0.6,
+					"cooldown": 6.0,
+					"mana": 20,
+					"ascended": {
+						"name": "Windschlag",
+						"desc": "Fernkampf-Windklinge, durchschlägt alle Gegner auf der Linie.",
+						"kind": "line",
+						"range": 8.0,
+						"width": 1.8,
+						"damage": [
+							85
+						],
+						"cooldown": 3.0
+					},
+					"tags": [
+						"attack",
+						"melee",
+						"lightning",
+						"area",
+						"control"
+					],
+					"summary": "Zwei Blitze treffen Gegner im Kegel. Der zweite Blitz betäubt."
+				},
+				{
+					"slot": 1,
+					"id": "glutnova",
+					"name": "Glutnova",
+					"desc": "Feuerwelle um Torvik, setzt Getroffene 3 s in Brand. Trifft sie 3 oder mehr Gegner, kostet die nächste nur die Hälfte.",
+					"kind": "nova",
+					"radius": 5.0,
+					"damage": 85,
+					"burn": 12,
+					"burn_time": 3.0,
+					"cooldown": 10.0,
+					"mana": 60,
+					"discount_hits": 3,
+					"discount": 0.5,
+					"tags": [
+						"spell",
+						"fire",
+						"area",
+						"dot",
+						"duration"
+					],
+					"summary": "Eine Feuernova trifft Gegner um dich und setzt sie in Brand."
+				},
+				{
+					"slot": 2,
+					"id": "erdschock",
+					"name": "Erdschock",
+					"desc": "Felsgeschoss in Zielrichtung, trifft den ersten Gegner und verlangsamt ihn 2 s um 40 %.",
+					"kind": "skillshot",
+					"range": 16.0,
+					"width": 0.9,
+					"speed": 24.0,
+					"damage": 95,
+					"slow": 0.4,
+					"slow_time": 2.0,
+					"cooldown": 8.0,
+					"mana": 30,
+					"tags": [
+						"spell",
+						"physical",
+						"projectile",
+						"control",
+						"debuff",
+						"duration"
+					],
+					"summary": "Ein Erdstoß trifft den ersten Gegner auf seiner Flugbahn und verlangsamt ihn."
+				},
+				{
+					"slot": 3,
+					"id": "windaufstieg",
+					"attack_range": 14.0,
+					"name": "Windaufstieg",
+					"desc": "15 s Luftelementar: Donnerhieb wird zu Windschlag, Abklingzeit halbiert, doppelte Windstoß-Chance. Beim Verwandeln schleudert ein Windstoß Gegner im Umkreis zurück und betäubt sie 1 s.",
+					"kind": "form",
+					"unlock": 6,
+					"duration": 15.0,
+					"radius": 5.0,
+					"stun": 1.0,
+					"knockback": 4.0,
+					"cooldown": 60.0,
+					"mana": 100,
+					"gust_mult": 2.0,
+					"tags": [
+						"spell",
+						"buff",
+						"area",
+						"control",
+						"duration"
+					],
+					"summary": "Verwandle dich in eine Windgestalt: Deine Grundangriffe werden zu Fernkampf-Windgeschossen. Ein Windstoß schleudert Gegner hoch."
+				}
+			],
+			"combat_role": "DD"
 		},
 		{
 			"id": "unrat",
@@ -40,16 +177,146 @@
 			"armor": 5,
 			"speed": 5.8,
 			"radius": 0.85,
-			"attack": {"damage": 30, "interval": 0.9, "range": 2.4, "arc": 120},
-			"level": {"max": 25, "xp_base": 70, "xp_growth": 1.25, "hp": 75, "mana": 12, "damage": 0.07, "armor": 0.6},
-			"respawn": {"base": 5.0, "per_level": 1.0},
-			"dodge": {"distance": 5.5, "time": 0.22, "cooldown": 4.0},
+			"attack": {
+				"damage": 30,
+				"interval": 0.9,
+				"range": 2.4,
+				"arc": 120,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 75,
+				"mana": 12,
+				"damage": 0.07,
+				"armor": 0.6
+			},
+			"respawn": {
+				"base": 5.0,
+				"per_level": 1.0
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4.0
+			},
 			"abilities": [
-				{"slot": 0, "id": "schrottbombe", "name": "Schrottbombe", "desc": "Wurfgeschoss auf einen Ort, explodiert dreimal an derselben Stelle. Jede Explosion macht Schaden und verlangsamt 4 s um 20 %.", "kind": "bomb", "at_point": true, "range": 12.0, "radius": 2.6, "flight": 0.5, "blasts": 3, "blast_gap": 0.6, "damage": 60, "slow": 0.2, "slow_time": 4.0, "cooldown": 7.0, "mana": 30},
-				{"slot": 1, "id": "rattenschwarm", "name": "Rattenschwarm", "desc": "Ratten springen Gegner im großen Umkreis an (bis 5 je Ziel), beißen jede Sekunde und senken je Biss die Rüstung. Ansturm schüttelt sie ab. Fallen sie ab, bleibt 6 s Rattenseuche: −15 % Schaden, −30 % Heilung, springt beim Tod auf 2 Gegner über.", "kind": "rats", "radius": 9.0, "rats": 14, "per_target": 5, "duration": 5.0, "bite": 8, "armor": 0.4, "plague": {"weaken": 0.15, "heal_cut": 0.3, "time": 6.0, "jumps": 2, "range": 6.0}, "cooldown": 14.0, "mana": 70},
-				{"slot": 2, "id": "koenigsgewand", "name": "Königsgewand", "desc": "Schild über 15 % des Höchstlebens für 6 s. Solange er hält, wirft König Unrat feindliche Geschosse mit 15 % Chance zum Schützen zurück.", "kind": "robe", "radius": 1.2, "shield": 0.15, "time": 6.0, "reflect": 0.15, "cooldown": 16.0, "mana": 50},
-				{"slot": 3, "id": "rattenbanner", "name": "Rattenbanner", "desc": "Pflanzt für 12 s ein Banner. Darin: +25 % Tempo, immun gegen Verlangsamung, 20 % weniger Schaden. Am Ende bricht die Kanalisation auf: Schaden, Gegner hochgeschleudert (1 s), 3 s um 40 % verlangsamt, und Rattenschwarm auf alle Getroffenen.", "kind": "banner", "at_point": true, "unlock": 6, "range": 10.0, "radius": 7.0, "duration": 12.0, "speed": 0.25, "dmg_in": 0.2, "damage": 260, "stun": 1.0, "slow": 0.4, "slow_time": 3.0, "cooldown": 60.0, "mana": 120}
-			]
+				{
+					"slot": 0,
+					"id": "schrottbombe",
+					"name": "Schrottbombe",
+					"desc": "Wurfgeschoss auf einen Ort, explodiert dreimal an derselben Stelle. Jede Explosion macht Schaden und verlangsamt 4 s um 20 %.",
+					"kind": "bomb",
+					"at_point": true,
+					"range": 12.0,
+					"radius": 2.6,
+					"flight": 0.5,
+					"blasts": 3,
+					"blast_gap": 0.6,
+					"damage": 60,
+					"slow": 0.2,
+					"slow_time": 4.0,
+					"cooldown": 7.0,
+					"mana": 30,
+					"tags": [
+						"spell",
+						"projectile",
+						"physical",
+						"area",
+						"control",
+						"duration"
+					],
+					"summary": "Wirf eine Bombe, die mehrmals Flächenschaden verursacht und Gegner verlangsamt."
+				},
+				{
+					"slot": 1,
+					"id": "rattenschwarm",
+					"name": "Rattenschwarm",
+					"desc": "Ratten springen Gegner im großen Umkreis an (bis 5 je Ziel), beißen jede Sekunde und senken je Biss die Rüstung. Ansturm schüttelt sie ab. Fallen sie ab, bleibt 6 s Rattenseuche: −15 % Schaden, −30 % Heilung, springt beim Tod auf 2 Gegner über.",
+					"kind": "rats",
+					"radius": 9.0,
+					"rats": 14,
+					"per_target": 5,
+					"duration": 5.0,
+					"bite": 8,
+					"armor": 0.4,
+					"plague": {
+						"weaken": 0.15,
+						"heal_cut": 0.3,
+						"time": 6.0,
+						"jumps": 2,
+						"range": 6.0
+					},
+					"cooldown": 14.0,
+					"mana": 70,
+					"tags": [
+						"spell",
+						"minion",
+						"poison",
+						"dot",
+						"debuff",
+						"area",
+						"duration"
+					],
+					"summary": "Ratten beißen wiederholt zu, senken Rüstung und verbreiten eine schwächende Seuche."
+				},
+				{
+					"slot": 2,
+					"id": "koenigsgewand",
+					"name": "Königsgewand",
+					"desc": "Schild über 15 % des Höchstlebens für 6 s. Solange er hält, wirft König Unrat feindliche Geschosse mit 15 % Chance zum Schützen zurück.",
+					"kind": "robe",
+					"radius": 1.2,
+					"shield": 0.15,
+					"time": 6.0,
+					"reflect": 0.15,
+					"cooldown": 16.0,
+					"mana": 50,
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"summary": "Ein Schild schützt dich und kann gegnerische Projektile zurückwerfen."
+				},
+				{
+					"slot": 3,
+					"id": "rattenbanner",
+					"name": "Rattenbanner",
+					"desc": "Pflanzt für 12 s ein Banner. Darin: +25 % Tempo, immun gegen Verlangsamung, 20 % weniger Schaden. Am Ende bricht die Kanalisation auf: Schaden, Gegner hochgeschleudert (1 s), 3 s um 40 % verlangsamt, und Rattenschwarm auf alle Getroffenen.",
+					"kind": "banner",
+					"at_point": true,
+					"unlock": 6,
+					"range": 10.0,
+					"radius": 7.0,
+					"duration": 12.0,
+					"speed": 0.25,
+					"dmg_in": 0.2,
+					"damage": 260,
+					"stun": 1.0,
+					"slow": 0.4,
+					"slow_time": 3.0,
+					"cooldown": 60.0,
+					"mana": 120,
+					"tags": [
+						"spell",
+						"area",
+						"buff",
+						"debuff",
+						"control",
+						"duration"
+					],
+					"summary": "Ein Banner stärkt Verbündete und schwächt Gegner in seiner Umgebung."
+				}
+			],
+			"combat_role": "Tank"
 		},
 		{
 			"id": "vesna",
@@ -64,17 +331,140 @@
 			"armor": 2,
 			"speed": 6.6,
 			"radius": 0.6,
-			"attack": {"damage": 38, "interval": 0.4, "range": 15.0, "ranged": true, "speed": 42.0, "width": 0.9, "mag": 8, "reload": 1.5, "heal": 40, "heal_cut": 0.5, "heal_cut_time": 3.0},
-			"level": {"max": 25, "xp_base": 70, "xp_growth": 1.25, "hp": 42, "mana": 18, "damage": 0.08, "armor": 0.3},
-			"respawn": {"base": 5.0, "per_level": 1.0},
-			"dodge": {"distance": 5.5, "time": 0.22, "cooldown": 4.0},
-			"passive": {"name": "Spritzengewehr", "desc": "Schüsse fliegen sichtbar und treffen, was in der Bahn steht: eigene Gebäude werden geheilt, Gegner nehmen Schaden und bekommen 3 s lang 50 % weniger Heilung. 8 Schuss, dann Nachladen."},
+			"attack": {
+				"damage": 38,
+				"interval": 0.4,
+				"range": 15.0,
+				"ranged": true,
+				"speed": 42.0,
+				"width": 0.9,
+				"mag": 8,
+				"reload": 1.5,
+				"heal": 40,
+				"heal_cut": 0.5,
+				"heal_cut_time": 3.0
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 42,
+				"mana": 18,
+				"damage": 0.08,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5.0,
+				"per_level": 1.0
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4.0
+			},
+			"passive": {
+				"name": "Spritzengewehr",
+				"desc": "Schüsse fliegen sichtbar und treffen, was in der Bahn steht: eigene Gebäude werden geheilt, Gegner nehmen Schaden und bekommen 3 s lang 50 % weniger Heilung. 8 Schuss, dann Nachladen."
+			},
 			"abilities": [
-				{"slot": 0, "id": "aderlass", "name": "Aderlass", "desc": "Band zwischen einem Gegner und Vesna: 4 s lang verliert der Gegner Leben und Vesna bekommt es. Reißt, wenn beide zu weit auseinander sind. Gut gegen Elite-Gegner und Bosse.", "kind": "drain", "at_point": true, "range": 12.0, "radius": 1.5, "break_range": 16.0, "duration": 4.0, "dps": 80, "cooldown": 8.0, "mana": 40},
-				{"slot": 1, "id": "betaeubungspfeil", "name": "Betäubungspfeil", "desc": "Pfeil in Zielrichtung: trifft den ersten Gegner und betäubt ihn 1,8 s. Unterbricht aufgeladene Fähigkeiten.", "kind": "dart", "preview": "line", "range": 16.0, "width": 0.7, "speed": 30.0, "damage": 90, "stun": 1.8, "cooldown": 12.0, "mana": 45},
-				{"slot": 2, "id": "notfallkapsel", "name": "Notfallkapsel", "desc": "Kapsel auf Vesna oder ein eigenes Gebäude, hält 10 s. Fällt das Leben darunter unter 30 %, platzt sie sofort: 35 % Heilung und kurzer Schild. Sonst heilt sie am Ende 10 % und die Abklingzeit sinkt um die Hälfte.", "kind": "capsule", "at_point": true, "range": 14.0, "radius": 1.5, "time": 10.0, "threshold": 0.3, "heal": 0.35, "shield": 0.15, "shield_time": 4.0, "end_heal": 0.1, "refund": 0.5, "cooldown": 18.0, "mana": 50},
-				{"slot": 3, "id": "hochdosis", "name": "Hochdosis", "desc": "Hochdosis auf Vesna oder ein eigenes Gebäude: sofort 25 % Heilung, 8 s lang +50 % Schaden, −50 % erlittener Schaden, +20 % Tempo.", "kind": "nano", "at_point": true, "unlock": 6, "range": 14.0, "radius": 1.5, "heal": 0.25, "duration": 8.0, "dmg_out": 0.5, "dmg_in": 0.5, "speed": 0.2, "cooldown": 60.0, "mana": 100}
-			]
+				{
+					"slot": 0,
+					"id": "aderlass",
+					"name": "Aderlass",
+					"desc": "Band zwischen einem Gegner und Vesna: 4 s lang verliert der Gegner Leben und Vesna bekommt es. Reißt, wenn beide zu weit auseinander sind. Gut gegen Elite-Gegner und Bosse.",
+					"kind": "drain",
+					"at_point": true,
+					"range": 12.0,
+					"radius": 1.5,
+					"break_range": 16.0,
+					"duration": 4.0,
+					"dps": 80,
+					"cooldown": 8.0,
+					"mana": 40,
+					"tags": [
+						"spell",
+						"dot",
+						"healing",
+						"duration"
+					],
+					"summary": "Entziehe einem Gegner über Zeit Leben und heile dich dabei."
+				},
+				{
+					"slot": 1,
+					"id": "betaeubungspfeil",
+					"name": "Betäubungspfeil",
+					"desc": "Pfeil in Zielrichtung: trifft den ersten Gegner und betäubt ihn 1,8 s. Unterbricht aufgeladene Fähigkeiten.",
+					"kind": "dart",
+					"preview": "line",
+					"range": 16.0,
+					"width": 0.7,
+					"speed": 30.0,
+					"damage": 90,
+					"stun": 1.8,
+					"cooldown": 12.0,
+					"mana": 45,
+					"tags": [
+						"attack",
+						"projectile",
+						"physical",
+						"control"
+					],
+					"summary": "Ein gezielter Schuss verletzt und betäubt den getroffenen Gegner."
+				},
+				{
+					"slot": 2,
+					"id": "notfallkapsel",
+					"name": "Notfallkapsel",
+					"desc": "Kapsel auf Vesna oder ein eigenes Gebäude, hält 10 s. Fällt das Leben darunter unter 30 %, platzt sie sofort: 35 % Heilung und kurzer Schild. Sonst heilt sie am Ende 10 % und die Abklingzeit sinkt um die Hälfte.",
+					"kind": "capsule",
+					"at_point": true,
+					"range": 14.0,
+					"radius": 1.5,
+					"time": 10.0,
+					"threshold": 0.3,
+					"heal": 0.35,
+					"shield": 0.15,
+					"shield_time": 4.0,
+					"end_heal": 0.1,
+					"refund": 0.5,
+					"cooldown": 18.0,
+					"mana": 50,
+					"tags": [
+						"spell",
+						"healing",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"summary": "Schütze und heile ein verbündetes Ziel mit einer Notfallkapsel."
+				},
+				{
+					"slot": 3,
+					"id": "hochdosis",
+					"name": "Hochdosis",
+					"desc": "Hochdosis auf Vesna oder ein eigenes Gebäude: sofort 25 % Heilung, 8 s lang +50 % Schaden, −50 % erlittener Schaden, +20 % Tempo.",
+					"kind": "nano",
+					"at_point": true,
+					"unlock": 6,
+					"range": 14.0,
+					"radius": 1.5,
+					"heal": 0.25,
+					"duration": 8.0,
+					"dmg_out": 0.5,
+					"dmg_in": 0.5,
+					"speed": 0.2,
+					"cooldown": 60.0,
+					"mana": 100,
+					"tags": [
+						"spell",
+						"healing",
+						"buff",
+						"duration"
+					],
+					"summary": "Eine Hochdosis heilt und stärkt ein verbündetes Ziel vorübergehend."
+				}
+			],
+			"combat_role": "Heiler"
 		},
 		{
 			"id": "zix",
@@ -89,28 +479,3341 @@
 			"armor": 3,
 			"speed": 6.2,
 			"radius": 0.75,
-			"attack": {"damage": 15, "interval": 0.5, "range": 7.0, "ranged": true, "repair": 0.06},
-			"level": {"max": 25, "xp_base": 70, "xp_growth": 1.25, "hp": 48, "mana": 16, "damage": 0.08, "armor": 0.4},
-			"respawn": {"base": 5.0, "per_level": 1.0},
-			"dodge": {"distance": 5.5, "time": 0.22, "cooldown": 4.0},
-			"passive": {"name": "Schraubenschlüssel", "desc": "Die Funkenpistole repariert eigene Gebäude (6 % je Schuss). Gebäude steigen mit Zix' Stufe mit und halten, bis sie zerstört werden, höchstens so viele je Art wie angegeben."},
+			"attack": {
+				"damage": 15,
+				"interval": 0.5,
+				"range": 7.0,
+				"ranged": true,
+				"repair": 0.06
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 48,
+				"mana": 16,
+				"damage": 0.08,
+				"armor": 0.4
+			},
+			"respawn": {
+				"base": 5.0,
+				"per_level": 1.0
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4.0
+			},
+			"passive": {
+				"name": "Schraubenschlüssel",
+				"desc": "Die Funkenpistole repariert eigene Gebäude (6 % je Schuss). Gebäude steigen mit Zix' Stufe mit und halten, bis sie zerstört werden, höchstens so viele je Art wie angegeben."
+			},
 			"kit_desc": "Baukasten: 3 von 10 Gebäuden liegen auf den ersten drei Tasten. Auswahl im Startfenster, ändern zwischen den Wellen im Spielmenü.",
-			"default_kit": ["bolzenturm", "teslaspule", "sanitaetsmast"],
+			"default_kit": [
+				"bolzenturm",
+				"teslaspule",
+				"sanitaetsmast"
+			],
 			"abilities": [
-				{"slot": 3, "id": "ueberspannung", "name": "Überspannung", "desc": "10 s lang alle eigenen Gebäude verstärkt: doppeltes Angriffstempo, +50 % Wirkung, volle Reparatur und eine Sonderwirkung je Gebäude.", "kind": "overcharge", "unlock": 6, "radius": 2.0, "duration": 10.0, "speed": 2.0, "power": 1.5, "cooldown": 50.0, "mana": 100}
+				{
+					"slot": 3,
+					"id": "ueberspannung",
+					"name": "Überspannung",
+					"desc": "10 s lang alle eigenen Gebäude verstärkt: doppeltes Angriffstempo, +50 % Wirkung, volle Reparatur und eine Sonderwirkung je Gebäude.",
+					"kind": "overcharge",
+					"unlock": 6,
+					"radius": 2.0,
+					"duration": 10.0,
+					"speed": 2.0,
+					"power": 1.5,
+					"cooldown": 50.0,
+					"mana": 100,
+					"tags": [
+						"spell",
+						"construct",
+						"buff",
+						"duration"
+					],
+					"summary": "Repariere deine Konstrukte und verstärke vorübergehend ihre Leistung."
+				}
+			],
+			"combat_role": "DD"
+		},
+		{
+			"id": "brennholt",
+			"name": "Hauptmann Brennholt",
+			"title": "Schildträger",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "557ba3",
+			"silhouette": "shield",
+			"passive_kind": "front",
+			"model": "res://assets/models/heroes/brennholt.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Eisenwille",
+				"desc": "Schaden von Gegnern vor dir wird um 35 % verringert."
+			},
+			"abilities": [
+				{
+					"name": "Schildstoß",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Ein Schildstoß trifft im Kegel, stößt zurück und unterbricht.",
+					"summary": "Ein Schildstoß trifft im Kegel, stößt zurück und unterbricht.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 4,
+					"radius": 4.0,
+					"damage": 95,
+					"stun": 0.6,
+					"knockback": 3,
+					"angle": 100,
+					"preview": "cone",
+					"slot": 0,
+					"id": "brennholt_0"
+				},
+				{
+					"name": "Hornruf",
+					"op": "taunt",
+					"kind": "roster",
+					"desc": "Spotte Gegner im Umkreis für 3 s.",
+					"summary": "Spotte Gegner im Umkreis für 3 s.",
+					"tags": [
+						"spell",
+						"control",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 14,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 0,
+					"duration": 3,
+					"preview": "circle",
+					"slot": 1,
+					"id": "brennholt_1"
+				},
+				{
+					"name": "Ansturm",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Stürme 8 m vor, triff Gegner auf der Bahn und betäube sie.",
+					"summary": "Stürme 8 m vor, triff Gegner auf der Bahn und betäube sie.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 8,
+					"radius": 4.0,
+					"damage": 110,
+					"stun": 1.2,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 2,
+					"id": "brennholt_2"
+				},
+				{
+					"name": "Schildwall",
+					"op": "wall",
+					"kind": "roster",
+					"desc": "Eine quer gestellte Schildmauer hält Gegner und Geschosse 6 s auf.",
+					"summary": "Eine quer gestellte Schildmauer hält Gegner und Geschosse 6 s auf.",
+					"tags": [
+						"spell",
+						"control",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 0,
+					"duration": 6,
+					"hp": 1800,
+					"preview": "circle",
+					"slot": 3,
+					"id": "brennholt_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "mira",
+			"name": "Mira Steinhaut",
+			"title": "Felsenwächterin",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "899785",
+			"silhouette": "stone",
+			"passive_kind": "moss",
+			"model": "res://assets/models/heroes/mira.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Moos",
+				"desc": "Nach 2 s Stillstand regenerierst du 3 % deines Höchstlebens pro Sekunde."
+			},
+			"abilities": [
+				{
+					"name": "Felsbrocken",
+					"op": "meteor",
+					"kind": "roster",
+					"desc": "Ein Fels schlägt nach 0,8 s am Zielpunkt ein und betäubt.",
+					"summary": "Ein Fels schlägt nach 0,8 s am Zielpunkt ein und betäubt.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"physical"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 140,
+					"stun": 1.2,
+					"delay": 0.8,
+					"at_point": true,
+					"elements": [
+						"physical"
+					],
+					"preview": "circle",
+					"slot": 0,
+					"id": "mira_0"
+				},
+				{
+					"name": "Versteinern",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Werde 2 s unbeweglich und unverwundbar; danach brechen Splitter aus.",
+					"summary": "Werde 2 s unbeweglich und unverwundbar; danach brechen Splitter aus.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 15,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 130,
+					"duration": 2,
+					"root": true,
+					"invulnerable": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "mira_1"
+				},
+				{
+					"name": "Bodenwelle",
+					"op": "line",
+					"kind": "roster",
+					"desc": "Ein Bodenriss schleudert Gegner in einer Linie hoch.",
+					"summary": "Ein Bodenriss schleudert Gegner in einer Linie hoch.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"physical"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 13,
+					"radius": 4.0,
+					"damage": 110,
+					"width": 2,
+					"stun": 1,
+					"elements": [
+						"physical"
+					],
+					"preview": "line",
+					"slot": 2,
+					"id": "mira_2"
+				},
+				{
+					"name": "Bergsturz",
+					"op": "meteor",
+					"kind": "roster",
+					"desc": "Fünf Felsen schlagen nacheinander rund um den Zielpunkt ein.",
+					"summary": "Fünf Felsen schlagen nacheinander rund um den Zielpunkt ein.",
+					"tags": [
+						"spell",
+						"area",
+						"control"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 180,
+					"stun": 0.7,
+					"count": 5,
+					"delay": 0.8,
+					"gap": 0.55,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "mira_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "grauhirte",
+			"name": "Der Grauhirte",
+			"title": "Rudelführer",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "83929a",
+			"silhouette": "wolf",
+			"passive_kind": "pack",
+			"model": "res://assets/models/heroes/grauhirte.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Rudel",
+				"desc": "Jeder lebende eigene Wolf gewährt 2 Rüstung."
+			},
+			"abilities": [
+				{
+					"name": "Ruf der Wölfe",
+					"op": "summon",
+					"kind": "roster",
+					"desc": "Rufe zwei Wölfe, höchstens vier; sie folgen dir und kämpfen.",
+					"summary": "Rufe zwei Wölfe, höchstens vier; sie folgen dir und kämpfen.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 13,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 28,
+					"count": 2,
+					"limit": 4,
+					"duration": 35,
+					"pet": "wolf",
+					"preview": "circle",
+					"slot": 0,
+					"id": "grauhirte_0",
+					"hp": 350
+				},
+				{
+					"name": "Hetzjagd",
+					"op": "command",
+					"kind": "roster",
+					"desc": "Deine Wölfe springen zum Ziel und halten Gegner fest.",
+					"summary": "Deine Wölfe springen zum Ziel und halten Gegner fest.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 55,
+					"stun": 1.5,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "grauhirte_1"
+				},
+				{
+					"name": "Hirtenstab",
+					"op": "pull",
+					"kind": "roster",
+					"desc": "Ziehe Gegner im vorderen Kegel zu dir.",
+					"summary": "Ziehe Gegner im vorderen Kegel zu dir.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 6,
+					"radius": 4.0,
+					"damage": 85,
+					"angle": 110,
+					"knockback": 3,
+					"preview": "cone",
+					"slot": 2,
+					"id": "grauhirte_2"
+				},
+				{
+					"name": "Rudelgeist",
+					"op": "form",
+					"kind": "roster",
+					"desc": "Eine Wolfsaura stärkt dich und deine Wölfe; Treffer heilen dich.",
+					"summary": "Eine Wolfsaura stärkt dich und deine Wölfe; Treffer heilen dich.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 60,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"duration": 14,
+					"dmg_out": 0.4,
+					"lifesteal": 0.25,
+					"shield": 0.18,
+					"preview": "circle",
+					"slot": 3,
+					"id": "grauhirte_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "sirra",
+			"name": "Sirra Nachtfalke",
+			"title": "Giftklinge",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "9855bb",
+			"silhouette": "daggers",
+			"passive_kind": "poison",
+			"model": "res://assets/models/heroes/sirra.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Gift",
+				"desc": "Grundangriffe legen Gift auf, bis zu zehn Stapel je Gegner."
+			},
+			"abilities": [
+				{
+					"name": "Klingenwurf",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Eine Klinge durchbohrt Gegner und legt drei Giftstapel auf.",
+					"summary": "Eine Klinge durchbohrt Gegner und legt drei Giftstapel auf.",
+					"tags": [
+						"spell",
+						"projectile",
+						"poison"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 95,
+					"poison": 3,
+					"pierce": true,
+					"elements": [
+						"poison"
+					],
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "sirra_0"
+				},
+				{
+					"name": "Schattensprung",
+					"op": "blink",
+					"kind": "roster",
+					"desc": "Springe zum Zielpunkt; dein nächster Grundangriff verursacht dreifachen Schaden.",
+					"summary": "Springe zum Zielpunkt; dein nächster Grundangriff verursacht dreifachen Schaden.",
+					"tags": [
+						"spell"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 10,
+					"radius": 4.0,
+					"damage": 0,
+					"critical": 3,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "sirra_1"
+				},
+				{
+					"name": "Rauchbombe",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Eine Rauchwolke senkt den Schaden der Gegner darin um 45 %.",
+					"summary": "Eine Rauchwolke senkt den Schaden der Gegner darin um 45 %.",
+					"tags": [
+						"spell",
+						"area",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 0,
+					"duration": 5,
+					"weaken": 0.45,
+					"preview": "circle",
+					"slot": 2,
+					"id": "sirra_2"
+				},
+				{
+					"name": "Todesfalter",
+					"op": "detonate",
+					"kind": "roster",
+					"desc": "Zünde deine Giftstapel auf Gegnern im Umkreis: 55 Schaden je Stapel.",
+					"summary": "Zünde deine Giftstapel auf Gegnern im Umkreis: 55 Schaden je Stapel.",
+					"tags": [
+						"spell",
+						"poison"
+					],
+					"mana": 100,
+					"cooldown": 55,
+					"range": 14.0,
+					"radius": 10,
+					"damage": 55,
+					"elements": [
+						"poison"
+					],
+					"preview": "circle",
+					"slot": 3,
+					"id": "sirra_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "kaspar",
+			"name": "Kaspar der Armbrustmacher",
+			"title": "Tüftler",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "ae8152",
+			"silhouette": "crossbow",
+			"passive_kind": "workbench",
+			"model": "res://assets/models/heroes/kaspar.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Werkbank",
+				"desc": "Eigene Geschütze in 8 m Umkreis schießen 25 % schneller."
+			},
+			"abilities": [
+				{
+					"name": "Bolzen",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein schwerer Bolzen durchbohrt bis zu drei Gegner.",
+					"summary": "Ein schwerer Bolzen durchbohrt bis zu drei Gegner.",
+					"tags": [
+						"spell",
+						"projectile",
+						"physical"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 22,
+					"radius": 4.0,
+					"damage": 150,
+					"pierce": 3,
+					"elements": [
+						"physical"
+					],
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "kaspar_0"
+				},
+				{
+					"name": "Geschütz",
+					"op": "turret",
+					"kind": "roster",
+					"desc": "Stelle eine Armbrust für 30 s auf, höchstens drei.",
+					"summary": "Stelle eine Armbrust für 30 s auf, höchstens drei.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 38,
+					"duration": 30,
+					"limit": 3,
+					"pet": "crossbow",
+					"at_point": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "kaspar_1"
+				},
+				{
+					"name": "Sprungfeder",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Springe rückwärts; eine Falle am Ausgangspunkt betäubt Gegner.",
+					"summary": "Springe rückwärts; eine Falle am Ausgangspunkt betäubt Gegner.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 14,
+					"range": 6,
+					"radius": 4.0,
+					"damage": 90,
+					"backward": true,
+					"trap": true,
+					"stun": 1.5,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 2,
+					"id": "kaspar_2"
+				},
+				{
+					"name": "Belagerungsgeschütz",
+					"op": "turret",
+					"kind": "roster",
+					"desc": "Ein großer Mörser beschießt Gegnergruppen 20 s lang.",
+					"summary": "Ein großer Mörser beschießt Gegnergruppen 20 s lang.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 150,
+					"duration": 20,
+					"limit": 1,
+					"pet": "mortar",
+					"blast": 3,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "kaspar_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "yuna",
+			"name": "Yuna Schnittwind",
+			"title": "Klingentänzerin",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "57bdb9",
+			"silhouette": "sword",
+			"passive_kind": "flow",
+			"model": "res://assets/models/heroes/yuna.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Fluss",
+				"desc": "Treffer gewähren 3 % Angriffstempo, bis 30 %, für 3 s."
+			},
+			"abilities": [
+				{
+					"name": "Windschnitt",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Ein kurzer Sprint trifft alle Gegner entlang deiner Bahn.",
+					"summary": "Ein kurzer Sprint trifft alle Gegner entlang deiner Bahn.",
+					"tags": [
+						"spell"
+					],
+					"mana": 35,
+					"cooldown": 7,
+					"range": 8,
+					"radius": 4.0,
+					"damage": 140,
+					"width": 1.5,
+					"preview": "line",
+					"slot": 0,
+					"id": "yuna_0"
+				},
+				{
+					"name": "Wirbel",
+					"op": "whirl",
+					"kind": "roster",
+					"desc": "Wirble 2 s weiterlaufend mit deiner Klinge.",
+					"summary": "Wirble 2 s weiterlaufend mit deiner Klinge.",
+					"tags": [
+						"spell",
+						"area",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 14.0,
+					"radius": 3.5,
+					"damage": 65,
+					"duration": 2,
+					"interval": 0.4,
+					"preview": "circle",
+					"slot": 1,
+					"id": "yuna_1"
+				},
+				{
+					"name": "Konter",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Eine Sekunde Konterhaltung: der erste Treffer wird abgewehrt und dreifach erwidert.",
+					"summary": "Eine Sekunde Konterhaltung: der erste Treffer wird abgewehrt und dreifach erwidert.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 14,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"duration": 1,
+					"counter": 3,
+					"invulnerable": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "yuna_2"
+				},
+				{
+					"name": "Tausend Schnitte",
+					"op": "strikes",
+					"kind": "roster",
+					"desc": "Acht schnelle Sprünge zwischen Gegnern; währenddessen unverwundbar.",
+					"summary": "Acht schnelle Sprünge zwischen Gegnern; währenddessen unverwundbar.",
+					"tags": [
+						"spell"
+					],
+					"mana": 100,
+					"cooldown": 60,
+					"range": 14.0,
+					"radius": 9,
+					"damage": 80,
+					"count": 8,
+					"gap": 0.16,
+					"preview": "circle",
+					"slot": 3,
+					"id": "yuna_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "orrin",
+			"name": "Orrin Glutwort",
+			"title": "Feuermagier",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "df7545",
+			"silhouette": "fire",
+			"passive_kind": "ember",
+			"model": "res://assets/models/heroes/orrin.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Brand",
+				"desc": "Grundangriffe legen eine kurze brennende Fläche am Ziel an."
+			},
+			"abilities": [
+				{
+					"name": "Feuerball",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein Feuerball explodiert am ersten getroffenen Gegner.",
+					"summary": "Ein Feuerball explodiert am ersten getroffenen Gegner.",
+					"tags": [
+						"spell",
+						"projectile",
+						"fire"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 140,
+					"blast": 3,
+					"elements": [
+						"fire"
+					],
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "orrin_0"
+				},
+				{
+					"name": "Feuerwand",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Eine vier Sekunden brennende Linie verletzt Gegner wiederholt.",
+					"summary": "Eine vier Sekunden brennende Linie verletzt Gegner wiederholt.",
+					"tags": [
+						"spell",
+						"area",
+						"duration",
+						"fire"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 12,
+					"radius": 4.0,
+					"damage": 55,
+					"duration": 4,
+					"shape": "line",
+					"width": 2,
+					"interval": 0.5,
+					"at_point": true,
+					"elements": [
+						"fire"
+					],
+					"preview": "line",
+					"slot": 1,
+					"id": "orrin_1"
+				},
+				{
+					"name": "Flammenschritt",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Springe vorwärts und hinterlasse eine brennende Spur.",
+					"summary": "Springe vorwärts und hinterlasse eine brennende Spur.",
+					"tags": [
+						"spell",
+						"duration",
+						"fire"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 7,
+					"radius": 4.0,
+					"damage": 35,
+					"trail": true,
+					"duration": 4,
+					"elements": [
+						"fire"
+					],
+					"preview": "line",
+					"width": 1.2,
+					"slot": 2,
+					"id": "orrin_2"
+				},
+				{
+					"name": "Meteor",
+					"op": "meteor",
+					"kind": "roster",
+					"desc": "Nach 1,5 s schlägt ein gewaltiger Meteor im sichtbaren Zielkreis ein.",
+					"summary": "Nach 1,5 s schlägt ein gewaltiger Meteor im sichtbaren Zielkreis ein.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"fire"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 620,
+					"delay": 1.5,
+					"stun": 0.8,
+					"at_point": true,
+					"elements": [
+						"fire"
+					],
+					"preview": "circle",
+					"slot": 3,
+					"id": "orrin_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "ilsabet",
+			"name": "Weise Ilsabet",
+			"title": "Frostmagierin",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "8ec9e5",
+			"silhouette": "ice",
+			"passive_kind": "frost",
+			"model": "res://assets/models/heroes/ilsabet.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Kälte",
+				"desc": "Frosttreffer verlangsamen; jeder fünfte Treffer friert kurz ein."
+			},
+			"abilities": [
+				{
+					"name": "Eislanze",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Eine Eislanze durchbohrt die Reihe und sammelt Kälte.",
+					"summary": "Eine Eislanze durchbohrt die Reihe und sammelt Kälte.",
+					"tags": [
+						"spell",
+						"projectile",
+						"control",
+						"cold"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 120,
+					"pierce": true,
+					"slow": 0.25,
+					"elements": [
+						"cold"
+					],
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "ilsabet_0"
+				},
+				{
+					"name": "Frostfeld",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Ein Frostfeld verlangsamt Gegner stark und sammelt Kälte.",
+					"summary": "Ein Frostfeld verlangsamt Gegner stark und sammelt Kälte.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"duration",
+						"cold"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 30,
+					"slow": 0.55,
+					"duration": 6,
+					"interval": 1,
+					"at_point": true,
+					"elements": [
+						"cold"
+					],
+					"preview": "circle",
+					"slot": 1,
+					"id": "ilsabet_1"
+				},
+				{
+					"name": "Eisblock",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Schütze ein nahes verbündetes Ziel mit Eis; Helden werden kurz unverwundbar und heilen.",
+					"summary": "Schütze ein nahes verbündetes Ziel mit Eis; Helden werden kurz unverwundbar und heilen.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"healing",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 18,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"duration": 2.5,
+					"heal": 140,
+					"invulnerable": true,
+					"root": true,
+					"ally": true,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "ilsabet_2"
+				},
+				{
+					"name": "Gletscher",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Ein großer Eiskegel friert Gegner ein und zerspringt mit hohem Schaden.",
+					"summary": "Ein großer Eiskegel friert Gegner ein und zerspringt mit hohem Schaden.",
+					"tags": [
+						"spell",
+						"control",
+						"cold"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 12,
+					"radius": 4.0,
+					"damage": 360,
+					"angle": 100,
+					"stun": 2.5,
+					"elements": [
+						"cold"
+					],
+					"preview": "cone",
+					"slot": 3,
+					"id": "ilsabet_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "tamo",
+			"name": "Tamo der Donnerbauer",
+			"title": "Gewitterbauer",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "d4ad4b",
+			"silhouette": "fork",
+			"passive_kind": "charge",
+			"model": "res://assets/models/heroes/tamo.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Ladung",
+				"desc": "Erlittener Schaden lädt dich auf; volle Ladung verstärkt die nächste Schadensfähigkeit um 50 %."
+			},
+			"abilities": [
+				{
+					"name": "Blitzkette",
+					"op": "chain",
+					"kind": "roster",
+					"desc": "Ein Blitz springt auf bis zu fünf Gegner.",
+					"summary": "Ein Blitz springt auf bis zu fünf Gegner.",
+					"tags": [
+						"spell",
+						"projectile",
+						"lightning"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 110,
+					"count": 5,
+					"jump": 6,
+					"elements": [
+						"lightning"
+					],
+					"preview": "circle",
+					"slot": 0,
+					"id": "tamo_0"
+				},
+				{
+					"name": "Gabelwurf",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Eine Kupfergabel schlägt am Ziel ein und zieht 4 s Blitze an.",
+					"summary": "Eine Kupfergabel schlägt am Ziel ein und zieht 4 s Blitze an.",
+					"tags": [
+						"spell",
+						"area",
+						"duration",
+						"lightning"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 70,
+					"duration": 4,
+					"interval": 0.7,
+					"at_point": true,
+					"elements": [
+						"lightning"
+					],
+					"preview": "circle",
+					"slot": 1,
+					"id": "tamo_1"
+				},
+				{
+					"name": "Donnerschlag",
+					"op": "blast",
+					"kind": "roster",
+					"desc": "Ein Donnerschlag um dich betäubt kurz.",
+					"summary": "Ein Donnerschlag um dich betäubt kurz.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"lightning"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 100,
+					"stun": 0.8,
+					"elements": [
+						"lightning"
+					],
+					"preview": "circle",
+					"slot": 2,
+					"id": "tamo_2"
+				},
+				{
+					"name": "Gewitterfront",
+					"op": "whirl",
+					"kind": "roster",
+					"desc": "Ein Gewitter folgt dir 8 s und trifft Gegner in deiner Nähe.",
+					"summary": "Ein Gewitter folgt dir 8 s und trifft Gegner in deiner Nähe.",
+					"tags": [
+						"spell",
+						"area",
+						"duration",
+						"lightning"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 85,
+					"duration": 8,
+					"interval": 0.7,
+					"elements": [
+						"lightning"
+					],
+					"preview": "circle",
+					"slot": 3,
+					"id": "tamo_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "albe",
+			"name": "Schwester Albe",
+			"title": "Lichtheilerin",
+			"role": "Heiler",
+			"combat_role": "Heiler",
+			"kit": "roster",
+			"color": "e5d79a",
+			"silhouette": "lantern",
+			"passive_kind": "grace",
+			"model": "res://assets/models/heroes/albe.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Gnade",
+				"desc": "Überschüssige Fähigkeitheilung wird zu einem begrenzten Schild."
+			},
+			"abilities": [
+				{
+					"name": "Lichtstrahl",
+					"op": "line",
+					"kind": "roster",
+					"desc": "Ein Lichtstrahl schadet Gegnern und heilt Verbündete auf der Linie.",
+					"summary": "Ein Lichtstrahl schadet Gegnern und heilt Verbündete auf der Linie.",
+					"tags": [
+						"spell",
+						"area",
+						"healing"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 16,
+					"radius": 4.0,
+					"damage": 85,
+					"heal": 125,
+					"width": 2,
+					"preview": "line",
+					"slot": 0,
+					"id": "albe_0"
+				},
+				{
+					"name": "Schutzkreis",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Der Schutzkreis heilt und senkt erlittenen Schaden von Helden um 30 %.",
+					"summary": "Der Schutzkreis heilt und senkt erlittenen Schaden von Helden um 30 %.",
+					"tags": [
+						"spell",
+						"area",
+						"healing",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 15,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 0,
+					"heal": 28,
+					"dmg_in": 0.3,
+					"duration": 6,
+					"interval": 1,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "albe_1"
+				},
+				{
+					"name": "Rettungsgriff",
+					"op": "rescue",
+					"kind": "roster",
+					"desc": "Ziehe einen verbündeten Helden zu dir und gib ihm einen Schild.",
+					"summary": "Ziehe einen verbündeten Helden zu dir und gib ihm einen Schild.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14,
+					"radius": 4.0,
+					"damage": 0,
+					"shield": 0.2,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "albe_2"
+				},
+				{
+					"name": "Auferstehung",
+					"op": "revive",
+					"kind": "roster",
+					"desc": "Belebe gefallene Mitspieler wieder; lebende Verbündete werden geheilt und geschützt.",
+					"summary": "Belebe gefallene Mitspieler wieder; lebende Verbündete werden geheilt und geschützt.",
+					"tags": [
+						"spell",
+						"healing",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 90,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"heal": 250,
+					"duration": 2,
+					"invulnerable": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "albe_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "fenn",
+			"name": "Fenn Laternenträger",
+			"title": "Pfadfinder",
+			"role": "Heiler",
+			"combat_role": "Heiler",
+			"kit": "roster",
+			"color": "d5bd64",
+			"silhouette": "scout",
+			"passive_kind": "shine",
+			"model": "res://assets/models/heroes/fenn.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Schein",
+				"desc": "Gegner im Laternenschein gewähren der Gruppe 20 % zusätzliches Killgold."
+			},
+			"abilities": [
+				{
+					"name": "Laterne setzen",
+					"op": "beacon",
+					"kind": "roster",
+					"desc": "Setze bis zu drei Laternen: ihr Schein heilt und beschleunigt Helden.",
+					"summary": "Setze bis zu drei Laternen: ihr Schein heilt und beschleunigt Helden.",
+					"tags": [
+						"spell",
+						"healing",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 0,
+					"heal": 22,
+					"speed": 0.2,
+					"duration": 25,
+					"limit": 3,
+					"interval": 1,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 0,
+					"id": "fenn_0"
+				},
+				{
+					"name": "Leuchtpfeil",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Markiere einen Gegner: Er nimmt 6 s lang 20 % mehr Schaden.",
+					"summary": "Markiere einen Gegner: Er nimmt 6 s lang 20 % mehr Schaden.",
+					"tags": [
+						"spell",
+						"projectile",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 85,
+					"expose": 0.2,
+					"duration": 6,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 1,
+					"id": "fenn_1"
+				},
+				{
+					"name": "Wegsprung",
+					"op": "beacon_blink",
+					"kind": "roster",
+					"desc": "Teleportiere dich zur Laterne nahe dem Zielpunkt und heile dich.",
+					"summary": "Teleportiere dich zur Laterne nahe dem Zielpunkt und heile dich.",
+					"tags": [
+						"spell",
+						"healing"
+					],
+					"mana": 35,
+					"cooldown": 14,
+					"range": 30,
+					"radius": 4.0,
+					"damage": 0,
+					"heal": 100,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "fenn_2"
+				},
+				{
+					"name": "Leuchtfeuer",
+					"op": "sun",
+					"kind": "roster",
+					"desc": "Alle Laternen werden 6 s zu Sonnen: mehr Heilung und wiederholte Unterbrechungen.",
+					"summary": "Alle Laternen werden 6 s zu Sonnen: mehr Heilung und wiederholte Unterbrechungen.",
+					"tags": [
+						"spell",
+						"healing",
+						"control",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 35,
+					"heal": 55,
+					"stun": 0.3,
+					"duration": 6,
+					"preview": "circle",
+					"slot": 3,
+					"id": "fenn_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "ralda",
+			"name": "Ralda Runenschmied",
+			"title": "Runenwächterin",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "bd8656",
+			"silhouette": "hammer",
+			"passive_kind": "craft",
+			"model": "res://assets/models/heroes/ralda.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Handwerk",
+				"desc": "Eigene Rezepte kosten 10 % weniger Gold."
+			},
+			"abilities": [
+				{
+					"name": "Runenhammer",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Ein Hammerschlag trifft vor dir und stärkt Helden in der Nähe.",
+					"summary": "Ein Hammerschlag trifft vor dir und stärkt Helden in der Nähe.",
+					"tags": [
+						"spell",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 4,
+					"radius": 4.0,
+					"damage": 110,
+					"angle": 110,
+					"dmg_out": 0.15,
+					"duration": 4,
+					"preview": "cone",
+					"slot": 0,
+					"id": "ralda_0"
+				},
+				{
+					"name": "Barrikade",
+					"op": "wall",
+					"kind": "roster",
+					"desc": "Eine widerstandsfähige Barrikade hält Gegner 6 s auf.",
+					"summary": "Eine widerstandsfähige Barrikade hält Gegner 6 s auf.",
+					"tags": [
+						"spell",
+						"control",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14.0,
+					"radius": 4,
+					"damage": 0,
+					"duration": 6,
+					"hp": 1600,
+					"preview": "circle",
+					"slot": 1,
+					"id": "ralda_1"
+				},
+				{
+					"name": "Waffe schärfen",
+					"op": "buff",
+					"kind": "roster",
+					"desc": "Stärke den Schaden eines verbündeten Helden 8 s um 25 %.",
+					"summary": "Stärke den Schaden eines verbündeten Helden 8 s um 25 %.",
+					"tags": [
+						"spell",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"dmg_out": 0.25,
+					"duration": 8,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "ralda_2"
+				},
+				{
+					"name": "Schmiedefeuer",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Ein Runenamboss schützt Verbündete mit Schilden und stärkt ihren Schaden.",
+					"summary": "Ein Runenamboss schützt Verbündete mit Schilden und stärkt ihren Schaden.",
+					"tags": [
+						"spell",
+						"area",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 0,
+					"shield": 0.06,
+					"dmg_out": 0.25,
+					"dmg_in": 0.2,
+					"duration": 10,
+					"interval": 1,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "ralda_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "varg",
+			"name": "Varg Eisenbart",
+			"title": "Berserker",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "b54b42",
+			"silhouette": "axes",
+			"passive_kind": "berserk",
+			"model": "res://assets/models/heroes/varg.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Blutmut",
+				"desc": "Mit sinkendem Leben steigt dein Schaden um bis zu 40 %."
+			},
+			"abilities": [
+				{
+					"name": "Bluthieb",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Ein wuchtiger Hieb heilt dich für einen Teil des verursachten Schadens.",
+					"summary": "Ein wuchtiger Hieb heilt dich für einen Teil des verursachten Schadens.",
+					"tags": [
+						"spell"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 4,
+					"radius": 4.0,
+					"damage": 170,
+					"angle": 100,
+					"leech": 0.25,
+					"preview": "cone",
+					"slot": 0,
+					"id": "varg_0"
+				},
+				{
+					"name": "Kampfrausch",
+					"op": "form",
+					"kind": "roster",
+					"desc": "Erhöhe 6 s deinen Schaden und dein Angriffstempo.",
+					"summary": "Erhöhe 6 s deinen Schaden und dein Angriffstempo.",
+					"tags": [
+						"spell",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 15,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"duration": 6,
+					"dmg_out": 0.3,
+					"attack_speed": 0.25,
+					"preview": "circle",
+					"slot": 1,
+					"id": "varg_1"
+				},
+				{
+					"name": "Eisenbrecher",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Springe vor und zertrümmere gegnerische Rüstung.",
+					"summary": "Springe vor und zertrümmere gegnerische Rüstung.",
+					"tags": [
+						"spell",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 7,
+					"radius": 4.0,
+					"damage": 110,
+					"armor_cut": 4,
+					"duration": 5,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 2,
+					"id": "varg_2"
+				},
+				{
+					"name": "Letztes Aufbäumen",
+					"op": "form",
+					"kind": "roster",
+					"desc": "Erhalte einen starken Schild und mehr Lebensraub und Schaden.",
+					"summary": "Erhalte einen starken Schild und mehr Lebensraub und Schaden.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"duration": 10,
+					"shield": 0.4,
+					"dmg_out": 0.5,
+					"lifesteal": 0.35,
+					"preview": "circle",
+					"slot": 3,
+					"id": "varg_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "lior",
+			"name": "Lior Spiegelseher",
+			"title": "Trugbildmagier",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "a3a2e1",
+			"silhouette": "mirror",
+			"passive_kind": "mirror",
+			"model": "res://assets/models/heroes/lior.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Spiegelhaut",
+				"desc": "Ein eigenes lebendes Trugbild verringert deinen erlittenen Schaden um 15 %."
+			},
+			"abilities": [
+				{
+					"name": "Spiegelsplitter",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein durchbohrender Splitter markiert Gegner und erhöht Folgeschaden.",
+					"summary": "Ein durchbohrender Splitter markiert Gegner und erhöht Folgeschaden.",
+					"tags": [
+						"spell",
+						"projectile",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 125,
+					"pierce": true,
+					"expose": 0.12,
+					"duration": 4,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "lior_0"
+				},
+				{
+					"name": "Trugbilder",
+					"op": "summon",
+					"kind": "roster",
+					"desc": "Zwei Spiegelbilder lenken Gegner ab und greifen 12 s lang an.",
+					"summary": "Zwei Spiegelbilder lenken Gegner ab und greifen 12 s lang an.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 28,
+					"count": 2,
+					"limit": 2,
+					"duration": 12,
+					"pet": "mirror",
+					"preview": "circle",
+					"slot": 1,
+					"id": "lior_1",
+					"hp": 350
+				},
+				{
+					"name": "Spiegelwechsel",
+					"op": "swap",
+					"kind": "roster",
+					"desc": "Tausche den Platz mit deinem nächsten Spiegelbild und erhalte einen Schild.",
+					"summary": "Tausche den Platz mit deinem nächsten Spiegelbild und erhalte einen Schild.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff"
+					],
+					"mana": 35,
+					"cooldown": 12,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"shield": 0.15,
+					"preview": "circle",
+					"slot": 2,
+					"id": "lior_2"
+				},
+				{
+					"name": "Spiegelkabinett",
+					"op": "summon",
+					"kind": "roster",
+					"desc": "Rufe vier starke Trugbilder, die Gegner ablenken.",
+					"summary": "Rufe vier starke Trugbilder, die Gegner ablenken.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 65,
+					"count": 4,
+					"limit": 6,
+					"duration": 18,
+					"pet": "mirror",
+					"preview": "circle",
+					"slot": 3,
+					"id": "lior_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "kraehenfrau",
+			"name": "Die Krähenfrau",
+			"title": "Fluchweberin",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "81708e",
+			"silhouette": "crow",
+			"passive_kind": "curse",
+			"model": "res://assets/models/heroes/kraehenfrau.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Schwarzfeder",
+				"desc": "Grundangriffe machen Gegner 4 s lang um 10 % verwundbarer."
+			},
+			"abilities": [
+				{
+					"name": "Fluchfeder",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Eine Feder durchbohrt Gegner und erhöht ihren erlittenen Schaden.",
+					"summary": "Eine Feder durchbohrt Gegner und erhöht ihren erlittenen Schaden.",
+					"tags": [
+						"spell",
+						"projectile",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 100,
+					"pierce": true,
+					"expose": 0.2,
+					"duration": 5,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "kraehenfrau_0"
+				},
+				{
+					"name": "Krähenschwarm",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Ein Krähenschwarm verletzt und schwächt Gegner im Zielgebiet.",
+					"summary": "Ein Krähenschwarm verletzt und schwächt Gegner im Zielgebiet.",
+					"tags": [
+						"spell",
+						"area",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 45,
+					"weaken": 0.2,
+					"duration": 6,
+					"interval": 0.7,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 1,
+					"id": "kraehenfrau_1"
+				},
+				{
+					"name": "Unheilsruf",
+					"op": "blast",
+					"kind": "roster",
+					"desc": "Ein Ruf unterbricht Gegner und senkt ihre Rüstung.",
+					"summary": "Ein Ruf unterbricht Gegner und senkt ihre Rüstung.",
+					"tags": [
+						"spell",
+						"area",
+						"control",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 6,
+					"damage": 70,
+					"stun": 0.8,
+					"armor_cut": 4,
+					"duration": 5,
+					"preview": "circle",
+					"slot": 2,
+					"id": "kraehenfrau_2"
+				},
+				{
+					"name": "Schwarzer Himmel",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Ein großer Fluchschwarm verursacht Schaden und macht Gegner verwundbar.",
+					"summary": "Ein großer Fluchschwarm verursacht Schaden und macht Gegner verwundbar.",
+					"tags": [
+						"spell",
+						"area",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 8,
+					"damage": 90,
+					"expose": 0.25,
+					"duration": 8,
+					"interval": 0.8,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "kraehenfrau_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "bruno",
+			"name": "Bruno Fassroller",
+			"title": "Kellerwächter",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "b28a55",
+			"silhouette": "barrel",
+			"passive_kind": "brew",
+			"model": "res://assets/models/heroes/bruno.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Zäher Sud",
+				"desc": "Treffer heilen dich um 2 % deines Höchstlebens, höchstens einmal pro Sekunde."
+			},
+			"abilities": [
+				{
+					"name": "Rollendes Fass",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein schweres Fass durchrollt Gegner, verlangsamt und stößt sie zurück.",
+					"summary": "Ein schweres Fass durchrollt Gegner, verlangsamt und stößt sie zurück.",
+					"tags": [
+						"spell",
+						"projectile",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 115,
+					"pierce": true,
+					"slow": 0.35,
+					"knockback": 2,
+					"look": "rock",
+					"speed": 13,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "bruno_0"
+				},
+				{
+					"name": "Malzschild",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Eine dicke Malzschicht gewährt dir Schild und Schadensminderung.",
+					"summary": "Eine dicke Malzschicht gewährt dir Schild und Schadensminderung.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"shield": 0.25,
+					"dmg_in": 0.2,
+					"duration": 6,
+					"preview": "circle",
+					"slot": 1,
+					"id": "bruno_1"
+				},
+				{
+					"name": "Schankruf",
+					"op": "taunt",
+					"kind": "roster",
+					"desc": "Spotte Gegner und heile dich für jeden angelockten Gegner.",
+					"summary": "Spotte Gegner und heile dich für jeden angelockten Gegner.",
+					"tags": [
+						"spell",
+						"control",
+						"healing",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 14,
+					"range": 14.0,
+					"radius": 6,
+					"damage": 0,
+					"duration": 3,
+					"heal": 25,
+					"preview": "circle",
+					"slot": 2,
+					"id": "bruno_2"
+				},
+				{
+					"name": "Große Fassflut",
+					"op": "shots",
+					"kind": "roster",
+					"desc": "Drei schwere Fässer fächern auf und werfen Gegner um.",
+					"summary": "Drei schwere Fässer fächern auf und werfen Gegner um.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 100,
+					"cooldown": 60,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 230,
+					"count": 3,
+					"pierce": true,
+					"stun": 1.5,
+					"look": "rock",
+					"speed": 13,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 3,
+					"id": "bruno_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "tessa",
+			"name": "Tessa Sturmsegel",
+			"title": "Windschützin",
+			"role": "DD",
+			"combat_role": "DD",
+			"kit": "roster",
+			"color": "66b8c8",
+			"silhouette": "sail",
+			"passive_kind": "tailwind",
+			"model": "res://assets/models/heroes/tessa.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Rückenwind",
+				"desc": "Grundangriffe gewähren 2 s lang 15 % Lauftempo."
+			},
+			"abilities": [
+				{
+					"name": "Windbolzen",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein Windbolzen durchbohrt Gegner und schiebt sie zurück.",
+					"summary": "Ein Windbolzen durchbohrt Gegner und schiebt sie zurück.",
+					"tags": [
+						"spell",
+						"projectile"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 135,
+					"pierce": true,
+					"knockback": 2,
+					"look": "wind",
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "tessa_0"
+				},
+				{
+					"name": "Sturmböe",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Eine breite Böe stößt Gegner zurück und verlangsamt.",
+					"summary": "Eine breite Böe stößt Gegner zurück und verlangsamt.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 9,
+					"radius": 4.0,
+					"damage": 100,
+					"angle": 90,
+					"slow": 0.4,
+					"knockback": 4,
+					"preview": "cone",
+					"slot": 1,
+					"id": "tessa_1"
+				},
+				{
+					"name": "Segelsprung",
+					"op": "dash",
+					"kind": "roster",
+					"desc": "Ein weiter Sprung stärkt kurz dein Lauftempo.",
+					"summary": "Ein weiter Sprung stärkt kurz dein Lauftempo.",
+					"tags": [
+						"spell",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 9,
+					"radius": 4.0,
+					"damage": 0,
+					"speed_buff": 0.3,
+					"duration": 3,
+					"preview": "line",
+					"width": 1.2,
+					"slot": 2,
+					"id": "tessa_2"
+				},
+				{
+					"name": "Orkan",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Ein Orkan zieht Gegner wiederholt zur Mitte und verursacht Schaden.",
+					"summary": "Ein Orkan zieht Gegner wiederholt zur Mitte und verursacht Schaden.",
+					"tags": [
+						"spell",
+						"area",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 85,
+					"pull": 1.5,
+					"duration": 7,
+					"interval": 0.6,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 3,
+					"id": "tessa_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "totengraeber",
+			"name": "Der Totengräber",
+			"title": "Seelenhüter",
+			"role": "Heiler",
+			"combat_role": "Heiler",
+			"kit": "roster",
+			"color": "7d9b89",
+			"silhouette": "shovel",
+			"passive_kind": "souls",
+			"model": "res://assets/models/heroes/totengraeber.glb",
+			"hp": 510,
+			"hp_regen": 1.8,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 2,
+			"speed": 6.6,
+			"radius": 0.6,
+			"attack": {
+				"damage": 43,
+				"interval": 0.7,
+				"range": 14,
+				"arc": 110,
+				"ranged": true,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 45,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.3
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Seelenrest",
+				"desc": "Grundangriffe heilen den verletztesten nahen Verbündeten um 18."
+			},
+			"abilities": [
+				{
+					"name": "Seelenernte",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Eine Sichel aus Seelenkraft trifft Gegner und heilt nahe Verbündete.",
+					"summary": "Eine Sichel aus Seelenkraft trifft Gegner und heilt nahe Verbündete.",
+					"tags": [
+						"spell",
+						"healing"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 6,
+					"radius": 4.0,
+					"damage": 100,
+					"heal": 90,
+					"angle": 110,
+					"preview": "cone",
+					"slot": 0,
+					"id": "totengraeber_0"
+				},
+				{
+					"name": "Grabhelfer",
+					"op": "summon",
+					"kind": "roster",
+					"desc": "Rufe zwei vergängliche Grabhelfer, die Gegner ablenken und bekämpfen.",
+					"summary": "Rufe zwei vergängliche Grabhelfer, die Gegner ablenken und bekämpfen.",
+					"tags": [
+						"spell",
+						"construct",
+						"minion",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 35,
+					"count": 2,
+					"limit": 4,
+					"duration": 18,
+					"pet": "skeleton",
+					"preview": "circle",
+					"slot": 1,
+					"id": "totengraeber_1"
+				},
+				{
+					"name": "Totenwache",
+					"op": "zone",
+					"kind": "roster",
+					"desc": "Eine Seelenlaterne heilt Verbündete und schwächt Gegner.",
+					"summary": "Eine Seelenlaterne heilt Verbündete und schwächt Gegner.",
+					"tags": [
+						"spell",
+						"area",
+						"healing",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"heal": 38,
+					"weaken": 0.15,
+					"duration": 6,
+					"interval": 1,
+					"at_point": true,
+					"preview": "circle",
+					"slot": 2,
+					"id": "totengraeber_2"
+				},
+				{
+					"name": "Rückkehr der Seelen",
+					"op": "revive",
+					"kind": "roster",
+					"desc": "Gefallene Helden kehren zurück; ein großer Seelensegen heilt die Gruppe.",
+					"summary": "Gefallene Helden kehren zurück; ein großer Seelensegen heilt die Gruppe.",
+					"tags": [
+						"spell",
+						"healing",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 90,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"heal": 320,
+					"shield": 0.2,
+					"duration": 5,
+					"preview": "circle",
+					"slot": 3,
+					"id": "totengraeber_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "ada",
+			"name": "Ada Glockenwacht",
+			"title": "Glockenritterin",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "b6a37b",
+			"silhouette": "bell",
+			"passive_kind": "resonance",
+			"model": "res://assets/models/heroes/ada.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Resonanz",
+				"desc": "Jeder vierte Grundangriff erzeugt einen Schild über 8 % deines Höchstlebens."
+			},
+			"abilities": [
+				{
+					"name": "Glockenschlag",
+					"op": "cone",
+					"kind": "roster",
+					"desc": "Ein schwerer Klöppel trifft und unterbricht Gegner.",
+					"summary": "Ein schwerer Klöppel trifft und unterbricht Gegner.",
+					"tags": [
+						"spell",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 4.5,
+					"radius": 4.0,
+					"damage": 120,
+					"stun": 0.6,
+					"angle": 105,
+					"preview": "cone",
+					"slot": 0,
+					"id": "ada_0"
+				},
+				{
+					"name": "Nachhallpanzer",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Ein Resonanzschild schützt dich; beim Ende trifft ein Nachhall Gegner.",
+					"summary": "Ein Resonanzschild schützt dich; beim Ende trifft ein Nachhall Gegner.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 16,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 100,
+					"shield": 0.25,
+					"duration": 5,
+					"preview": "circle",
+					"slot": 1,
+					"id": "ada_1"
+				},
+				{
+					"name": "Wachtgeläut",
+					"op": "taunt",
+					"kind": "roster",
+					"desc": "Das Geläut zieht Gegner auf dich und schützt nahe Helden.",
+					"summary": "Das Geläut zieht Gegner auf dich und schützt nahe Helden.",
+					"tags": [
+						"spell",
+						"control",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 0,
+					"duration": 3,
+					"dmg_in": 0.15,
+					"preview": "circle",
+					"slot": 2,
+					"id": "ada_2"
+				},
+				{
+					"name": "Abendglocke",
+					"op": "whirl",
+					"kind": "roster",
+					"desc": "Acht Sekunden Geläut: Gegner werden unterbrochen, Verbündete erhalten Schilde.",
+					"summary": "Acht Sekunden Geläut: Gegner werden unterbrochen, Verbündete erhalten Schilde.",
+					"tags": [
+						"spell",
+						"area",
+						"shield",
+						"buff",
+						"control",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 7,
+					"damage": 45,
+					"stun": 0.25,
+					"shield": 0.06,
+					"duration": 8,
+					"interval": 1,
+					"preview": "circle",
+					"slot": 3,
+					"id": "ada_3",
+					"unlock": 6
+				}
+			]
+		},
+		{
+			"id": "sorek",
+			"name": "Sorek Ankerträger",
+			"title": "Kettenwächter",
+			"role": "Tank",
+			"combat_role": "Tank",
+			"kit": "roster",
+			"color": "578b94",
+			"silhouette": "anchor",
+			"passive_kind": "anchor",
+			"model": "res://assets/models/heroes/sorek.glb",
+			"hp": 860,
+			"hp_regen": 3,
+			"mana": 320,
+			"mana_regen": 5,
+			"armor": 6,
+			"speed": 5.8,
+			"radius": 0.75,
+			"attack": {
+				"damage": 35,
+				"interval": 0.9,
+				"range": 2.8,
+				"arc": 110,
+				"ranged": false,
+				"animations": [
+					"attack_combo_1",
+					"attack_combo_2",
+					"attack_combo_finish"
+				]
+			},
+			"level": {
+				"max": 25,
+				"xp_base": 70,
+				"xp_growth": 1.25,
+				"hp": 72,
+				"mana": 16,
+				"damage": 0.075,
+				"armor": 0.5
+			},
+			"respawn": {
+				"base": 5,
+				"per_level": 1
+			},
+			"dodge": {
+				"distance": 5.5,
+				"time": 0.22,
+				"cooldown": 4
+			},
+			"passive": {
+				"name": "Schwerer Stand",
+				"desc": "Solange du stillstehst, erleidest du 15 % weniger Schaden."
+			},
+			"abilities": [
+				{
+					"name": "Ankerwurf",
+					"op": "shot",
+					"kind": "roster",
+					"desc": "Ein Anker trifft den ersten Gegner, zieht ihn zu dir und betäubt.",
+					"summary": "Ein Anker trifft den ersten Gegner, zieht ihn zu dir und betäubt.",
+					"tags": [
+						"spell",
+						"projectile",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14,
+					"radius": 4.0,
+					"damage": 115,
+					"pull": 5,
+					"stun": 0.7,
+					"look": "scrap",
+					"preview": "line",
+					"width": 1.2,
+					"slot": 0,
+					"id": "sorek_0"
+				},
+				{
+					"name": "Kettenkreis",
+					"op": "blast",
+					"kind": "roster",
+					"desc": "Schwinge die Kette: Flächenschaden, Gegner werden verlangsamt.",
+					"summary": "Schwinge die Kette: Flächenschaden, Gegner werden verlangsamt.",
+					"tags": [
+						"spell",
+						"area",
+						"control"
+					],
+					"mana": 35,
+					"cooldown": 9.0,
+					"range": 14.0,
+					"radius": 5,
+					"damage": 90,
+					"slow": 0.5,
+					"preview": "circle",
+					"slot": 1,
+					"id": "sorek_1"
+				},
+				{
+					"name": "Festmachen",
+					"op": "guard",
+					"kind": "roster",
+					"desc": "Verankere dich: Schild, weniger Schaden und immun gegen Verlangsamung.",
+					"summary": "Verankere dich: Schild, weniger Schaden und immun gegen Verlangsamung.",
+					"tags": [
+						"spell",
+						"shield",
+						"buff",
+						"duration"
+					],
+					"mana": 35,
+					"cooldown": 15,
+					"range": 14.0,
+					"radius": 4.0,
+					"damage": 0,
+					"shield": 0.25,
+					"dmg_in": 0.3,
+					"slow_immune": true,
+					"duration": 5,
+					"preview": "circle",
+					"slot": 2,
+					"id": "sorek_2"
+				},
+				{
+					"name": "Hafenbollwerk",
+					"op": "wall",
+					"kind": "roster",
+					"desc": "Ein breites Ankerbollwerk stoppt Gegner und Projektile für 8 s.",
+					"summary": "Ein breites Ankerbollwerk stoppt Gegner und Projektile für 8 s.",
+					"tags": [
+						"spell",
+						"control",
+						"duration"
+					],
+					"mana": 100,
+					"cooldown": 65,
+					"range": 14.0,
+					"radius": 6,
+					"damage": 0,
+					"duration": 8,
+					"hp": 2400,
+					"preview": "circle",
+					"slot": 3,
+					"id": "sorek_3",
+					"unlock": 6
+				}
 			]
 		}
 	],
 	"gadgets": {
-		"bolzenturm": {"name": "Bolzenturm", "role": "Schaden", "desc": "Schneller Einzelschuss auf den nächsten Gegner.", "over": "Schüsse durchschlagen.", "max": 2, "hp": 260, "armor": 2, "radius": 0.7, "reach": 10.0, "interval": 0.5, "damage": 11, "cooldown": 6.0, "mana": 40},
-		"flammenspeier": {"name": "Flammenspeier", "role": "Schaden", "desc": "Flammenkegel nach vorne, setzt in Brand.", "over": "Kegel doppelt so breit.", "max": 2, "hp": 300, "armor": 2, "radius": 0.7, "reach": 5.0, "angle": 55, "interval": 0.4, "damage": 9, "burn": 6, "burn_time": 2.0, "cooldown": 7.0, "mana": 45},
-		"raketenwerfer": {"name": "Raketenwerfer", "role": "Schaden", "desc": "Mörser auf Gruppen, blauer Warnkreis.", "over": "3 Raketen pro Salve.", "max": 1, "hp": 260, "armor": 2, "radius": 0.8, "reach": 16.0, "interval": 4.0, "windup": 1.0, "blast": 2.6, "damage": 55, "cooldown": 10.0, "mana": 55},
-		"teslaspule": {"name": "Tesla-Spule", "role": "Schaden/Kontrolle", "desc": "Kettenblitz auf 3 Gegner, jeder 4. Treffer betäubt kurz.", "over": "Jeder Treffer betäubt 0,3 s.", "max": 2, "hp": 280, "armor": 2, "radius": 0.7, "reach": 8.0, "interval": 1.2, "damage": 15, "hops": 3, "hop_range": 5.0, "stun_every": 4, "stun": 0.5, "over_stun": 0.3, "cooldown": 8.0, "mana": 45},
-		"sanitaetsmast": {"name": "Sanitätsmast", "role": "Heilung", "desc": "Heilstrahl auf den verletztesten Mitspieler.", "over": "Strahl heilt 3 Ziele.", "max": 1, "hp": 240, "armor": 1, "radius": 0.6, "reach": 10.0, "heal": 22, "cooldown": 12.0, "mana": 50},
-		"heilsprinkler": {"name": "Heilsprinkler", "role": "Heilung", "desc": "Heilfläche am Boden.", "over": "Fläche gibt zusätzlich Schild.", "max": 2, "hp": 200, "armor": 1, "radius": 0.6, "area": 3.5, "heal": 12, "over_shield": 40, "cooldown": 9.0, "mana": 40},
-		"schrottbot": {"name": "Schrottbot", "role": "Tank", "desc": "Kleiner Roboter, spottet Gegner und folgt Zix.", "over": "Wird groß, Spott im großen Kreis.", "max": 1, "hp": 700, "armor": 4, "radius": 0.8, "speed": 5.5, "follow": 4.0, "taunt_radius": 4.5, "taunt": 2.5, "taunt_every": 4.0, "damage": 10, "interval": 1.0, "over_scale": 1.6, "over_taunt": 7.5, "cooldown": 14.0, "mana": 55},
-		"elektrozaun": {"name": "Elektrozaun", "role": "Kontrolle", "desc": "2 Masten mit Stromlinie: Gegner darauf verlangsamt, Rüstung gesenkt, nach 3 s Kontakt betäubt.", "over": "Betäubung sofort.", "max": 2, "hp": 220, "armor": 2, "radius": 0.5, "length": 8.0, "width": 1.0, "slow": 0.4, "armor_cut": 3, "stun_after": 3.0, "stun": 1.0, "cooldown": 10.0, "mana": 45},
-		"schildkuppel": {"name": "Schildkuppel", "role": "Schutz", "desc": "Kuppel hält Geschosse der Gegner ab.", "over": "Kuppel heilt darin.", "max": 1, "hp": 400, "armor": 3, "radius": 0.6, "area": 4.5, "over_heal": 15, "cooldown": 16.0, "mana": 60},
-		"magnetkoeder": {"name": "Magnetköder", "role": "Kontrolle", "desc": "Zieht Gegner an und lenkt sie 4 s ab, alle 8 s.", "over": "Zieht stärker, explodiert am Ende.", "max": 2, "hp": 260, "armor": 2, "radius": 0.6, "reach": 7.0, "pull": 3.5, "taunt": 4.0, "every": 8.0, "over_pull": 7.0, "over_blast": 120, "cooldown": 10.0, "mana": 40}
+		"bolzenturm": {
+			"name": "Bolzenturm",
+			"role": "Schaden",
+			"desc": "Schneller Einzelschuss auf den nächsten Gegner.",
+			"over": "Schüsse durchschlagen.",
+			"max": 2,
+			"hp": 260,
+			"armor": 2,
+			"radius": 0.7,
+			"reach": 10.0,
+			"interval": 0.5,
+			"damage": 11,
+			"cooldown": 6.0,
+			"mana": 40,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"projectile",
+				"physical"
+			],
+			"summary": "Verschießt Bolzen auf nahe Gegner."
+		},
+		"flammenspeier": {
+			"name": "Flammenspeier",
+			"role": "Schaden",
+			"desc": "Flammenkegel nach vorne, setzt in Brand.",
+			"over": "Kegel doppelt so breit.",
+			"max": 2,
+			"hp": 300,
+			"armor": 2,
+			"radius": 0.7,
+			"reach": 5.0,
+			"angle": 55,
+			"interval": 0.4,
+			"damage": 9,
+			"burn": 6,
+			"burn_time": 2.0,
+			"cooldown": 7.0,
+			"mana": 45,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"fire",
+				"area",
+				"dot",
+				"duration"
+			],
+			"summary": "Verbrennt Gegner in einem Kegel und hinterlässt Brandschaden."
+		},
+		"raketenwerfer": {
+			"name": "Raketenwerfer",
+			"role": "Schaden",
+			"desc": "Mörser auf Gruppen, blauer Warnkreis.",
+			"over": "3 Raketen pro Salve.",
+			"max": 1,
+			"hp": 260,
+			"armor": 2,
+			"radius": 0.8,
+			"reach": 16.0,
+			"interval": 4.0,
+			"windup": 1.0,
+			"blast": 2.6,
+			"damage": 55,
+			"cooldown": 10.0,
+			"mana": 55,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"projectile",
+				"physical"
+			],
+			"summary": "Raketen verursachen Flächenschaden."
+		},
+		"teslaspule": {
+			"name": "Tesla-Spule",
+			"role": "Schaden/Kontrolle",
+			"desc": "Kettenblitz auf 3 Gegner, jeder 4. Treffer betäubt kurz.",
+			"over": "Jeder Treffer betäubt 0,3 s.",
+			"max": 2,
+			"hp": 280,
+			"armor": 2,
+			"radius": 0.7,
+			"reach": 8.0,
+			"interval": 1.2,
+			"damage": 15,
+			"hops": 3,
+			"hop_range": 5.0,
+			"stun_every": 4,
+			"stun": 0.5,
+			"over_stun": 0.3,
+			"cooldown": 8.0,
+			"mana": 45,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"lightning",
+				"control"
+			],
+			"summary": "Blitze springen zwischen Gegnern und betäuben sie."
+		},
+		"sanitaetsmast": {
+			"name": "Sanitätsmast",
+			"role": "Heilung",
+			"desc": "Heilstrahl auf den verletztesten Mitspieler.",
+			"over": "Strahl heilt 3 Ziele.",
+			"max": 1,
+			"hp": 240,
+			"armor": 1,
+			"radius": 0.6,
+			"reach": 10.0,
+			"heal": 22,
+			"cooldown": 12.0,
+			"mana": 50,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"healing"
+			],
+			"summary": "Heilt ein verwundetes verbündetes Ziel."
+		},
+		"heilsprinkler": {
+			"name": "Heilsprinkler",
+			"role": "Heilung",
+			"desc": "Heilfläche am Boden.",
+			"over": "Fläche gibt zusätzlich Schild.",
+			"max": 2,
+			"hp": 200,
+			"armor": 1,
+			"radius": 0.6,
+			"area": 3.5,
+			"heal": 12,
+			"over_shield": 40,
+			"cooldown": 9.0,
+			"mana": 40,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"healing"
+			],
+			"summary": "Heilt Verbündete im Wirkungsbereich."
+		},
+		"schrottbot": {
+			"name": "Schrottbot",
+			"role": "Tank",
+			"desc": "Kleiner Roboter, spottet Gegner und folgt Zix.",
+			"over": "Wird groß, Spott im großen Kreis.",
+			"max": 1,
+			"hp": 700,
+			"armor": 4,
+			"radius": 0.8,
+			"speed": 5.5,
+			"follow": 4.0,
+			"taunt_radius": 4.5,
+			"taunt": 2.5,
+			"taunt_every": 4.0,
+			"damage": 10,
+			"interval": 1.0,
+			"over_scale": 1.6,
+			"over_taunt": 7.5,
+			"cooldown": 14.0,
+			"mana": 55,
+			"tags": [
+				"spell",
+				"construct",
+				"minion"
+			],
+			"summary": "Ein widerstandsfähiger Diener bindet Gegner im Nahkampf."
+		},
+		"elektrozaun": {
+			"name": "Elektrozaun",
+			"role": "Kontrolle",
+			"desc": "2 Masten mit Stromlinie: Gegner darauf verlangsamt, Rüstung gesenkt, nach 3 s Kontakt betäubt.",
+			"over": "Betäubung sofort.",
+			"max": 2,
+			"hp": 220,
+			"armor": 2,
+			"radius": 0.5,
+			"length": 8.0,
+			"width": 1.0,
+			"slow": 0.4,
+			"armor_cut": 3,
+			"stun_after": 3.0,
+			"stun": 1.0,
+			"cooldown": 10.0,
+			"mana": 45,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"lightning",
+				"control"
+			],
+			"summary": "Ein elektrischer Zaun verletzt und kontrolliert Gegner."
+		},
+		"schildkuppel": {
+			"name": "Schildkuppel",
+			"role": "Schutz",
+			"desc": "Kuppel hält Geschosse der Gegner ab.",
+			"over": "Kuppel heilt darin.",
+			"max": 1,
+			"hp": 400,
+			"armor": 3,
+			"radius": 0.6,
+			"area": 4.5,
+			"over_heal": 15,
+			"cooldown": 16.0,
+			"mana": 60,
+			"tags": [
+				"spell",
+				"construct",
+				"minion",
+				"shield",
+				"buff",
+				"area"
+			],
+			"summary": "Eine Kuppel schützt Verbündete und blockiert Projektile."
+		},
+		"magnetkoeder": {
+			"name": "Magnetköder",
+			"role": "Kontrolle",
+			"desc": "Zieht Gegner an und lenkt sie 4 s ab, alle 8 s.",
+			"over": "Zieht stärker, explodiert am Ende.",
+			"max": 2,
+			"hp": 260,
+			"armor": 2,
+			"radius": 0.6,
+			"reach": 7.0,
+			"pull": 3.5,
+			"taunt": 4.0,
+			"every": 8.0,
+			"over_pull": 7.0,
+			"over_blast": 120,
+			"cooldown": 10.0,
+			"mana": 40,
+			"tags": [
+				"spell",
+				"construct",
+				"minion"
+			],
+			"summary": "Lockt Gegner an und hält sie vom Helden fern."
+		}
 	}
 }
