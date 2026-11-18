@@ -9,3 +9,9 @@ Aus dem Paket **Medieval Village MegaKit [Standard]** von Quaternius.
 - Bearbeitung: auf 1024 px verkleinert, Albedo zu einer grauen Detailkarte (Mittel 0.82) umgerechnet, damit die
   Spielfarbe aus dem Code die Fläche färbt; Rauheit aus `*_Roughness` bzw. dem G-Kanal von `*_ORM`.
 - Reproduzierbar: `godot --headless -s tools/heroes/bollwerk_oberflaechen.gd -- <Textures> <Textures/Normals Godot-Unity> assets/textures/bollwerk`
+
+## Stoffe für Modelle (HdStoffe)
+
+- `leder_*`: aus der eigenen Bollwerk-Ledertextur `assets/textures/ui/bollwerk_leather.png` (siehe `assets/textures/ui/CREDITS.md`), grau umgerechnet, Normalen aus der Helligkeit.
+- `stoff_*`, `fell_*`, `knochen_*`, `chitin_*`: prozedural mit Godot-Rauschen erzeugt, eigene Werke.
+- Reproduzierbar: `godot --headless --path . -s tools/heroes/bollwerk_stoffe.gd`
