@@ -56,6 +56,7 @@ static func build(game, parent: Node3D) -> Node3D:
 		if planted>0:
 			centers.append(center)
 			if not island.is_empty():used_islands.append(center)
+	var city_plants := _city_green(game,scatter,positions,brushes,low)
 	var triangles := _batches(root,scatter,low,false)
 	var trees := Node3D.new()
 	trees.name="CourtyardTrees"
@@ -80,6 +81,7 @@ static func build(game, parent: Node3D) -> Node3D:
 	root.set_meta("plant_positions",positions)
 	root.set_meta("ground_brushes",brushes)
 	root.set_meta("plant_count",positions.size())
+	root.set_meta("city_plants",city_plants)
 	root.set_meta("triangle_budget",triangles)
 	root.set_meta("batch_count",root.get_child_count())
 	return root
@@ -125,3 +127,79 @@ static func _available(game, at: Vector3, settlements: Array, buildings: Array) 
 		var center: Vector3=game.zones.center(str(zone.id))
 		if at.distance_to(center)<float(zone.get("radius",13))+.5:return false
 	return true
+
+
+## Grün in der Stadt (Lukas 2026-11-19: „bissl mehr Gras undso in den Städten“): Gras und Unkraut an Hauswänden
+## und Bordsteinen, Büsche und Farn in Hinterhöfen, grüne Rasenflecken auf freien Flächen. Fester Seed,
+## nie auf Pflaster, Lanes oder vor Türen.
+static func _city_green(game, scatter: Dictionary, positions: Array[Vector3], brushes: Array, low: bool) -> int:
+	var cathedral: Node=game.get_node_or_null("SchwarzeKathedrale")
+	if cathedral==null:return 0
+	var Streets := preload("res://scripts/heroes/hd_city_streets.gd")
+	var layout: HdArena=game.arena_layout
+	var houses: Array=cathedral.get_meta("street_sites",[]).filter(func(s):return s.get("half_size",Vector2.ZERO)!=Vector2.ZERO)
+	var rng := RandomNumberGenerator.new()
+	rng.seed=440917
+	var planted: Array=[0]
+	var free := func(at: Vector3) -> bool:
+		if layout.boundary_kind(at)!="city":return false
+		if at.distance_to(layout.nearest(at))<float(game.cfg.arena.road_width)*.5+.7:return false
+		if layout.divider_distance(at)<HdArena.DIVIDER_HALF_WIDTH+.6 or HdExplorationLayout.clearance(at)<1.5:return false
+		if at.distance_to(game.fortress_pos)<17:return false
+		if Streets.covered(game,at,.3) or Streets._in_houses(houses,at,.15):return false
+		if preload("res://scripts/heroes/hd_settlement_streets.gd").distance(game,at)<1.65:return false
+		for site in houses:
+			if Vector2(at.x-site.door.x,at.z-site.door.z).length()<2.2:return false
+		return true
+	var plant := func(at: Vector3, kind: int, size: float, brush: float) -> void:
+		at.y=HdArenaMountains.ground_height(layout,at)
+		scatter[MODELS[kind]].append(Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3.ONE*size),at-Vector3.UP*.025))
+		positions.append(at)
+		if brush>0.0:brushes.append({"pos":at,"radius":brush,"grass":.9 if kind in [0,1] else .5})
+		planted[0]+=1
+	var every := 2 if low else 1
+	# Hauswände: Grasbüschel und Unkraut in der Traufkante, hinten auch Busch oder Farn.
+	for index in range(0,houses.size(),every):
+		var site: Dictionary=houses[index]
+		if not site.get("town",false):continue
+		var hs: Vector2=site.half_size
+		var yaw: float=site.get("yaw",0.0)
+		for k in 9:
+			var side := rng.randi_range(0,3)
+			var t := rng.randf_range(-1.0,1.0)
+			var local := Vector3(t*hs.x,0,-hs.y-.45) if side==0 else (Vector3(t*hs.x,0,hs.y+.45) if side==1 else Vector3((hs.x+.45)*(1.0 if side==2 else -1.0),0,t*hs.y))
+			var at: Vector3=site.center+local.rotated(Vector3.UP,yaw)
+			at.y=0
+			if not free.call(at):continue
+			var back := side==0
+			# Büsche sind teuer (900 Dreiecke): nur selten im Hinterhof, sonst Farn, Kraut und Gras.
+			var kind := (4 if rng.randf()<.12 else 3) if back and rng.randf()<.5 else (0 if rng.randf()<.7 else 2)
+			plant.call(at,kind,rng.randf_range(.75,1.2) if kind==4 else rng.randf_range(.35,.65),1.3 if back else .9)
+	# Bordsteine: vereinzeltes Unkraut außen an der Kante.
+	var paving: Dictionary=game.get_meta("city_paving",{})
+	var step := 0
+	for piece in paving.get("pieces",[]):
+		if piece.kind=="plaza":continue
+		for q in piece.points:
+			step+=1
+			if step%(3*every)!=0:continue
+			var side := 1.0 if rng.randf()<.5 else -1.0
+			var at: Vector3=q.c+q.n*side*(float(piece.half)+.35)
+			at.y=0
+			if free.call(at):plant.call(at,0 if rng.randf()<.75 else 1,rng.randf_range(.28,.48),.7)
+	# Freie Stadtflächen: Rasenflecken mit Klee und Gras, gelegentlich ein Busch.
+	var bounds: Array=game.cfg.arena.bounds
+	var patches := 0
+	for attempt in 2600:
+		if patches>=(70 if low else 170):break
+		var center := Vector3(rng.randf_range(float(bounds[0]),float(bounds[2])),0,rng.randf_range(float(bounds[1]),float(bounds[3])))
+		if not free.call(center):continue
+		patches+=1
+		brushes.append({"pos":center,"radius":rng.randf_range(2.2,3.6),"grass":.95})
+		for k in (3 if low else 6):
+			var at := center+Vector3(rng.randf_range(-2.4,2.4),0,rng.randf_range(-2.4,2.4))
+			if free.call(at):
+				var roll := rng.randf()
+				plant.call(at,0 if roll<.55 else (1 if roll<.8 else (2 if roll<.92 else 3)),rng.randf_range(.3,.6) if roll<.8 else rng.randf_range(.6,1.1),0.0)
+	return planted[0]
+

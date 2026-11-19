@@ -12,6 +12,9 @@ const LIFT := .06
 const SKIRT := .14
 const CURB := Vector3(.24,.14,1.0)
 const CELL := 8.0
+## Punktabstand am Rand und im Innenraster des Pflaster-Meshes (m).
+const EDGE_STEP := .5
+const INNER_STEP := 1.5
 const CityLayout := preload("res://scripts/heroes/hd_city_layout.gd")
 
 
@@ -22,7 +25,9 @@ static func build(game, parent: Node3D) -> Node3D:
 	var cathedral: Node=game.get_node_or_null("SchwarzeKathedrale")
 	if cathedral==null:return root
 	var layout: HdArena=game.arena_layout
-	var lane_clear := float(game.cfg.arena.road_width)*.5+.45
+	var lane_half := float(game.cfg.arena.road_width)*.5
+	# Pflaster darf bis in den Lane-Rand laufen und taucht dort unter das Lane-Pflaster: nahtlose Einmündung.
+	var lane_clear := lane_half-1.2
 	var houses: Array=cathedral.get_meta("street_sites",[]).filter(func(s):return s.get("half_size",Vector2.ZERO)!=Vector2.ZERO)
 	var why := {}
 	var reason := func(p: Vector3) -> String:
@@ -97,27 +102,23 @@ static func build(game, parent: Node3D) -> Node3D:
 	var connectors := _connect(pieces,layout,lane_clear,ok,houses)
 	var grid := {}
 	for i in pieces.size():_register(grid,pieces[i],i)
-	var paving := SurfaceTool.new()
-	paving.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var curbs: Array[Transform3D]=[]
 	for i in pieces.size():
 		var piece: Dictionary=pieces[i]
 		if piece.kind=="plaza":
-			_plaza_mesh(paving,layout,piece.corners)
-			for k in 4:_curb_line(curbs,layout,piece.corners[k],piece.corners[(k+1)%4],grid,pieces,i,houses,lane_clear)
+			for k in 4:_curb_line(curbs,layout,piece.corners[k],piece.corners[(k+1)%4],grid,pieces,i,houses,lane_half+.25)
 		else:
-			_strip_mesh(paving,layout,piece)
 			for side in [-1.0,1.0]:
 				var edge: Array=piece.points.map(func(p):return p.c+p.n*side*float(piece.half))
-				for k in edge.size()-1:_curb_line(curbs,layout,edge[k],edge[k+1],grid,pieces,i,houses,lane_clear)
+				for k in edge.size()-1:_curb_line(curbs,layout,edge[k],edge[k+1],grid,pieces,i,houses,lane_half+.25)
 	if not pieces.is_empty():
-		paving.generate_normals()
 		var mesh := MeshInstance3D.new()
 		mesh.name="StreetPaving"
-		mesh.mesh=paving.commit()
+		mesh.mesh=_union_mesh(layout,pieces,grid,lane_half)
 		mesh.material_override=material()
 		mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mesh)
+		root.set_meta("lane_curbs_opened",_open_lane_curbs(game,grid,pieces))
 	if not curbs.is_empty():
 		var mm := MultiMesh.new()
 		mm.transform_format=MultiMesh.TRANSFORM_3D
@@ -148,10 +149,10 @@ static func build(game, parent: Node3D) -> Node3D:
 	return root
 
 
-## Stadtpflaster: dasselbe weltkoordinatenbasierte Setzpflaster wie die Monsterwege, etwas wärmer und dunkler,
-## damit Gassen und Lanes unterscheidbar bleiben.
+## Stadtpflaster: exakt dasselbe weltkoordinatenbasierte Setzpflaster wie die Monsterwege, damit Gassen
+## nahtlos in die Lanes übergehen (Lukas 2026-11-19).
 static func material() -> Material:
-	return HdCathedral._stone("path_town",Color("6b6762"),false)
+	return HdCathedral.path_material()
 
 
 static var _curb_material: StandardMaterial3D
@@ -346,25 +347,6 @@ static func _ground(layout: HdArena, p: Vector3) -> Vector3:
 	return Vector3(p.x,HdArenaMountains.ground_height(layout,p)+LIFT,p.z)
 
 
-static func _strip_mesh(st: SurfaceTool, layout: HdArena, piece: Dictionary) -> void:
-	var points: Array=piece.points
-	var half: float=piece.half
-	for k in points.size()-1:
-		var a: Dictionary=points[k]
-		var b: Dictionary=points[k+1]
-		var row_a: Array=[_ground(layout,a.c-a.n*half),_ground(layout,a.c),_ground(layout,a.c+a.n*half)]
-		var row_b: Array=[_ground(layout,b.c-b.n*half),_ground(layout,b.c),_ground(layout,b.c+b.n*half)]
-		for j in 2:_quad(st,row_a[j],row_a[j+1],row_b[j],row_b[j+1])
-		# Sichtbare Kante: die Pflasterschicht fällt außen senkrecht ab, statt ins Gelände zu verlaufen.
-		_skirt(st,row_a[0],row_b[0])
-		_skirt(st,row_b[2],row_a[2])
-	# Stirnseiten an offenen Enden.
-	var first: Dictionary=points[0]
-	var last: Dictionary=points[points.size()-1]
-	_skirt(st,_ground(layout,first.c+first.n*half),_ground(layout,first.c-first.n*half))
-	_skirt(st,_ground(layout,last.c-last.n*half),_ground(layout,last.c+last.n*half))
-
-
 static func _plaza_mesh(st: SurfaceTool, layout: HdArena, corners: Array) -> void:
 	# Gitter über das Viereck, damit die Fläche dem Gelände folgt.
 	var n := 8
@@ -417,13 +399,122 @@ static func covered(game, p: Vector3, margin := 0.0) -> bool:
 	return not paving.is_empty() and _covered(paving.grid,paving.pieces,p,-1,margin)
 
 
+## Ein einziges Pflaster-Mesh über alle Gassen, Plätze und Anschlüsse: Punkte auf dem Außenrand der Vereinigung
+## plus Innenraster, Delaunay, nur Dreiecke auf Pflaster. Keine inneren Kanten, Stufen oder Doppelflächen.
+static func _union_mesh(layout: HdArena, pieces: Array, grid: Dictionary, lane_half: float) -> ArrayMesh:
+	var points := PackedVector2Array()
+	var seen := {}
+	var add := func(p: Vector2) -> void:
+		var key := Vector2i(roundi(p.x*20.0),roundi(p.y*20.0))
+		if seen.has(key):return
+		seen[key]=true
+		points.append(p)
+	for i in pieces.size():
+		var outline: Array=_outline(pieces[i])
+		for k in outline.size():
+			var a: Vector3=outline[k]
+			var b: Vector3=outline[(k+1)%outline.size()]
+			var count := maxi(1,ceili(Vector2(b.x-a.x,b.z-a.z).length()/EDGE_STEP))
+			for s in count:
+				var p := a.lerp(b,float(s)/count)
+				# Randpunkte, die in einem anderen Stück liegen, sind Innenpunkte der Vereinigung.
+				if _covered(grid,pieces,p,i,-.3):continue
+				add.call(Vector2(p.x,p.z))
+	var lo := Vector2(INF,INF)
+	var hi := -lo
+	for p in points:
+		lo=lo.min(p)
+		hi=hi.max(p)
+	var x := floorf(lo.x/INNER_STEP)*INNER_STEP
+	while x<=hi.x:
+		var z := floorf(lo.y/INNER_STEP)*INNER_STEP
+		while z<=hi.y:
+			if _covered(grid,pieces,Vector3(x,0,z),-1,-.6):add.call(Vector2(x,z))
+			z+=INNER_STEP
+		x+=INNER_STEP
+	var triangles := Geometry2D.triangulate_delaunay(points)
+	var heights := PackedFloat32Array()
+	heights.resize(points.size())
+	for i in points.size():heights[i]=_paving_height(layout,points[i],lane_half)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var edges := {}
+	for t in range(0,triangles.size(),3):
+		var ids := [triangles[t],triangles[t+1],triangles[t+2]]
+		var a: Vector2=points[ids[0]]
+		var b: Vector2=points[ids[1]]
+		var c: Vector2=points[ids[2]]
+		var center := (a+b+c)/3.0
+		if not _covered(grid,pieces,Vector3(center.x,0,center.y),-1,.02):continue
+		# Lange Dreiecke über Lücken hinweg (konkave Ecken) gehören nicht dazu.
+		if maxf(a.distance_to(b),maxf(b.distance_to(c),c.distance_to(a)))>INNER_STEP*2.2:continue
+		# Godot: Vorderseite im Uhrzeigersinn von oben gesehen.
+		if (b-a).cross(c-a)<0.0:ids=[ids[0],ids[2],ids[1]]
+		for k in 3:
+			st.set_normal(Vector3.UP)
+			var id: int=ids[k]
+			st.add_vertex(Vector3(points[id].x,heights[id],points[id].y))
+			var e := Vector2i(mini(ids[k],ids[(k+1)%3]),maxi(ids[k],ids[(k+1)%3]))
+			edges[e]=int(edges.get(e,0))+1
+	# Nur der Außenrand bekommt eine senkrechte Kante nach unten.
+	for e: Vector2i in edges:
+		if edges[e]!=1:continue
+		var a3 := Vector3(points[e.x].x,heights[e.x],points[e.x].y)
+		var b3 := Vector3(points[e.y].x,heights[e.y],points[e.y].y)
+		var out := Vector3(b3.z-a3.z,0,a3.x-b3.x).normalized()
+		var mid := (a3+b3)*.5
+		if _covered(grid,pieces,mid+out*.3,-1):out=-out
+		var a2 := a3-Vector3.UP*SKIRT
+		var b2 := b3-Vector3.UP*SKIRT
+		var quad := [a3,b3,a2,b3,b2,a2] if (b3-a3).cross(a2-a3).dot(out)<0.0 else [a3,a2,b3,b3,a2,b2]
+		for v in quad:
+			st.set_normal(out)
+			st.add_vertex(v)
+	return st.commit()
+
+
+static func _outline(piece: Dictionary) -> Array:
+	if piece.kind=="plaza":return piece.corners
+	var left: Array=piece.points.map(func(q):return q.c-q.n*float(piece.half))
+	var right: Array=piece.points.map(func(q):return q.c+q.n*float(piece.half))
+	right.reverse()
+	return left+right
+
+
+## Pflasterhöhe: leicht über dem Gelände, am Lane-Rand unter das Lane-Pflaster abgesenkt.
+static func _paving_height(layout: HdArena, p: Vector2, lane_half: float) -> float:
+	var at := Vector3(p.x,0,p.y)
+	var ground := HdArenaMountains.ground_height(layout,at)
+	var lane := at.distance_to(layout.nearest(at))
+	return ground+lerpf(-.03,LIFT,smoothstep(lane_half-.2,lane_half+1.6,lane))
+
+
+## Lane-Bordsteine dort entfernen, wo eine Gasse einmündet (gleiche MultiMesh wie die Lane-Details).
+static func _open_lane_curbs(game, grid: Dictionary, pieces: Array) -> int:
+	var removed := 0
+	for node in game.find_children("RoadCurbs","MultiMeshInstance3D",true,false):
+		var kept: Array[Transform3D]=[]
+		var mm: MultiMesh=node.multimesh
+		for i in mm.instance_count:
+			var t: Transform3D=node.global_transform*mm.get_instance_transform(i)
+			if _covered(grid,pieces,t.origin,-1,.35):removed+=1
+			else:kept.append(mm.get_instance_transform(i))
+		if kept.size()==mm.instance_count:continue
+		mm.instance_count=kept.size()
+		for i in kept.size():mm.set_instance_transform(i,kept[i])
+	return removed
+
+
 static func _covered(grid: Dictionary, pieces: Array, p: Vector3, skip: int, margin := 0.0) -> bool:
 	for index in grid.get(Vector2i(floori(p.x/CELL),floori(p.z/CELL)),[]):
 		if index==skip:continue
 		var piece: Dictionary=pieces[index]
 		if piece.kind=="plaza":
 			var polygon := PackedVector2Array(piece.corners.map(func(c):return Vector2(c.x,c.z)))
-			if margin>0.0:polygon=Geometry2D.offset_polygon(polygon,margin)[0]
+			if margin!=0.0:
+				var grown: Array=Geometry2D.offset_polygon(polygon,margin)
+				if grown.is_empty():continue
+				polygon=grown[0]
 			if Geometry2D.is_point_in_polygon(Vector2(p.x,p.z),polygon):return true
 			continue
 		var points: Array=piece.points
