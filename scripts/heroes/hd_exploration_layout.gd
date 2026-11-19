@@ -194,7 +194,46 @@ static func concealment(layout: HdArena) -> Array:
 				var ruin: bool = index==4 and sign_side<0 and int(site.order[0])==0
 				var kind := "bush_common" if bush else "pine_"+str([1,2,3,5][index%4])
 				result.append({"pos":at,"kind":"ruin" if ruin else kind,"height":3.0 if ruin else (1.35 if bush else 6.5+float(index%3)),"yaw":atan2(along.x,along.z)+float(index)*.31})
+		_entrance_cover(layout,site,result)
 	return result
+
+
+## Eingang selbst verstecken (Lukas 2026-11-19): Höhlen liegen in einer engen Felsklamm wie ein kleiner
+## Bergpass, Krypten hinter Mauerresten und Gestrüpp; dichte Tannen rahmen beides. Alles bleibt mindestens
+## 3 m neben der Laufkontur, damit Pfad und Schwelle so breit bleiben wie bisher.
+static func _entrance_cover(layout: HdArena, site: Dictionary, result: Array) -> void:
+	var path: Array=site.path
+	var entrance: Vector3=site.pos
+	var inward: Vector3=(entrance-path[-2]).normalized()
+	var side := Vector3(-inward.z,0,inward.x)
+	var cave := str(site.entrance_kind)!="building"
+	var seed_value := int(site.order[0])*7+path.size()
+	var spots: Array=[]
+	# Klamm/Mauerreste entlang der letzten Pfadmeter.
+	for index in 6:
+		var t := .86+float(index)*.025
+		var center := _along(path,t)
+		var along := (_along(path,minf(1,t+.01))-_along(path,maxf(0,t-.01))).normalized()
+		var normal := Vector3(-along.z,0,along.x)
+		for sign_side in [-1.0,1.0]:
+			var offset := 4.6+.5*sin(float(index*3+seed_value))
+			var kind := ("rock_tall_a" if (index+int(sign_side>0))%2==0 else "rock_medium_"+str(1+index%3)) if cave else ("ruin" if index%2==0 else "bush_common")
+			var height := (2.4+float(index%3)*.5 if kind=="rock_tall_a" else 2.6) if cave else (2.2+float(index%2)*.8 if kind=="ruin" else 1.6)
+			spots.append({"pos":center+normal*sign_side*offset,"kind":kind,"height":height,"yaw":atan2(along.x,along.z)+float(index)*.7})
+	# Tannen und Gebüsch seitlich und hinter dem Eingang, Büsche schräg davor.
+	for ring in [[-3.5,4.0,"bush_common",1.5],[-1.0,7.5,"pine_2",7.5],[3.0,8.5,"pine_1",8.5],[7.0,8.0,"pine_5",7.0],[11.0,6.5,"pine_3",8.0],[15.0,0.0,"pine_2",9.0],[15.0,5.0,"pine_1",8.0]]:
+		for sign_side in [-1.0,1.0]:
+			if float(ring[1])==0.0 and sign_side>0:continue
+			var at: Vector3=entrance+inward*float(ring[0])+side*sign_side*float(ring[1])
+			spots.append({"pos":at,"kind":str(ring[2]),"height":float(ring[3])*(.9+.1*sin(at.x)),"yaw":at.x*.37+at.z*.11})
+	for spot in spots:
+		var at: Vector3=spot.pos
+		at.y=0
+		spot.pos=at
+		if clearance(at)<3.0 or layout.divider_distance(at)<4.0:continue
+		if at.distance_to(layout.nearest(at))<layout.width+3.0:continue
+		if not cave and spot.kind=="ruin":spot.yaw=atan2(inward.x,inward.z)
+		result.append(spot)
 
 
 ## Leicht mäandernde Spur, deren Start exakt auf der gerundeten Straße liegt.

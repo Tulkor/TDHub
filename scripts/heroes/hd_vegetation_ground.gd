@@ -103,7 +103,7 @@ static func _paint_streets(image: Image, rect: Rect2, paths: Array) -> void:
 
 ## Nutzungskarte für die Bodenmaterialien (Lukas 2026-11-19: Sediment nach Nutzung und Gefälle statt
 ## Rauschflecken). R Siedlung/Trittfläche, G Nässe, B Hangschutt, A Platzpflaster. Nur Optik, einmal je Spiel.
-const USE_RESOLUTION := 256
+const USE_RESOLUTION := 384
 
 static func _bake_use(game, rect: Rect2) -> ImageTexture:
 	var n := USE_RESOLUTION
@@ -141,6 +141,21 @@ static func _bake_use(game, rect: Rect2) -> ImageTexture:
 	for plaza in plazas:
 		_splat(paved,rect,cell,plaza.pos,float(plaza.get("radius",11.0))*.82,float(plaza.get("radius",11.0))*.6,1.0,true)
 		_splat(settled,rect,cell,plaza.pos,float(plaza.get("radius",11.0))+6.0,6.0,1.0)
+	# Gepflasterte Gassen: Vorplätze benachbarter Häuser einer Zeile zu einer durchgehenden Gasse verbinden.
+	var streets := {}
+	for site in sites:
+		if not site.get("town",false):continue
+		# Gegenüberliegende Zeilen (2k, 2k+1) teilen sich eine Gasse.
+		var pair := int(site.get("row",-2))/2
+		if not streets.has(pair):streets[pair]=[]
+		streets[pair].append(site.approach)
+	for pair in streets:
+		var points: Array=streets[pair]
+		points.sort_custom(func(a,b):return a.x<b.x)
+		for i in points.size():
+			_splat(paved,rect,cell,points[i],3.2,1.6,.95)
+			if i>0 and (points[i] as Vector3).distance_to(points[i-1])<26.0:
+				_stroke(paved,rect,cell,points[i-1],points[i],2.6,1.4,.95)
 	var blurred := _blur(heights,n,4)
 	var slope := PackedFloat32Array()
 	slope.resize(n*n)
@@ -156,10 +171,11 @@ static func _bake_use(game, rect: Rect2) -> ImageTexture:
 		for x in n:
 			var i := y*n+x
 			# Senken sammeln Wasser und Feinmaterial, Hangfüße den Schutt von oben.
-			var hollow := clampf((blurred[i]-heights[i])*1.1,0.0,1.0)
-			var scree := clampf(talus[i]*1.1-slope[i]*.35,0.0,1.0)*(1.0-smoothstep(5.0,10.0,heights[i]))
+			var hollow := clampf((blurred[i]-heights[i]-.25)*.6,0.0,1.0)
+			var scree := clampf(talus[i]*.8-slope[i]*.3,0.0,1.0)*(1.0-smoothstep(5.0,10.0,heights[i]))
 			var wet := clampf(maxf(gutter[i]*.75,hollow),0.0,1.0)
 			image.set_pixel(x,y,Color(clampf(settled[i],0,1),wet,scree,clampf(paved[i],0,1)))
+	if OS.has_environment("GEMTD_BODEN_KARTE"):image.save_png(OS.get_environment("GEMTD_BODEN_KARTE"))
 	return ImageTexture.create_from_image(image)
 
 
@@ -178,6 +194,14 @@ static func _splat(field: PackedFloat32Array, rect: Rect2, cell: float, at: Vect
 			var weight := (1.0-smoothstep(radius-soft,radius,d))*strength
 			if weight<=0.0:continue
 			field[y*n+x]=maxf(field[y*n+x],weight)
+
+
+static func _stroke(field: PackedFloat32Array, rect: Rect2, cell: float, a: Vector3, b: Vector3, radius: float, soft: float, strength: float) -> void:
+	var steps := maxi(1,ceili(a.distance_to(b)/(cell*.7)))
+	for k in steps+1:
+		var at := a.lerp(b,float(k)/steps)
+		# Breite schwankt leicht, wie in gewachsenen Gassen.
+		_splat(field,rect,cell,at,radius*(1.0+.12*sin(at.x*.37+at.z*.23)),soft,strength)
 
 
 static func _blur(field: PackedFloat32Array, n: int, radius: int) -> PackedFloat32Array:

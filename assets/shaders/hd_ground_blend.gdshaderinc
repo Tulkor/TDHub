@@ -58,7 +58,7 @@ vec3 hd_ground_setts(vec2 at,out float joint) {
 	float edge=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));
 	joint=1.0-smoothstep(.03,.11,edge);
 	float shade=hd_ground_hash2(tile);
-	return mix(vec3(.21,.205,.2)*(.72+shade*.5),vec3(.06,.055,.05),joint);
+	return mix(vec3(.34,.33,.315)*(.72+shade*.5),vec3(.07,.065,.06),joint);
 }
 vec3 hd_ground_compose(vec3 slab,vec3 earth,vec3 scree,vec4 w,float paved,vec2 at) {
 	float slab_gray=dot(slab,vec3(.299,.587,.114));

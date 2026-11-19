@@ -10,6 +10,7 @@ var _root: Node3D
 var _game
 var _sites: Array[Vector3] = []
 var _street_sites: Array = []
+var _street_lamps: Array = []
 var _lights: Array[OmniLight3D] = []
 var _rng := RandomNumberGenerator.new()
 
@@ -188,6 +189,7 @@ func _build(game, parent: Node3D) -> Node3D:
 	_root.set_meta("cathedral_sites", _sites.size())
 	_root.set_meta("cathedral_sites_positions",_sites.duplicate())
 	_root.set_meta("street_sites",_street_sites)
+	_root.set_meta("house_lamps",_street_lamps)
 	game.arena_layout.register_city(_street_sites)
 	return _root
 
@@ -514,7 +516,20 @@ func _townhouse(site: Dictionary) -> void:
 	var rise := maxf(.12,at.y-ground)
 	for i in 3:
 		_part("box",stone,Vector3(2.0,rise*float(3-i)/3.0,.45),Vector3(at.x,ground,at.z),Vector3(0,rise*float(3-i)/6.0,3.75+float(i)*.4),1,yaw)
-	_street_sites.append({"center":at,"door":at+front*4.5,"approach":at+front*6,"radius":4.8,"front":front,"kind":"house","town":true,"half_size":Vector2(width*.5,3.65),"yaw":yaw,"row":site.row})
+	var side_dir := Vector3.RIGHT.rotated(Vector3.UP,yaw)
+	# Wandbrunnen an jeder fünften Fassade: Becken vor der Hauswand, neben der Tür (Lukas 2026-11-19).
+	if score%5==1:
+		var spot := at+side_dir*(width*.5-1.1)+front*3.6
+		_place("box",stone,Vector3(1.5,.75,.9),spot+front*.45+Vector3.UP*.37,yaw)
+		_place("box",_solid("plaza_water",Color("1d2a33"),0.0,0.15),Vector3(1.25,.06,.65),spot+front*.45+Vector3.UP*.72,yaw)
+		_place("box",trim,Vector3(.9,1.7,.18),spot+Vector3.UP*1.55,yaw)
+		_place("cylinder",_solid("brass",Color("9e8756"),0.0,0.65),Vector3(.06,.45,.06),spot+front*.3+Vector3.UP*1.6,yaw)
+	# Laterne an der Hausecke für die Gassenbeleuchtung (HdAtmosphere entscheidet über den Abstand).
+	var lamp_side := 1.0 if score%2==0 else -1.0
+	var lamp := at+side_dir*lamp_side*(width*.5+.5)+front*4.6
+	lamp.y=HdArenaMountains.ground_height(_game.arena_layout,lamp)
+	_street_lamps.append({"pos":lamp,"yaw":yaw+PI*.5*lamp_side})
+	_street_sites.append({"center":at,"door":at+front*4.5,"approach":at+front*6,"radius":4.8,"front":front,"kind":"house","town":true,"half_size":Vector2(width*.5,3.65),"yaw":yaw,"row":site.row,"column":site.column})
 
 ## Platzmitte: abwechselnd Laufbrunnen mit achteckigem Becken oder Pestsäule, wie auf Plätzen in
 ## Habsburger Städten. Kleiner, registrierter Fußabdruck: Helden laufen herum, Wege führen hin.

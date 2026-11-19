@@ -178,7 +178,7 @@ func _test_streets(game: HdGame) -> void:
 	check(clear,"Neue Pflanzenpatches lassen die Gehwege frei")
 	var atmosphere: HdAtmosphere=game.get_node("Atmosphere")
 	var lamps: Array=atmosphere.get_meta("street_lantern_positions",[])
-	check(lamps.size()>0 and atmosphere._lamps.size()<=8,"Straßenlaternen nutzen den vorhandenen begrenzten Lichtpool")
+	check(lamps.size()>0 and atmosphere._lamps.size()<=14,"Straßenlaternen nutzen den begrenzten Lichtpool (seit 2026-11-19 bis 14 nahe Lichter, nachts heller)")
 	var grounded := true
 	for at: Vector3 in lamps:
 		if absf(at.y-HdArenaMountains.ground_height(game.arena_layout,at))>.01:grounded=false

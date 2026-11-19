@@ -8,12 +8,15 @@ var _lamps: Array[OmniLight3D] = []
 var _embers: Array[CPUParticles3D] = []
 var _clock := 0.0
 var _wait := 0.0
+var _lane_skips := 0
+var _pool_material: ShaderMaterial
 
 
 func _ready() -> void:
 	game = get_parent()
 	preload("res://scripts/heroes/hd_settlement_streets.gd").build(game,self)
 	var plants := preload("res://scripts/heroes/hd_undergrowth.gd").build(game,self)
+	preload("res://scripts/heroes/hd_fields.gd").build(game,self)
 	preload("res://scripts/heroes/hd_vegetation_ground.gd").build(game,plants)
 	var sky := CanvasLayer.new()
 	sky.name="OverheadBirdLayer"
@@ -25,23 +28,31 @@ func _ready() -> void:
 	sky.add_child(birds)
 	var builder := HdGothic.new()
 	var street_lamps: Array = []
-	for lamp in game.get_meta("settlement_street_lamps",[]):
+	# Hausecken-Laternen zuerst, damit jede Gasse ihre Lichterkette bekommt (Lukas 2026-11-19: nachts zu dunkel).
+	var cathedral: Node=game.get_node_or_null("SchwarzeKathedrale")
+	var candidates: Array=(cathedral.get_meta("house_lamps",[]) if cathedral else []).duplicate()
+	candidates.append_array(game.get_meta("settlement_street_lamps",[]))
+	for lamp in candidates:
 		var point: Vector3=lamp.pos
-		if not _separated(point,14.0):continue
+		if not _separated(point,9.0):continue
 		_lantern(builder,point,float(lamp.yaw))
 		fires.append(point+Vector3.UP*2.02)
 		street_lamps.append(point)
 	set_meta("street_lantern_positions",street_lamps)
 	for road in game.arena_layout.paths:
-		for distance in range(18, int(road.length)-10, 24):
+		# Monsterwege: alle 13 m abwechselnd links und rechts eine Laterne.
+		for distance in range(14, int(road.length)-8, 13):
 			var at: Vector3 = road.point(distance)
 			var direction: Vector3 = (road.point(distance+.5) - road.point(distance-.5)).normalized()
-			var side := Vector3(-direction.z, 0, direction.x)
+			var side := Vector3(-direction.z, 0, direction.x) * (1.0 if (distance/13)%2==0 else -1.0)
 			var point: Vector3 = at + side * (game.arena_layout.width + .7)
-			if _separated(point, 14.0):
+			if HdArenaMountains.ground_height(game.arena_layout,point)>1.5:
+				_lane_skips+=1
+				continue
+			if _separated(point, 10.0):
 				fires.append(point + Vector3.UP * 2.0)
 				_lantern(builder, point, atan2(direction.x, direction.z))
-				_clutter(builder, point - direction * 3.0, atan2(direction.x, direction.z), int(distance / 24) % 3)
+				if (distance/13)%2==0:_clutter(builder, point - direction * 3.0, atan2(direction.x, direction.z), int(distance / 26) % 3)
 	for zone in game.cfg.zones.list:
 		var center: Vector3 = game.zones.center(str(zone.id))
 		for sign in [-1.0, 1.0]:
@@ -49,11 +60,12 @@ func _ready() -> void:
 			_brazier(builder, point)
 			fires.append(point + Vector3.UP * 1.4)
 	add_child(builder.commit())
-	var count := 3 if Display.quality == Display.LOW else 8
+	_build_pools(street_lamps)
+	var count := 5 if Display.quality == Display.LOW else 14
 	for i in count:
 		var light := OmniLight3D.new()
 		light.light_color = Color("ffb567")
-		light.omni_range = 13.0
+		light.omni_range = 15.0
 		light.omni_attenuation = 1.3
 		light.shadow_enabled = false
 		add_child(light)
@@ -65,7 +77,35 @@ func _ready() -> void:
 	var sound := game.get_node_or_null("Soundscape") as HdSoundscape
 	if sound != null: sound.fires = fires.duplicate()
 	set_meta("fires", fires.size())
+	set_meta("lane_lamp_skips", _lane_skips)
 	set_meta("light_budget", count)
+
+
+## Jede Laterne wirft nachts einen schwachen warmen Schein auf den Boden; ein MultiMesh, keine Lichtquellen.
+func _build_pools(street_lamps: Array) -> void:
+	_pool_material=ShaderMaterial.new()
+	_pool_material.shader=preload("res://assets/shaders/hd_lamp_pool.gdshader")
+	var quad := QuadMesh.new()
+	quad.size=Vector2(10,10)
+	quad.orientation=PlaneMesh.FACE_Y
+	var mm := MultiMesh.new()
+	mm.transform_format=MultiMesh.TRANSFORM_3D
+	mm.mesh=quad
+	var spots: Array=[]
+	for at: Vector3 in fires:
+		if at.y-HdArenaMountains.ground_height(game.arena_layout,at)>1.6:spots.append(at)
+	mm.instance_count=spots.size()
+	for i in spots.size():
+		var at: Vector3=spots[i]
+		at.y=HdArenaMountains.ground_height(game.arena_layout,at)+.07
+		mm.set_instance_transform(i,Transform3D(Basis(),at))
+	var node := MultiMeshInstance3D.new()
+	node.name="LampPools"
+	node.multimesh=mm
+	node.material_override=_pool_material
+	node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(node)
+	set_meta("lamp_pools",spots.size())
 
 
 func _separated(point: Vector3, radius: float) -> bool:
@@ -79,6 +119,9 @@ func _process(dt: float) -> void:
 	_wait -= dt
 	if _wait > 0: return
 	_wait = .16
+	if _pool_material:
+		var dark: float = game.day_cycle.night_amount() if game.day_cycle != null else 1.0
+		_pool_material.set_shader_parameter("strength",.02+.17*dark)
 	var actor = game.get("hero")
 	if not is_instance_valid(actor): return
 	var nearby := fires.duplicate()
@@ -91,7 +134,7 @@ func _process(dt: float) -> void:
 			continue
 		lamp.position = nearby[i]
 		var night: float = game.day_cycle.night_amount() if game.day_cycle != null else 1.0
-		lamp.light_energy = lerpf(1.1, 2.6, night) * (1.0 + sin(_clock*8.7+i)*.045 + sin(_clock*13.1+i*2)*.025)
+		lamp.light_energy = lerpf(1.1, 3.4, night) * (1.0 + sin(_clock*8.7+i)*.045 + sin(_clock*13.1+i*2)*.025)
 		if i < _embers.size():
 			_embers[i].position = lamp.position
 			_embers[i].emitting = true

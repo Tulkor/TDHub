@@ -44,6 +44,13 @@ func _ready() -> void:
 					score=nearby
 					focus=at
 		if args.has("--stadt"):focus=Vector3.ZERO
+		for arg: String in args:
+			if arg.begins_with("--punkt="):
+				var xz := arg.trim_prefix("--punkt=").split(",")
+				focus=Vector3(float(xz[0]),0,float(xz[1]))
+		var fields: Node=game.get_node_or_null("Atmosphere/Fields")
+		if fields:print("FELDER ",fields.get_meta("fields",[]).map(func(f):return Vector2i(int(f.pos.x),int(f.pos.z))))
+		print("SECRETS ",HdExplorationLayout.sites().map(func(s):return [str(s.entrance_kind),Vector2i(int(s.pos.x),int(s.pos.z))]))
 		focus.y=HdArenaMountains.ground_height(game.arena_layout,focus)
 		game.hero.position=focus
 		game.hero.hide()
@@ -60,6 +67,7 @@ func _ready() -> void:
 		atmosphere._process(0)
 		game.get_node("Atmosphere/OverheadBirdLayer").hide()
 		game.hud.hide()
+		print("FEUER ",atmosphere.get_meta("fires")," hang=",atmosphere.get_meta("lane_lamp_skips"))
 		print("GEHWEGE pfade=%d laternen=%d baeume_entfernt=%d fokus=%s" % [paths.size(),atmosphere.get_meta("street_lantern_positions").size(),game.get_node("Atmosphere/SettlementWalkways").get_meta("cleared_trees"),focus])
 		print("STADT haeuser=%d zugaenge=%d plaetze=%d" % [game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).size(),game.get_meta("settlement_city_access",[]).size(),game.get_node("SchwarzeKathedrale").get_meta("settlement_plazas",[]).size()])
 		print("STADT_GRUNDRISS ",hash(game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).map(func(site):return [site.pos.x,site.pos.z,site.yaw,site.ruin])))

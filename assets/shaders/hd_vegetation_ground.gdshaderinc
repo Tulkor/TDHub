@@ -16,7 +16,9 @@ vec4 hd_vegetation_surface(vec2 at) {
 	vec3 vegetation=vec3(0.0);
 	if (weight>.002) {
 		float grass=smoothstep(.12,.85,coverage.g/max(coverage.r+coverage.g,.001)+(noise-.5)*.24);
-		vec3 dirt=tv_sample(vegetation_soil,at*.53,0.0)*vec3(.38,.30,.23);
+		vec3 dirt_tex=tv_sample(vegetation_soil,at*.53,0.0);
+		// Waldboden/Humus dunkel und erdig statt orange Flecken unter jedem Baum (Lukas 2026-11-19).
+		vec3 dirt=mix(dirt_tex,vec3(dot(dirt_tex,vec3(.299,.587,.114))),.5)*vec3(.27,.235,.2);
 		vec3 meadow=tv_sample(vegetation_grass,at*.42,0.0)*vec3(.32,.38,.30);
 		vegetation=mix(dirt,meadow,grass)*(.92+noise*.16);
 	}
