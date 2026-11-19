@@ -16,6 +16,7 @@ ZIEL = argv[0] if argv else '/tmp/bollwerk'
 NUR = next((a.split('=', 1)[1].split(',') for a in argv if a.startswith('--nur=')), None)
 BOGEN = next((a.split('=', 1)[1] for a in argv if a.startswith('--bogen=')), '')
 POSEN = next((a.split('=', 1)[1] for a in argv if a.startswith('--posen=')), '')
+GROSS = int(next((a.split('=', 1)[1] for a in argv if a.startswith('--gross=')), '420'))
 ROH = '--roh' in argv  # ohne Veredelung (Vergleich)
 GRUPPE = next((a.split('=', 1)[1] for a in argv if a.startswith('--gruppe=')), '')
 
@@ -310,6 +311,7 @@ class Figur:
         bpy.ops.object.join()
         ob = bpy.context.object
         ob.name = self.name
+        bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)  # Punkte in Weltkoordinaten
         # weiche Schattierung, harte Kanten erst ab 50 Grad (Platten, Klingen, Stacheln bleiben kantig)
         ob.data.shade_smooth()
         ob.data.set_sharp_from_angle(angle=math.radians(50))
@@ -1115,11 +1117,11 @@ def verschlinger():
 # ---------------------------------------------------------------- Sonderzonen und Ereignisse
 
 FARBEN.update({
-    'arena_rot': (0.55, 0.12, 0.22), 'geist': (0.45, 0.85, 0.62), 'geist_hell': (0.75, 1.00, 0.85), 'rinde': (0.26, 0.19, 0.12),
+    'arena_rot': (0.55, 0.12, 0.22), 'geist': (0.45, 0.85, 0.62), 'geist_hell': (0.75, 1.00, 0.85), 'rinde': (0.30, 0.27, 0.24), 'moos_grau': (0.46, 0.50, 0.40),
     'laub': (0.20, 0.38, 0.18), 'uebung': (0.72, 0.72, 0.85), 'stroh': (0.70, 0.58, 0.30), 'tuch_braun': (0.36, 0.25, 0.14),
     'wache': (0.26, 0.27, 0.33),
 })
-GLUT.update({'geist_hell': 2.5})
+GLUT.update({'geist_hell': 4.0, 'geist': 1.2})
 
 
 def arenawaechter():
@@ -1156,26 +1158,37 @@ def arenawaechter():
 
 
 def haingeist():
-    """Waldgeist des Holzhains: schwebender Rindenleib mit Laubkrone, Astarmen und leuchtendem Kern (1,2)."""
-    # Flügel/Hände starr am Arm (2026-11-17): eigener Handknochen drehte sie sonst vom Arm weg.
+    """Waldgeist des Holzhains, spukhaft (Lukas 2026-11-19: "spookier"): hagerer, verdrehter Rindenleib,
+    der unten in einen Geisterschweif ausläuft, hohler Rindenschädel mit tiefen Augenhöhlen und
+    aufgerissenem Maul, kahles Astgeweih mit Moosbärten, lange Zweigfinger, Irrlichter (1,2)."""
     f = Figur('haingeist', 62)
-    f.zyl('rinde', (0, 0, 0.5), 0.16, 0.6, r2=0.08, seg=7, beule=0.015)
-    for i in range(5):
-        a = i / 5 * math.tau
-        f.zyl('rinde', (math.cos(a) * 0.1, math.sin(a) * 0.1, 0.14), 0.03, 0.3, dreh=(math.sin(a) * 20, -math.cos(a) * 20, 0), seg=4, r2=0.008)   # Wurzeln
-    f.kugel('geist_hell', (0, -0.12, 0.62), (0.07, 0.05, 0.1), stufe=2)                                     # Kern
-    f.quader('rinde', (0.07, -0.14, 0.62), (0.03, 0.04, 0.22))
-    f.quader('rinde', (-0.07, -0.14, 0.62), (0.03, 0.04, 0.22))
-    f.paar(f.zyl, 'rinde', (0.24, -0.04, 0.66), 0.03, 0.4, dreh=(10, -40, 0), knochen='arm.X', seg=5)
+    # Geisterschweif statt Füßen: verdrehte, ausfransende Schleier bis knapp über den Boden
     for k in range(3):
-        f.paar(f.kegel, 'rinde', (0.36, -0.08 - k * 0.05, 0.46 + k * 0.02), 0.015, 0.16, dreh=(150, 0, (k - 1) * 20), knochen='arm.X', seg=3)
-    f.kugel('rinde', (0, -0.03, 0.92), (0.14, 0.14, 0.13), knochen='head', beule=0.015)
-    f.paar(f.kugel, 'geist_hell', (0.055, -0.15, 0.94), (0.03, 0.02, 0.04), knochen='head')
-    f.quader('geist', (0, -0.16, 0.86), (0.06, 0.02, 0.025), knochen='head')
-    for i in range(7):
-        a = i / 7 * math.tau
-        f.kugel('laub' if i % 2 else 'geist', (math.cos(a) * 0.13, -0.02 + math.sin(a) * 0.13, 1.06 + (i % 3) * 0.04), (0.1, 0.1, 0.08), knochen='head', beule=0.015)
-    f.paar(f.zyl, 'rinde', (0.1, 0.0, 1.16), 0.018, 0.26, dreh=(0, -30, 0), knochen='head', seg=4, r2=0.006)   # Geweihäste
+        a = k / 3 * math.tau
+        pts = [(math.cos(a + t * 2.4) * 0.09 * (1 - t), math.sin(a + t * 2.4) * 0.09 * (1 - t) + t * 0.1, 0.42 - t * 0.4)
+               for t in [i / 6 for i in range(7)]]
+        f.rohr('geist' if k else 'geist_hell', pts, [0.06 * (1 - t) ** 0.8 for t in [i / 6 for i in range(7)]], seg=8)
+    # Rumpf: verdrehter, hagerer Stamm, vorn offen mit Rindenrippen, dahinter das Geisterlicht
+    pts = [(0, 0.02, 0.36), (0.02, 0.0, 0.5), (-0.02, 0.02, 0.64), (0.0, 0.04, 0.78), (0, 0.02, 0.86)]
+    f.rohr('rinde', pts, [0.1, 0.12, 0.11, 0.13, 0.1], seg=9, beule=0.008)
+    f.kugel('geist_hell', (0, -0.08, 0.62), (0.07, 0.05, 0.09))                                   # Kern
+    for i in range(4):
+        z = 0.52 + i * 0.065
+        pts = [(math.sin(math.radians(w)) * 0.13, 0.02 - math.cos(math.radians(w)) * 0.13, z + 0.02 * math.cos(math.radians(w)))
+               for w in range(-120, 121, 30)]
+        f.rohr('rinde', pts, [0.012] * len(pts), seg=5)
+    # Arme: lang, knochig, nach vorn greifend
+    for s, seite in ((1, 'L'), (-1, 'R')):
+        pts = [(0.1 * s, 0.02, 0.8), (0.22 * s, -0.02, 0.76), (0.3 * s, -0.12, 0.62), (0.34 * s, -0.24, 0.52)]
+        f.rohr('rinde', pts, [0.035, 0.028, 0.022, 0.018], knochen='arm.' + seite, seg=6, beule=0.004)
+    # Kopf: langer Rindenschädel, nach vorn geneigt
+    f.kugel('rinde', (0, -0.04, 0.98), (0.12, 0.13, 0.17), dreh=(-15, 0, 0), knochen='head', beule=0.012)
+    f.kugel('rinde', (0, -0.1, 0.88), (0.08, 0.08, 0.08), knochen='head', beule=0.008)          # Kinn
+    # Astgeweih (kahl, verzweigt)
+    for s in (1, -1):
+        f.bogen('rinde', (0.06 * s, -0.02, 1.1), (0.5 * s, 0.1, 1), 0.28, 0.025, krumm=(0.12 * s, 0.05, -0.04), knochen='head', seg=6)
+        f.bogen('rinde', (0.15 * s, 0.0, 1.22), (0.1 * s, -0.3, 1), 0.14, 0.014, krumm=(0, -0.04, 0), knochen='head', seg=5)
+        f.bogen('rinde', (0.22 * s, 0.03, 1.28), (0.8 * s, 0.2, 0.4), 0.14, 0.012, krumm=(0, 0, 0.05), knochen='head', seg=5)
     return f
 
 
@@ -1783,19 +1796,34 @@ def v_arenawaechter(f):
 
 
 def v_haingeist(f):
-    for i in range(6):                                                                       # Rindenrillen
-        a = i / 6 * math.tau
-        f.quader('wurzel', (math.cos(a) * 0.12, math.sin(a) * 0.12, 0.5), (0.02, 0.02, 0.45), dreh=(0, 0, math.degrees(a)), beule=0.005)
-    pilze(f, (0.08, 0.06, 0.66), 3, 0.025, seed=6)
-    for i in range(6):                                                                       # Ranken und Blätter
-        a = i / 6 * math.tau
-        f.bogen('laub', (math.cos(a) * 0.15, -0.02 + math.sin(a) * 0.15, 1.05), (math.cos(a), math.sin(a), 0.3), 0.12, (0.04, 0.008),
-                krumm=(0, 0, -0.05), knochen='head', seg=6)
-    for i in range(5):                                                                       # Glühwürmchen
-        a = i / 5 * math.tau
-        f.kugel('geist_hell', (math.cos(a) * 0.3, math.sin(a) * 0.3, 0.6 + (i % 3) * 0.15), (0.015,) * 3, stufe=1)
-    f.paar(f.bogen, 'laub', (0.32, -0.08, 0.5), (0.5, -0.3, -0.3), 0.08, (0.03, 0.006), knochen='arm.X', seg=6)
-    f.zahnreihe('wurzel', (-0.04, -0.16, 0.86), (0.04, -0.16, 0.86), 3, 0.008, 0.03, richtung=(0, 0, -1))
+    # Gesicht: tiefe schwarze Augenhöhlen mit kleinen kalten Lichtern, aufgerissenes Maul mit Splitterzähnen
+    for s in (1, -1):
+        f.kugel('schwarz', (0.05 * s, -0.15, 1.0), (0.04, 0.03, 0.05), dreh=(0, 0, 20 * s), knochen='head')
+        f.kugel('geist_hell', (0.05 * s, -0.175, 0.995), (0.022, 0.01, 0.026), knochen='head', stufe=2)
+        f.quader('rinde', (0.055 * s, -0.16, 1.055), (0.08, 0.03, 0.025), dreh=(0, -25 * s, 0), knochen='head')  # Brauenwulst
+    f.kugel('schwarz', (0, -0.16, 0.87), (0.055, 0.03, 0.09), knochen='head')
+    f.kugel('geist', (0, -0.15, 0.87), (0.03, 0.02, 0.05), knochen='head')
+    f.zahnreihe('rinde', (-0.04, -0.17, 0.95), (0.04, -0.17, 0.95), 4, 0.008, 0.04, richtung=(0, 0, -1))
+    f.zahnreihe('rinde', (-0.035, -0.17, 0.81), (0.035, -0.17, 0.81), 3, 0.008, 0.035, richtung=(0, 0, 1))
+    # Risse in der Rinde, aus denen Geisterlicht scheint
+    for x, z, w in ((0.07, 0.72, 20), (-0.08, 0.5, -15), (0.05, 1.07, 10)):
+        f.quader('geist_hell', (x, -0.1 if z < 1 else -0.12, z), (0.012, 0.01, 0.07), dreh=(0, w, 0), knochen='head' if z > 0.85 else 'body')
+    # Zweigfinger: lang und dünn
+    f.paar(f.klauen, 'rinde', (0.34, -0.25, 0.52), (0.1, -1, -0.5), n=4, laenge=0.13, r=0.009, spreiz=18, krumm=0.5, knochen='arm.X')
+    # Moosbärte, die von Armen, Kinn und Geweih hängen
+    f.fetzen('moos_grau', (0, -0.08, 0.86), 0.06, 0.05, 0.84, 5, 0.18, von=-70, bis=70, spreiz=3, knochen='head')
+    f.paar(f.fetzen, 'moos_grau', (0.26, -0.06, 0.72), 0.03, 0.03, 0.72, 3, 0.16, breite=0.03, spreiz=2, knochen='arm.X')
+    # Pilze und Efeu auf der Schulter
+    pilze(f, (0.08, 0.06, 0.84), 3, 0.022, seed=6, farbe='geist', stiel='pilz_stiel')
+    for i in range(4):
+        a = i / 4 * math.tau + 0.3
+        f.bogen('laub', (math.cos(a) * 0.11, 0.02 + math.sin(a) * 0.11, 0.6 + i * 0.05), (math.cos(a), math.sin(a), 0.2), 0.05,
+                (0.022, 0.005), knochen='body', seg=5)
+    # Irrlichter: kleine Lichtkugeln mit blassem Hof
+    for i in range(4):
+        a = i / 4 * math.tau + 0.7
+        p = (math.cos(a) * 0.32, math.sin(a) * 0.3, 0.45 + (i % 2) * 0.35)
+        f.kugel('geist_hell', p, (0.025,) * 3, stufe=2)
 
 
 def v_pruefling(f):
@@ -1854,7 +1882,7 @@ FIGUREN = {'sumpfling': (sumpfling, 0.9), 'moorklauer': (moorklauer, 1.0),
            'glutling': (glutling, 0.8), 'glutspeier': (glutspeier, 1.2), 'lavawalze': (lavawalze, 1.4), 'glutfalter': (glutfalter, 0.5),
            'aschenpriester': (aschenpriester, 1.5), 'schmelzhauer': (schmelzhauer, 1.9), 'ignar': (ignar, 3.6),
            'leerling': (leerling, 0.9), 'leerenseher': (leerenseher, 1.4), 'nichtswandler': (nichtswandler, 1.8),
-           'leerenschwinge': (leerenschwinge, 0.5), 'riftrufer': (riftrufer, 1.5), 'leerenhueter': (leerenhueter, 2.1),
+           'leerenschwinge': (leerenschwinge, 0.25), 'riftrufer': (riftrufer, 1.5), 'leerenhueter': (leerenhueter, 2.1),
            'verschlinger': (verschlinger, 4.6),
            'arenawaechter': (arenawaechter, 2.2), 'haingeist': (haingeist, 1.2), 'pruefling': (pruefling, 0.8),
            'karawanenraeuber': (karawanenraeuber, 1.2), 'kerkerwache': (kerkerwache, 1.5)}
@@ -2162,7 +2190,8 @@ def exportieren(ob, rig, pfad):
                               export_apply=False)
 
 
-def rendern(ob, pfad, groesse=420):
+def rendern(ob, pfad, groesse=None):
+    groesse = groesse or GROSS
     sc = bpy.context.scene
     if sc.camera:
         sc.render.filepath = pfad
@@ -2282,13 +2311,13 @@ def main():
         print('POSEN', POSEN)
     if BOGEN:
         from PIL import Image, ImageDraw
-        s, spalten = 420, 5
+        s, spalten = GROSS, 5
         zeilen = (len(bilder) + spalten - 1) // spalten
         im = Image.new('RGB', (spalten * s, zeilen * (s + 26)), (20, 22, 30))
         dr = ImageDraw.Draw(im)
         for i, (n, p) in enumerate(bilder):
             x, y = (i % spalten) * s, (i // spalten) * (s + 26)
-            im.paste(Image.open(p).convert('RGB'), (x, y))
+            im.paste(Image.open(p).convert('RGB').resize((s, s)), (x, y))
             hoehe = FIGUREN[n][1]
             dr.text((x + 8, y + s + 6), f'{n}  ({hoehe:g})', fill=(240, 240, 240))
         im.save(BOGEN)
