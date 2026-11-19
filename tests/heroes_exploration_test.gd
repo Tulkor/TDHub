@@ -216,8 +216,14 @@ func _test_city(game: HdGame) -> void:
 	var layout := game.arena_layout
 	var sites: Array=game.get_node("SchwarzeKathedrale").get_meta("street_sites",[])
 	var houses: Array=sites.filter(func(site):return site.get("town",false))
-	check(houses.size()>=60,"Zusammenhängende Wohnviertel füllen die niedrigen Stadtflächen")
-	check(houses.all(func(site):return absf((site.front as Vector3).x)<.01),"Hausfassaden richten sich zu gemeinsamen Gassen statt zufällig in alle Richtungen")
+	# Seit 2026-11-19 nehmen drei Plätze (je ~4 Parzellen) und freigehaltene Türen etwas Bebauung weg.
+	check(houses.size()>=54,"Zusammenhängende Wohnviertel füllen die niedrigen Stadtflächen")
+	# Gewachsene Altstadt (Lukas 2026-11-19): Fassaden folgen der gekrümmten Gasse, höchstens rund 20° schräg.
+	check(houses.all(func(site):return absf((site.front as Vector3).x)<.36),"Hausfassaden richten sich zu gemeinsamen Gassen statt zufällig in alle Richtungen")
+	var yaws := {}
+	for site in houses:yaws[snappedf(float(site.yaw),.01)]=true
+	check(yaws.size()>houses.size()/2,"Fluchten sind leicht gegeneinander verdreht statt mit dem Lineal gezogen")
+	check(game.get_node("SchwarzeKathedrale").get_meta("settlement_plazas",[]).size()>=2,"Freie Blöcke bilden Plätze mit Brunnen oder Pestsäule")
 	var facades := true
 	for planned in game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]):
 		for site in sites:
@@ -276,6 +282,7 @@ func _test_city(game: HdGame) -> void:
 		var approach: Vector3=site.approach
 		var cell := Vector2i(roundi(approach.x/2),roundi(approach.z/2))
 		if reached.has(cell):accessible+=1
+		else:print("STADT_UNERREICHBAR ",approach)
 	print("STADTLAUFTEST Häuser=%d erreichbar=%d freieZellen=%d verbunden=%d" % [houses.size(),accessible,open.size(),reached.size()])
 	check(accessible==houses.size(),"Jede bewohnte Häuserzeile ist über echte freie Bodenflächen von einer Lane erreichbar")
 	var separated := true

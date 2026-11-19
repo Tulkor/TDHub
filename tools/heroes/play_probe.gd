@@ -61,7 +61,7 @@ func _ready() -> void:
 		game.get_node("Atmosphere/OverheadBirdLayer").hide()
 		game.hud.hide()
 		print("GEHWEGE pfade=%d laternen=%d baeume_entfernt=%d fokus=%s" % [paths.size(),atmosphere.get_meta("street_lantern_positions").size(),game.get_node("Atmosphere/SettlementWalkways").get_meta("cleared_trees"),focus])
-		print("STADT haeuser=%d zugaenge=%d" % [game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).size(),game.get_meta("settlement_city_access",[]).size()])
+		print("STADT haeuser=%d zugaenge=%d plaetze=%d" % [game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).size(),game.get_meta("settlement_city_access",[]).size(),game.get_node("SchwarzeKathedrale").get_meta("settlement_plazas",[]).size()])
 		print("STADT_GRUNDRISS ",hash(game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).map(func(site):return [site.pos.x,site.pos.z,site.yaw,site.ruin])))
 		print("WEGGRUEN inseln=%d bepflanzt=%d baeume=%d baumdreiecke=%d" % [game.get_meta("settlement_islands",[]).size(),game.get_node("Atmosphere/UndergrowthPatches").get_meta("courtyard_islands",[]).size(),game.get_node("Atmosphere/CourtyardTrees").get_meta("tree_positions",[]).size(),game.get_node("Atmosphere/CourtyardTrees").get_meta("triangle_budget",0)])
 		name=("bollwerk-stadt" if args.has("--stadt") else "bollwerk-gehwege")+("-insel" if args.has("--insel") else "")+("-nacht" if args.has("--nacht") else "-tag")+("-weit" if args.has("--weit") else "")+("-niedrig" if Display.quality==Display.LOW else "")

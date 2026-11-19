@@ -22,6 +22,7 @@ static func build(game, plants: Node3D) -> void:
 	_paint_streets(image,rect,game.get_meta("settlement_street_paths",[]))
 	image.generate_mipmaps()
 	var texture := ImageTexture.create_from_image(image)
+	var use := _bake_use(game,rect)
 	var copies := {}
 	for node in game.find_children("*","MeshInstance3D",true,false):
 		if not node.has_meta("vegetation_ground"):continue
@@ -35,9 +36,13 @@ static func build(game, plants: Node3D) -> void:
 			material.set_shader_parameter("vegetation_grass",preload("res://assets/textures/ground/grass_a.jpg"))
 			material.set_shader_parameter("vegetation_bounds",Vector4(rect.position.x,rect.position.y,rect.size.x,rect.size.y))
 			material.set_shader_parameter("vegetation_enabled",true)
+			material.set_shader_parameter("ground_use",use)
+			material.set_shader_parameter("ground_use_bounds",Vector4(rect.position.x,rect.position.y,rect.size.x,rect.size.y))
+			material.set_shader_parameter("ground_use_enabled",true)
 			copies[key]=material
 		node.material_override=copies[key]
 	game.set_meta("vegetation_ground_texture",texture)
+	game.set_meta("ground_use_texture",use)
 	game.set_meta("vegetation_ground_bounds",rect)
 	game.set_meta("vegetation_ground_roots",brushes)
 
@@ -94,3 +99,103 @@ static func _paint_streets(image: Image, rect: Rect2, paths: Array) -> void:
 			var old := image.get_pixel(x,y)
 			var weight: float=coverage[key]
 			image.set_pixel(x,y,Color(old.r,old.g,maxf(old.b,weight),minf(1,old.a+weight*.38)))
+
+
+## Nutzungskarte für die Bodenmaterialien (Lukas 2026-11-19: Sediment nach Nutzung und Gefälle statt
+## Rauschflecken). R Siedlung/Trittfläche, G Nässe, B Hangschutt, A Platzpflaster. Nur Optik, einmal je Spiel.
+const USE_RESOLUTION := 256
+
+static func _bake_use(game, rect: Rect2) -> ImageTexture:
+	var n := USE_RESOLUTION
+	var cell := rect.size.x/n
+	var layout: HdArena=game.arena_layout
+	var lane_width := float(game.cfg.arena.road_width)*.5
+	var heights := PackedFloat32Array()
+	var settled := PackedFloat32Array()
+	var gutter := PackedFloat32Array()
+	heights.resize(n*n)
+	settled.resize(n*n)
+	gutter.resize(n*n)
+	for y in n:
+		for x in n:
+			var p := Vector3(rect.position.x+(x+.5)*cell,0,rect.position.y+(y+.5)*cell)
+			var i := y*n+x
+			var h := HdArenaMountains.ground_height(layout,p)
+			heights[i]=h
+			var q := layout.nearest(p)
+			var lane := Vector2(p.x,p.z).distance_to(Vector2(q.x,q.z))
+			var low := 1.0-smoothstep(1.2,3.5,h)
+			# Neben dem Pflaster ist der Boden zertreten; das Regenwasser läuft vom Pflaster in eine Rinne.
+			var roadside := (1.0-smoothstep(lane_width+.5,lane_width+9.0,lane))*.8
+			var city := .45 if layout.boundary_kind(p)=="city" else 0.0
+			settled[i]=maxf(roadside,city)*low
+			var wave := .55+.45*sin(p.x*.21+p.z*.17)*sin(p.x*.07-p.z*.13)
+			gutter[i]=smoothstep(lane_width-.4,lane_width+.6,lane)*(1.0-smoothstep(lane_width+1.2,lane_width+3.6,lane))*wave*low
+	var cathedral: Node=game.get_node_or_null("SchwarzeKathedrale")
+	var sites: Array=cathedral.get_meta("street_sites",[]) if cathedral else []
+	for site in sites:
+		_splat(settled,rect,cell,site.center,16.0,6.0,1.0)
+	var paved := PackedFloat32Array()
+	paved.resize(n*n)
+	var plazas: Array=cathedral.get_meta("settlement_plazas",[]) if cathedral else []
+	for plaza in plazas:
+		_splat(paved,rect,cell,plaza.pos,float(plaza.get("radius",11.0))*.82,float(plaza.get("radius",11.0))*.6,1.0,true)
+		_splat(settled,rect,cell,plaza.pos,float(plaza.get("radius",11.0))+6.0,6.0,1.0)
+	var blurred := _blur(heights,n,4)
+	var slope := PackedFloat32Array()
+	slope.resize(n*n)
+	for y in range(1,n-1):
+		for x in range(1,n-1):
+			var i := y*n+x
+			var gx := (heights[i+1]-heights[i-1])/(2.0*cell)
+			var gz := (heights[i+n]-heights[i-n])/(2.0*cell)
+			slope[i]=Vector2(gx,gz).length()
+	var talus := _blur(slope,n,3)
+	var image := Image.create(n,n,false,Image.FORMAT_RGBA8)
+	for y in n:
+		for x in n:
+			var i := y*n+x
+			# Senken sammeln Wasser und Feinmaterial, Hangfüße den Schutt von oben.
+			var hollow := clampf((blurred[i]-heights[i])*1.1,0.0,1.0)
+			var scree := clampf(talus[i]*1.1-slope[i]*.35,0.0,1.0)*(1.0-smoothstep(5.0,10.0,heights[i]))
+			var wet := clampf(maxf(gutter[i]*.75,hollow),0.0,1.0)
+			image.set_pixel(x,y,Color(clampf(settled[i],0,1),wet,scree,clampf(paved[i],0,1)))
+	return ImageTexture.create_from_image(image)
+
+
+static func _splat(field: PackedFloat32Array, rect: Rect2, cell: float, at: Vector3, radius: float, soft: float, strength: float, ragged := false) -> void:
+	var n := USE_RESOLUTION
+	var cx := (at.x-rect.position.x)/cell
+	var cy := (at.z-rect.position.y)/cell
+	var reach := ceili(radius/cell)+1
+	for y in range(maxi(0,floori(cy)-reach),mini(n,ceili(cy)+reach+1)):
+		for x in range(maxi(0,floori(cx)-reach),mini(n,ceili(cx)+reach+1)):
+			var d := Vector2(x+.5-cx,y+.5-cy).length()*cell
+			if ragged:
+				# Platzränder folgen den Hausfluchten, keine Zirkelkreise.
+				var angle := atan2(y+.5-cy,x+.5-cx)
+				d*=1.0+.13*sin(angle*3.0+at.x)+.08*sin(angle*5.0-at.z)
+			var weight := (1.0-smoothstep(radius-soft,radius,d))*strength
+			if weight<=0.0:continue
+			field[y*n+x]=maxf(field[y*n+x],weight)
+
+
+static func _blur(field: PackedFloat32Array, n: int, radius: int) -> PackedFloat32Array:
+	var tmp := PackedFloat32Array()
+	tmp.resize(n*n)
+	var out := PackedFloat32Array()
+	out.resize(n*n)
+	var span := float(radius*2+1)
+	for y in n:
+		var sum := 0.0
+		for k in range(-radius,radius+1):sum+=field[y*n+clampi(k,0,n-1)]
+		for x in n:
+			tmp[y*n+x]=sum/span
+			sum+=field[y*n+clampi(x+radius+1,0,n-1)]-field[y*n+clampi(x-radius,0,n-1)]
+	for x in n:
+		var sum := 0.0
+		for k in range(-radius,radius+1):sum+=tmp[clampi(k,0,n-1)*n+x]
+		for y in n:
+			out[y*n+x]=sum/span
+			sum+=tmp[clampi(y+radius+1,0,n-1)*n+x]-tmp[clampi(y-radius,0,n-1)*n+x]
+	return out

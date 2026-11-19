@@ -23,7 +23,10 @@ vec4 hd_vegetation_surface(vec2 at) {
 	if (path<.002) return vec4(vegetation,weight);
 	// Verdichtete Erde statt aufgesetztem Streifen. Breite Störung und feines Korn ohne neue Sampler.
 	float packed=smoothstep(.12,.95,coverage.a);
-	vec3 track=tv_sample(vegetation_soil,at*.62,0.0)*mix(vec3(.46,.37,.27),vec3(.62,.53,.40),packed);
+	vec3 track_tex=tv_sample(vegetation_soil,at*.62,0.0);
+	// Festgetretener Weg: staubig grau-braun statt orange Erde (Lukas 2026-11-19).
+	track_tex=mix(track_tex,vec3(dot(track_tex,vec3(.299,.587,.114))),.6);
+	vec3 track=track_tex*mix(vec3(.4,.37,.33),vec3(.55,.52,.47),packed);
 	track*=.91+noise*.18+hd_ground_noise(at*3.7)*.07;
 	float combined=weight+path-weight*path;
 	return vec4((vegetation*weight*(1.0-path)+track*path)/max(combined,.001),combined);

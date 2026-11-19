@@ -128,9 +128,14 @@ func _build(game, parent: Node3D) -> Node3D:
 		_chapel(ossuary, deg_to_rad(-105), 0.65, false)
 		_sites.append(ossuary)
 	var hamlets: Array = []
+	var plazas: Array=[]
 	for site in HdArenaMountains.settlements(game.arena_layout):
 		var at: Vector3=site.pos
-		if not _separated(at,9.0):continue
+		if site.get("plaza",false):
+			plazas.append(site)
+			continue
+		# Häuser einer Zeile stehen eng wie in einer gewachsenen Altstadt (Lukas 2026-11-19).
+		if not _separated(at,7.0):continue
 		var depth: float=site.foundation
 		_place("box",wall_material(),Vector3(6.6,depth,7.6),at-Vector3.UP*(depth*.5),float(site.yaw))
 		if bool(site.ruin):
@@ -142,6 +147,9 @@ func _build(game, parent: Node3D) -> Node3D:
 		_sites.append(at)
 		hamlets.append(site)
 	_root.set_meta("settlement_sites",hamlets)
+	for plaza in plazas:
+		_plaza_monument(plaza)
+	_root.set_meta("settlement_plazas",plazas)
 	# Schlanke Türme und Kerzennischen begleiten die Wände, niemals die Spielfläche.
 	for road in game.arena_layout.paths:
 		var count := maxi(2, floori(road.length / 31.0))
@@ -476,20 +484,26 @@ func _townhouse(site: Dictionary) -> void:
 	var at: Vector3=site.pos
 	var yaw: float=site.yaw
 	var front := Vector3.BACK.rotated(Vector3.UP,yaw)
-	var width := 5.8+float(int(site.score)%3)*.3
-	var height := 5.2+float(int(site.score)%4)*.65
+	var score := int(site.score)
+	var width := 5.4+float(score%5)*.4
+	var height := 5.2+float(score%4)*.65+(1.5 if score%7==3 else 0.0)
+	# Bürgerhäuser meist traufständig (First parallel zur Gasse), jedes dritte giebelständig.
+	var eaves := score%3!=0
 	var stone := wall_material()
 	var trim := _solid("trim",Color("747785"))
 	var timber := _solid("town_timber",Color("292529"))
 	var dark := _solid("door",Color("171c26"))
 	_part("box",stone,Vector3(width,height,7.2),at,Vector3(0,height*.5,0),1,yaw)
-	_part("gable",roof_material(),Vector3(width+.65,2.7,8),at,Vector3(0,height,0),1,yaw)
+	if eaves:
+		_place("gable",roof_material(),Vector3(8,2.3+float(score%3)*.25,width+.65),at+Vector3.UP*height,yaw+PI*.5)
+	else:
+		_part("gable",roof_material(),Vector3(width+.65,2.7,8),at,Vector3(0,height,0),1,yaw)
 	_part("box",trim,Vector3(width+.25,.24,7.45),at,Vector3(0,2.9,0),1,yaw)
 	_part("box",trim,Vector3(width+.35,.22,7.5),at,Vector3(0,height-.08,0),1,yaw)
 	_part("box",stone,Vector3(.75,2.6,.8),at,Vector3(width*.3,height+1.1,-2.3),1,yaw)
 	for side in [-1.0,1.0]:
 		_part("box",timber,Vector3(.18,height,.16),at,Vector3(side*(width*.5-.18),height*.5,3.64),1,yaw)
-		for y in [1.2,3.6]:
+		for y in ([1.2,3.6,6.0] if height>7.0 else [1.2,3.6]):
 			_window(at+Vector3(side*width*.27,y,3.63).rotated(Vector3.UP,yaw),yaw,.95,1.5)
 		for z in [-2.0,1.6]:
 			_window(at+Vector3(side*(width*.5+.015),3.6,z).rotated(Vector3.UP,yaw),yaw+side*PI*.5,.95,1.5)
@@ -501,6 +515,38 @@ func _townhouse(site: Dictionary) -> void:
 	for i in 3:
 		_part("box",stone,Vector3(2.0,rise*float(3-i)/3.0,.45),Vector3(at.x,ground,at.z),Vector3(0,rise*float(3-i)/6.0,3.75+float(i)*.4),1,yaw)
 	_street_sites.append({"center":at,"door":at+front*4.5,"approach":at+front*6,"radius":4.8,"front":front,"kind":"house","town":true,"half_size":Vector2(width*.5,3.65),"yaw":yaw,"row":site.row})
+
+## Platzmitte: abwechselnd Laufbrunnen mit achteckigem Becken oder Pestsäule, wie auf Plätzen in
+## Habsburger Städten. Kleiner, registrierter Fußabdruck: Helden laufen herum, Wege führen hin.
+func _plaza_monument(plaza: Dictionary) -> void:
+	var at: Vector3=plaza.pos
+	at.y=HdArenaMountains.ground_height(_game.arena_layout,at)
+	var yaw: float=plaza.yaw
+	if not _separated(at,6.0):return
+	var stone := wall_material()
+	var trim := _solid("trim",Color("747785"))
+	var fountain := int(round(at.x*3.0+at.z*7.0))%2==0
+	if fountain:
+		_part("cylinder",stone,Vector3(1.75,.75,1.75),at,Vector3(0,.37,0),1,yaw+PI/8.0)
+		_part("cylinder",_solid("plaza_water",Color("1d2a33"),0.0,0.15),Vector3(1.5,.08,1.5),at,Vector3(0,.68,0),1,yaw+PI/8.0)
+		_part("cylinder",trim,Vector3(.32,2.4,.32),at,Vector3(0,1.2,0),1,yaw)
+		_part("cylinder",stone,Vector3(.62,.25,.62),at,Vector3(0,2.3,0),1,yaw+PI/8.0)
+		_part("spire",trim,Vector3(.35,.8,.35),at,Vector3(0,2.8,0),1,yaw+PI*.25)
+	else:
+		_part("box",stone,Vector3(3.0,.45,3.0),at,Vector3(0,.22,0),1,yaw)
+		_part("box",stone,Vector3(2.2,.45,2.2),at,Vector3(0,.66,0),1,yaw)
+		_part("box",trim,Vector3(1.3,1.4,1.3),at,Vector3(0,1.55,0),1,yaw)
+		_part("cylinder",stone,Vector3(.36,5.0,.36),at,Vector3(0,4.7,0),1,yaw)
+		_part("cylinder",trim,Vector3(.7,.35,.7),at,Vector3(0,7.3,0),1,yaw+PI/8.0)
+		_part("spire",_solid("brass",Color("9e8756"),0.0,0.65),Vector3(.55,1.6,.55),at,Vector3(0,8.2,0),1,yaw+PI*.25)
+		for corner in 4:
+			var c := Vector3(1.05,0,1.05).rotated(Vector3.UP,float(corner)*PI*.5)
+			_part("spire",trim,Vector3(.32,.9,.32),at,c+Vector3(0,1.3,0),1,yaw+PI*.25)
+	var front := Vector3.BACK.rotated(Vector3.UP,yaw)
+	_sites.append(at)
+	_street_sites.append({"center":at,"door":at+front*2.2,"approach":at+front*3.4,"radius":2.1,"front":front,
+		"kind":"fountain" if fountain else "column","half_size":Vector2(1.6,1.6),"yaw":yaw})
+
 
 func _ruin(at: Vector3, yaw: float) -> void:
 	_street_site(at,yaw+PI,.3,"ruin")
