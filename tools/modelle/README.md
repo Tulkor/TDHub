@@ -57,3 +57,4 @@ Bild: `tools/screenshot.sh --map=eeve --bezirk=ueberwuchert --winkel=nah --punkt
 Bollwerk-Gegner (alle 35, Details je Figur in `v_<id>`, `--roh` ohne Details; Galerie `tools/modelle/galerie.sh`): `<python mit bpy> -I tools/modelle/bollwerk_figuren.py -- assets/models/heroes/gegner [--nur=grolm]
 [--bogen=bogen.png] [--posen=posen.png] [--gruppe=reihe.png]`. Ein neuer Gegner = Funktion plus Einträge in `FIGUREN` (Höhe = size[1])
 und `STIL` (Angriffsart hieb/beide/wurf/stoss/stab/sprung); im Spiel `"model"` in `data/heroes.json`.
+Wabern: zweite UV-Map trägt je Vertex das Gewicht (siehe `WOBBEL_*` im Skript), im Spiel animiert `scripts/heroes/hd_wobbel.gd`. `galerie.sh --bilder=30` rendert Einzelbilder und ein GIF.

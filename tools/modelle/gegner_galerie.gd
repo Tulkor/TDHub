@@ -1,6 +1,6 @@
 extends Node3D
 ## Bollwerk-Gegner von vorn-oben (wie die Spielkamera) in Reihen, mit HdStoffe wie im Spiel.
-## Aufruf: gegner_galerie.tscn -- --ids=a,b,c [--name=x] [--spalten=6]  ->  .godot/galerie-<name>.png
+## Aufruf: gegner_galerie.tscn -- --ids=a,b,c [--name=x] [--spalten=6] [--bilder=N]  ->  .godot/galerie-<name>.png
 ## Ohne --ids alle .glb unter assets/models/heroes/gegner.
 
 
@@ -8,11 +8,14 @@ func _ready() -> void:
 	var ids: PackedStringArray = []
 	var name_ := "gegner"
 	var spalten := 6
+	var bilder := 0  # >0: Bildfolge für eine Animation (Wabbeln), alle 0,1 s
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--ids="):
 			ids = arg.trim_prefix("--ids=").split(",")
 		elif arg.begins_with("--name="):
 			name_ = arg.trim_prefix("--name=")
+		elif arg.begins_with("--bilder="):
+			bilder = int(arg.trim_prefix("--bilder="))
 		elif arg.begins_with("--spalten="):
 			spalten = int(arg.trim_prefix("--spalten="))
 	if ids.is_empty():
@@ -44,6 +47,10 @@ func _ready() -> void:
 		var m: Node3D = load(path).instantiate()
 		HdStoffe.modell(m)
 		add_child(m)
+		var b0 := AABB()
+		for mi0 in m.find_children("*", "MeshInstance3D", true, false):
+			b0 = b0.merge(mi0.get_aabb()) if b0.size != Vector3.ZERO else mi0.get_aabb()
+		HdWobbel.modell(m, b0.size.y)
 		var box := AABB()
 		for mi in m.find_children("*", "MeshInstance3D", true, false):
 			var b: AABB = mi.global_transform * mi.get_aabb()
@@ -87,6 +94,10 @@ func _ready() -> void:
 	for i in 10:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	for k in bilder:
+		await get_tree().create_timer(0.1).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://.godot/galerie-%s-%02d.png" % [name_, k])
 	var path := "res://.godot/galerie-%s.png" % name_
 	get_viewport().get_texture().get_image().save_png(path)
 	print("BILD ", ProjectSettings.globalize_path(path))

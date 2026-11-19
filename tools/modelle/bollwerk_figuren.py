@@ -36,6 +36,13 @@ FARBEN = {
 GLUT = {'blitz': 3.0, 'auge': 4.0, 'auge_rot': 4.0, 'gift': 1.5, 'lila_glut': 3.0}
 
 
+# Wabbeln (HdWobbel): Stoffe hängen oben fest, Flammen am Fuß, Lichter schweben ganz
+WOBBEL_STOFF = {'grabtuch': 0.8, 'grabtuch_hell': 0.8, 'robe': 0.6, 'robe_dunkel': 0.6, 'aschtuch': 0.7, 'umhang': 0.8,
+                'tuch_braun': 0.5, 'schleier': 1.0, 'geist': 1.0, 'moos_grau': 1.0, 'schilf': 1.0, 'asche': 0.8}
+WOBBEL_FLAMME = {'glut': 1.0, 'glut_hell': 1.0, 'seele': 1.0, 'geist_hell': 0.8}
+WOBBEL_GANZ = {'seele': 0.4}
+WOBBEL_FETZEN = 1.0
+ALPHA = {}
 METALLE = ('stahl', 'stahl_dunkel', 'gold', 'eisen', 'krone', 'altgold', 'kupfer', 'gruft', 'rost')
 
 
@@ -58,6 +65,10 @@ def mat(name):
     if name in GLUT:
         p.inputs['Emission Color'].default_value = (*c, 1)
         p.inputs['Emission Strength'].default_value = GLUT[name]
+    if name in ALPHA:  # durchscheinend (Schleier der Leerenwesen)
+        p.inputs['Alpha'].default_value = ALPHA[name]
+        m.surface_render_method = 'BLENDED'
+        m.blend_method = 'BLEND'
     return m
 
 
@@ -70,9 +81,10 @@ class Figur:
     def __init__(self, name, seed=1):
         self.name = name
         self.teile = []
+        self.wobbel = {}
         self.rng = random.Random(seed)
 
-    def _fertig(self, ob, farbe, ort, gross, dreh, knochen, beule, fase=0.0):
+    def _fertig(self, ob, farbe, ort, gross, dreh, knochen, beule, fase=0.0, form='', wobbel=None):
         ob.location = ort
         ob.scale = gross
         ob.rotation_euler = Euler([math.radians(a) for a in dreh])
@@ -91,14 +103,43 @@ class Figur:
                 v.co += Vector([self.rng.uniform(-beule, beule) for _ in range(3)])
         vg = ob.vertex_groups.new(name=knochen)
         vg.add(list(range(len(ob.data.vertices))), 1.0, 'REPLACE')
+        self._wobbel_setzen(ob, farbe, form, wobbel, knochen)
         self.teile.append(ob)
         return ob
 
-    def kugel(self, farbe, ort, gross, dreh=(0, 0, 0), knochen='body', beule=0.0, stufe=2):
+    def _wobbel_setzen(self, ob, farbe, form, wobbel, knochen='body'):
+        """Wabbel-Gewicht je Punkt (0 = fest, 1 = frei), landet als zweite UV-Karte "wobbel" (u) im glTF;
+        HdWobbel bewegt im Spiel nur diese Punkte. Lukas 2026-11-19: alles nicht Feste soll wabbeln.
+        wobbel: None = nach Material/Form, Zahl = Stärke von oben (fest) nach unten (frei),
+        Liste = Gewicht je Punkt (rohr: entlang des Wegs)."""
+        if isinstance(wobbel, list):
+            self.wobbel[ob.name] = wobbel
+            return
+        if wobbel == 'ganz':  # schwebt als Ganzes (Irrlichter, Funken)
+            self.wobbel[ob.name] = [1.0] * len(ob.data.vertices)
+            return
+        zs = [v.co.z for v in ob.data.vertices]
+        lo, hi = min(zs), max(zs)
+        h = max(hi - lo, 1e-6)
+        if wobbel is None:
+            if farbe in WOBBEL_STOFF and form != 'kugel' and knochen != 'head':
+                wobbel = WOBBEL_STOFF[farbe]
+            elif farbe in WOBBEL_FLAMME and form == 'kegel':
+                self.wobbel[ob.name] = [WOBBEL_FLAMME[farbe] * ((z - lo) / h) ** 1.3 for z in zs]  # Spitze frei
+                return
+            elif farbe in WOBBEL_GANZ and form == 'kugel':
+                self.wobbel[ob.name] = [WOBBEL_GANZ[farbe]] * len(zs)
+                return
+            else:
+                return
+        if wobbel:
+            self.wobbel[ob.name] = [wobbel * ((hi - z) / h) ** 1.3 for z in zs]
+
+    def kugel(self, farbe, ort, gross, dreh=(0, 0, 0), knochen='body', beule=0.0, stufe=2, wobbel=None):
         if max(gross) > 0.25:
             stufe = max(stufe, 3)  # große Leiber runder
         bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=stufe, radius=1)
-        return self._fertig(bpy.context.object, farbe, ort, gross, dreh, knochen, beule)
+        return self._fertig(bpy.context.object, farbe, ort, gross, dreh, knochen, beule, form='kugel', wobbel=wobbel)
 
     def rund(self, farbe, ort, gross, dreh=(0, 0, 0), knochen='body', beule=0.0, seg=8, ringe=6):
         bpy.ops.mesh.primitive_uv_sphere_add(segments=max(seg, 16), ring_count=max(ringe, 10), radius=1)
@@ -111,7 +152,7 @@ class Figur:
             return seg
         return max(seg, 16 if r > 0.15 else 12 if r > 0.05 else 8)
 
-    def zyl(self, farbe, ort, r, h, dreh=(0, 0, 0), knochen='body', beule=0.0, seg=12, r2=None):
+    def zyl(self, farbe, ort, r, h, dreh=(0, 0, 0), knochen='body', beule=0.0, seg=12, r2=None, wobbel=None):
         seg = self._seg(seg, r)
         if r2 is None:
             bpy.ops.mesh.primitive_cylinder_add(vertices=seg, radius=1, depth=1)
@@ -120,19 +161,19 @@ class Figur:
         ob = bpy.context.object
         if seg > 6 and min(r, h) > 0.02:
             # Deckel leicht abrunden: Kanten fangen Licht statt harter Kreiskante
-            return self._fertig(ob, farbe, ort, (r, r, h), dreh, knochen, beule, fase=min(r, h) * 0.12)
-        return self._fertig(ob, farbe, ort, (r, r, h), dreh, knochen, beule)
+            return self._fertig(ob, farbe, ort, (r, r, h), dreh, knochen, beule, fase=min(r, h) * 0.12, form='zyl', wobbel=wobbel)
+        return self._fertig(ob, farbe, ort, (r, r, h), dreh, knochen, beule, form='zyl', wobbel=wobbel)
 
-    def kegel(self, farbe, ort, r, h, dreh=(0, 0, 0), knochen='body', beule=0.0, seg=8):
+    def kegel(self, farbe, ort, r, h, dreh=(0, 0, 0), knochen='body', beule=0.0, seg=8, wobbel=None):
         seg = seg if seg <= 4 else max(seg, 10)
         bpy.ops.mesh.primitive_cone_add(vertices=seg, radius1=1, radius2=0, depth=1)
-        return self._fertig(bpy.context.object, farbe, ort, (r, r, h), dreh, knochen, beule)
+        return self._fertig(bpy.context.object, farbe, ort, (r, r, h), dreh, knochen, beule, form='kegel', wobbel=wobbel)
 
-    def quader(self, farbe, ort, gross, dreh=(0, 0, 0), knochen='body', beule=0.0, fase=None):
+    def quader(self, farbe, ort, gross, dreh=(0, 0, 0), knochen='body', beule=0.0, fase=None, wobbel=None):
         bpy.ops.mesh.primitive_cube_add(size=1)
         if fase is None:
             fase = min(min(gross) * 0.3, 0.03)
-        return self._fertig(bpy.context.object, farbe, ort, gross, dreh, knochen, beule, fase=fase)
+        return self._fertig(bpy.context.object, farbe, ort, gross, dreh, knochen, beule, fase=fase, form='quader', wobbel=wobbel)
 
     def paar(self, fn, farbe, ort, *a, **k):
         """Teil links und rechts gespiegelt (x und Drehung um y/z). Knochen mit .L/.R, falls angegeben."""
@@ -158,19 +199,20 @@ class Figur:
 
     # ------------------------------------------------------------ Bausteine für Details
 
-    def _netz(self, farbe, verts, faces, knochen, beule=0.0):
+    def _netz(self, farbe, verts, faces, knochen, beule=0.0, wobbel=None):
         me = bpy.data.meshes.new('teil')
         me.from_pydata([tuple(v) for v in verts], [], faces)
         me.update()
         ob = bpy.data.objects.new('teil', me)
         bpy.context.scene.collection.objects.link(ob)
-        return self._fertig(ob, farbe, (0, 0, 0), (1, 1, 1), (0, 0, 0), knochen, beule)
+        return self._fertig(ob, farbe, (0, 0, 0), (1, 1, 1), (0, 0, 0), knochen, beule, form='netz', wobbel=wobbel)
 
-    def rohr(self, farbe, punkte, radien, knochen='body', seg=10, beule=0.0, deckel=True):
+    def rohr(self, farbe, punkte, radien, knochen='body', seg=10, beule=0.0, deckel=True, wobbel=None):
         """Röhre durch punkte mit Radius je Punkt (Radius 0 = Spitze): gebogene Glieder, Hörner,
         Schwänze, Tentakel, Krallen. Radius als Paar (rx, ry) für flache Querschnitte."""
         pts = [Vector(p) for p in punkte]
         verts, faces, ringe = [], [], []
+        gew = []
         vorher = None
         for i, p in enumerate(pts):
             t = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
@@ -183,15 +225,18 @@ class Figur:
             vorher = a
             r = radien[i]
             rx, ry = (r, r) if not isinstance(r, (tuple, list)) else r
+            t = i / max(len(pts) - 1, 1)
             if max(rx, ry) < 1e-5:
                 ringe.append([len(verts)])
                 verts.append(p)
+                gew.append(t)
                 continue
             ring = []
             for k in range(seg):
                 w = k / seg * math.tau
                 ring.append(len(verts))
                 verts.append(p + a * math.cos(w) * rx + b * math.sin(w) * ry)
+                gew.append(t)
             ringe.append(ring)
         for r1, r2 in zip(ringe, ringe[1:]):
             if len(r1) == 1 and len(r2) == 1:
@@ -207,9 +252,12 @@ class Figur:
                 faces.append(tuple(reversed(ringe[0])))
             if len(ringe[-1]) > 1:
                 faces.append(tuple(ringe[-1]))
-        return self._netz(farbe, verts, faces, knochen, beule)
+        if wobbel is None and (farbe in WOBBEL_STOFF or farbe in WOBBEL_FLAMME or farbe in WOBBEL_GANZ):
+            wobbel = 1.0  # Tentakel, Flammenzungen, Schweife, Ranken: frei zum Ende hin
+        w = [wobbel * g ** 1.2 for g in gew] if wobbel else 0
+        return self._netz(farbe, verts, faces, knochen, beule, wobbel=w)
 
-    def bogen(self, farbe, start, richtung, laenge, r, krumm=(0, 0, 0), knochen='body', seg=8, n=5, spitz=True, r_ende=None):
+    def bogen(self, farbe, start, richtung, laenge, r, krumm=(0, 0, 0), knochen='body', seg=8, n=5, spitz=True, r_ende=None, wobbel=None):
         """Gebogenes, sich verjüngendes Teil (Kralle, Horn, Stachel, Finger): von start in richtung,
         über die Länge um krumm (Vektor) ausgelenkt."""
         d = Vector(richtung).normalized()
@@ -217,13 +265,14 @@ class Figur:
         pts, rs = [], []
         flach = isinstance(r, (tuple, list))
         r0 = r if flach else (r, r)
-        r1 = (0.0, 0.0) if spitz else ((r0[0] * 0.6, r0[1] * 0.6) if r_ende is None else (r_ende, r_ende))
+        r1 = (0.0, 0.0) if spitz else ((r0[0] * 0.6, r0[1] * 0.6) if r_ende is None else
+              (tuple(r_ende) if isinstance(r_ende, (tuple, list)) else (r_ende, r_ende)))
         for i in range(n + 1):
             t = i / n
             pts.append(Vector(start) + d * laenge * t + k * (t * t))
             rr = tuple(a + (b - a) * t ** 1.3 for a, b in zip(r0, r1))
             rs.append(rr if flach else rr[0])
-        return self.rohr(farbe, pts, rs, knochen=knochen, seg=seg)
+        return self.rohr(farbe, pts, rs, knochen=knochen, seg=seg, wobbel=wobbel)
 
     def klauen(self, farbe, ort, richtung, n=3, laenge=0.1, r=0.015, spreiz=25, krumm=0.4, knochen='body', seg=6):
         """n gebogene Krallen/Finger fächerförmig um richtung (in der Ebene quer dazu), nach unten gekrümmt."""
@@ -282,7 +331,7 @@ class Figur:
             faces += [(k, (k + 1) % m, m + (k + 1) % m, m + k) for k in range(m)]
             kipp = Euler((math.radians(-spreiz), 0, -a)).to_matrix()
             welt = [kipp @ v + Vector((mitte[0] + x, mitte[1] + y, z)) for v in verts]
-            self._netz(farbe2 if (farbe2 and i % 2) else farbe, welt, faces, knochen)
+            self._netz(farbe2 if (farbe2 and i % 2) else farbe, welt, faces, knochen, wobbel=WOBBEL_FETZEN)
 
     def schuppen(self, farbe, mitte, rx, ry, z, reihen, n, hoehe, knochen='body', von=0, bis=360, versatz=True, dicke=0.012, kipp=12):
         """Lamellen/Schuppen: reihen x n kleine gekippte Platten rund um eine Ellipse (z = oberste Reihe)."""
@@ -304,6 +353,19 @@ class Figur:
             self.rohr(farbe, [p, p + d * hi], [r, 0.0], knochen=knochen, seg=seg)
 
     def zusammen(self):
+        for o in self.teile:
+            me = o.data
+            while len(me.uv_layers) < 1:
+                me.uv_layers.new(name='UVMap')
+            me.uv_layers[0].name = 'UVMap'
+            uv = me.uv_layers.new(name='wobbel')
+            w = self.wobbel.get(o.name)
+            if w:
+                for loop in me.loops:
+                    uv.data[loop.index].uv = (w[loop.vertex_index], 0.0)
+            else:
+                for d in uv.data:
+                    d.uv = (0.0, 0.0)
         bpy.ops.object.select_all(action='DESELECT')
         for o in self.teile:
             o.select_set(True)
@@ -947,172 +1009,277 @@ def ignar():
 # ---------------------------------------------------------------- Leere (Wellen 31-40)
 
 def _auge(f, ort, r, knochen='head'):
+    """Leerenauge: weicher Sternenglanz, Rissiris, schmale Pupille (alles rund, keine Kanten)."""
     f.kugel('stern', ort, (r, r * 0.6, r), knochen=knochen, stufe=2)
-    f.kugel('riss', (ort[0], ort[1] - r * 0.45, ort[2]), (r * 0.6, r * 0.3, r * 0.6), knochen=knochen, stufe=2)
-    f.quader('schwarz', (ort[0], ort[1] - r * 0.7, ort[2]), (r * 0.16, r * 0.1, r * 0.8), knochen=knochen)
+    f.kugel('riss', (ort[0], ort[1] - r * 0.45, ort[2]), (r * 0.62, r * 0.3, r * 0.62), knochen=knochen, stufe=2)
+    f.kugel('schwarz', (ort[0], ort[1] - r * 0.68, ort[2]), (r * 0.12, r * 0.08, r * 0.5), knochen=knochen, stufe=2)
+
+
+# Leerenwesen ätherisch (Lukas 2026-11-19: "mehr ethereal, weniger harte Formen"): nur runde, fließende Formen,
+# leise leuchtende Leiber, durchscheinende Schleier (ALPHA), Tentakel und Ranken, die im Spiel wabbeln, ein Hauch
+# Nebel um den Leib. Keine Quader, keine vierkantigen Stacheln.
+FARBEN.update({'schleier': (0.70, 0.58, 1.00), 'nebel': (0.48, 0.36, 0.85)})
+GLUT.update({'leere': 0.35, 'leere_hell': 0.7, 'schleier': 1.2, 'nebel': 0.8})
+ALPHA.update({'schleier': 0.42, 'nebel': 0.15})
+WOBBEL_STOFF.update({'nebel': 1.0})
+
+
+def _ranke(f, farbe, start, richtung, laenge, r, krumm=(0, 0, 0), knochen='body', wobbel=1.0, seg=8, n=7, r_ende=None):
+    """Weiche Tentakel/Ranke: viele Ringe, wabert zum Ende hin. Flache Bänder (r als Paar) laufen breit und
+    weich aus, runde Tentakel enden in einer dünnen, runden Spitze (keine Stachel)."""
+    if r_ende is None:
+        r_ende = (r[0] * 0.45, r[1]) if isinstance(r, (tuple, list)) else max(r * 0.18, 0.004)
+    return f.bogen(farbe, start, richtung, laenge, r, krumm=krumm, knochen=knochen, seg=seg, n=n,
+                   spitz=r_ende is None, r_ende=r_ende, wobbel=wobbel)
+
+
+def _schleier(f, mitte, rx, ry, z, n, laenge, breite, knochen='body', von=0, bis=360, aussen=0.25, farbe='schleier'):
+    """Durchscheinende, sich verjüngende Schleierbänder, die von einer Ellipse herabwehen."""
+    for i in range(n):
+        w = math.radians(von + (bis - von) * (i + 0.5) / n)
+        x, y = math.sin(w) * rx, -math.cos(w) * ry
+        lg = laenge * f.rng.uniform(0.8, 1.15)
+        _ranke(f, farbe, (mitte[0] + x, mitte[1] + y, z), (math.sin(w) * aussen, -math.cos(w) * aussen, -1), lg,
+               (breite, 0.006), krumm=(math.sin(w) * lg * 0.2, -math.cos(w) * lg * 0.2, lg * 0.1), knochen=knochen, seg=6)
+
+
+def _nebel(f, mitte, r, n, knochen='body', seed=1):
+    """Ein paar durchscheinende Nebelballen um den Leib, schweben als Ganzes."""
+    rng = random.Random(seed)
+    for _ in range(n):
+        a = rng.uniform(0, math.tau)
+        p = (mitte[0] + math.cos(a) * r * rng.uniform(0.7, 1.1), mitte[1] + math.sin(a) * r * rng.uniform(0.7, 1.1),
+             mitte[2] + rng.uniform(-r, r) * 0.6)
+        k = r * rng.uniform(0.12, 0.2)
+        f.kugel('nebel', p, (k, k, k * 0.8), knochen=knochen, wobbel='ganz')
+
+
+def _ring(f, farbe, mitte, rx, ry, r, kipp=(0, 0, 0), knochen='head', n=24):
+    m = Euler([math.radians(a) for a in kipp]).to_matrix()
+    pts = [Vector(mitte) + m @ Vector((math.cos(i / n * math.tau) * rx, math.sin(i / n * math.tau) * ry, 0)) for i in range(n + 1)]
+    f.rohr(farbe, pts, [r] * len(pts), knochen=knochen, seg=6, deckel=False, wobbel=0)
 
 
 def leerling():
-    """Kleiner Leerenkriecher: geduckter Schattenleib, ein großes Auge, Klauenarme (0,9)."""
+    """Kleiner Leerenkriecher: weicher Schattenleib auf Rankenbeinen, ein großes Auge, Tentakelarme (0,9)."""
     f = Figur('leerling', 51)
-    f.paar(f.zyl, 'chitin', (0.12, 0.02, 0.12), 0.04, 0.26, dreh=(0, 18, 0), knochen='leg.X', seg=5)
-    f.paar(f.kegel, 'chitin', (0.16, -0.04, 0.03), 0.04, 0.12, dreh=(100, 0, 0), knochen='leg.X', seg=4)
-    f.kugel('leere', (0, 0.04, 0.36), (0.2, 0.24, 0.18), beule=0.02)
-    for i in range(4):
-        f.kegel('leere_hell', (0, 0.1 + i * 0.06, 0.5 - i * 0.02), 0.04, 0.16, dreh=(-40 - i * 10, 0, 0), seg=4)
-    f.paar(f.zyl, 'chitin', (0.24, -0.08, 0.36), 0.035, 0.3, dreh=(30, -40, 0), knochen='arm.X', seg=5)
-    f.paar(f.kegel, 'riss', (0.32, -0.26, 0.26), 0.03, 0.18, dreh=(120, 0, 0), knochen='hand.X', seg=4)
-    f.kugel('leere', (0, -0.16, 0.56), (0.19, 0.17, 0.17), knochen='head', beule=0.015)
-    _auge(f, (0, -0.31, 0.58), 0.09)
-    f.paar(f.kegel, 'leere_hell', (0.14, -0.1, 0.72), 0.035, 0.2, dreh=(0, -35, 0), knochen='head', seg=4)
+    for x, y in ((0.1, -0.06), (0.14, 0.12)):
+        f.paar(_ranke_beine, 'leere_hell', (x, y, 0.3), knochen='leg.X', f=f)
+    f.kugel('leere', (0, 0.04, 0.38), (0.2, 0.24, 0.18), beule=0.01)
+    f.kugel('leere_hell', (0, -0.06, 0.32), (0.13, 0.12, 0.1))
+    f.paar(_ranke_arm, 'leere_hell', (0.17, -0.1, 0.42), knochen='arm.X', f=f, lang=0.32, r=0.035)
+    f.kugel('leere', (0, -0.16, 0.56), (0.17, 0.16, 0.16), knochen='head', beule=0.008)
+    _auge(f, (0, -0.3, 0.58), 0.085)
+    for i in range(4):                                                                       # Schleierfahnen am Rücken
+        _ranke(f, 'schleier', ((i - 1.5) * 0.06, 0.14, 0.52), ((i - 1.5) * 0.3, 1, 0.15), 0.3, (0.05, 0.006),
+               krumm=(0, 0.04, -0.2), seg=6)
     return f
 
 
+def _ranke_beine(farbe, ort, knochen='leg.L', f=None, dreh=None):
+    s = 1 if ort[0] > 0 else -1
+    _ranke(f, farbe, ort, (0.5 * s, -0.1, -1), 0.32, 0.04, krumm=(0.1 * s, 0, 0.06), knochen=knochen, wobbel=0.25, r_ende=0.012)
+
+
+def _ranke_arm(farbe, ort, knochen='arm.L', f=None, lang=0.3, r=0.03, dreh=None):
+    s = 1 if ort[0] > 0 else -1
+    _ranke(f, farbe, ort, (0.5 * s, -1, -0.4), lang, r, krumm=(0.05 * s, -0.05, -0.08), knochen=knochen, wobbel=0.5)
+    ende = Vector(ort) + Vector((0.5 * s, -1, -0.4)).normalized() * lang * 0.9
+    f.klauen('riss', tuple(ende), (0.2 * s, -1, -0.6), n=3, laenge=lang * 0.25, r=r * 0.35, spreiz=28, knochen=knochen, seg=6)
+
+
 def leerenseher():
-    """Fernkämpfer: schwebender schmaler Leib mit drei Augen und Tentakelsaum (1,4)."""
-    # Flügel/Hände starr am Arm (2026-11-17): eigener Handknochen drehte sie sonst vom Arm weg.
+    """Fernkämpfer: schwebender Tropfenleib mit Tentakelsaum, drei Augen, Lichtring über dem Kopf (1,4)."""
     f = Figur('leerenseher', 52)
-    f.zyl('leere', (0, 0, 0.62), 0.12, 0.6, r2=0.18, seg=8, beule=0.012)
+    f.rohr('leere', [(0, 0, 0.35), (0, 0, 0.48), (0, 0.01, 0.66), (0, 0, 0.84), (0, 0, 0.98)],
+           [0.04, 0.12, 0.16, 0.15, 0.1], seg=16)
     for i in range(7):
         a = i / 7 * math.tau
-        f.zyl('leere_hell', (math.cos(a) * 0.09, math.sin(a) * 0.09, 0.18), 0.025, 0.36, dreh=(math.sin(a) * 14, -math.cos(a) * 14, 0), seg=4, r2=0.008)
-    f.zyl('chitin', (0, 0, 0.9), 0.2, 0.08, r2=0.14, seg=8)
-    f.paar(f.zyl, 'leere_hell', (0.24, -0.06, 0.74), 0.03, 0.4, dreh=(20, -22, 0), knochen='arm.X', seg=5)
-    f.paar(f.kugel, 'riss', (0.33, -0.18, 0.56), (0.05, 0.05, 0.05), knochen='arm.X', stufe=2)
-    f.kugel('leere', (0, -0.04, 1.14), (0.17, 0.17, 0.2), knochen='head', beule=0.012, stufe=2)
+        _ranke(f, 'leere_hell', (math.cos(a) * 0.1, math.sin(a) * 0.1, 0.45), (math.cos(a) * 0.35, math.sin(a) * 0.35, -1), 0.42, 0.032,
+               krumm=(math.cos(a + 1.2) * 0.14, math.sin(a + 1.2) * 0.14, 0.1), n=9)
+    _schleier(f, (0, 0, 0), 0.15, 0.15, 0.92, 9, 0.22, 0.04)
+    f.paar(_ranke_arm, 'leere_hell', (0.14, -0.02, 0.88), knochen='arm.X', f=f, lang=0.38, r=0.03)
+    f.paar(f.kugel, 'riss', (0.3, -0.35, 0.74), (0.045, 0.045, 0.045), knochen='arm.X', wobbel='ganz')
+    f.kugel('leere', (0, -0.04, 1.14), (0.17, 0.17, 0.2), knochen='head', beule=0.008)
     _auge(f, (0, -0.19, 1.16), 0.075)
     _auge(f, (0.11, -0.15, 1.27), 0.04)
     _auge(f, (-0.11, -0.15, 1.27), 0.04)
-    for i in range(5):
-        f.kegel('chitin', ((i - 2) * 0.07, 0.02, 1.34 + (2 - abs(i - 2)) * 0.03), 0.03, 0.2, dreh=(0, (i - 2) * 14, 0), knochen='head', seg=4)
+    for i in range(5):                                                                       # Schleierkamm statt Stacheln
+        _ranke(f, 'schleier', ((i - 2) * 0.06, 0.08, 1.28), ((i - 2) * 0.3, 1, 0.1), 0.34, (0.05, 0.006), krumm=(0, 0.05, -0.28),
+               knochen='head', seg=6)
+    _ring(f, 'stern', (0, 0.02, 1.42), 0.18, 0.18, 0.008, kipp=(-15, 0, 0))
     return f
 
 
 def nichtswandler():
-    """Schwerer Leerenläufer: massiger Chitinpanzer mit Riss in der Brust, lange Sichelarme (1,8)."""
+    """Schwerer Leerenläufer: massiger, weicher Leib mit leuchtendem Riss, lange Sichelarme aus Licht (1,8)."""
     f = Figur('nichtswandler', 53)
-    f.paar(f.zyl, 'chitin', (0.2, 0, 0.26), 0.09, 0.52, knochen='leg.X', r2=0.12, seg=6)
-    f.paar(f.kegel, 'chitin', (0.2, -0.1, 0.05), 0.09, 0.26, dreh=(95, 0, 0), knochen='leg.X', seg=4)
-    f.kugel('leere', (0, 0.06, 0.92), (0.4, 0.36, 0.42), beule=0.025, stufe=2)
-    for i in range(4):
-        f.quader('chitin', (0, 0.28 - i * 0.02, 0.7 + i * 0.16), (0.56 - i * 0.06, 0.2, 0.12), dreh=(-20, 0, 0), beule=0.008)    # Rückenplatten
-    f.quader('riss', (0, -0.3, 0.92), (0.05, 0.03, 0.4), dreh=(0, 8, 0))                                    # Riss in der Brust
-    f.quader('stern', (0, -0.315, 0.94), (0.02, 0.02, 0.26), dreh=(0, 8, 0))
-    f.paar(f.kugel, 'chitin', (0.44, 0, 1.2), (0.18, 0.18, 0.15), knochen='arm.X', beule=0.012)
-    f.paar(f.zyl, 'leere_hell', (0.5, -0.06, 0.9), 0.07, 0.5, dreh=(10, -10, 0), knochen='arm.X', seg=6)
-    # Sicheln hängen direkt an der Hand und krümmen sich nach vorn (vorher schwebten sie neben dem Arm).
-    f.paar(f.kugel, 'chitin', (0.55, -0.08, 0.64), (0.08, 0.08, 0.08), knochen='hand.X')
-    f.paar(f.quader, 'chitin', (0.55, -0.1, 0.44), (0.05, 0.12, 0.4), dreh=(12, 0, 0), knochen='hand.X')
-    f.paar(f.quader, 'chitin', (0.55, -0.24, 0.26), (0.05, 0.3, 0.09), dreh=(-25, 0, 0), knochen='hand.X')
-    f.paar(f.kegel, 'riss', (0.55, -0.42, 0.33), 0.03, 0.14, dreh=(-60, 0, 0), knochen='hand.X', seg=4)
-    f.kugel('leere', (0, -0.2, 1.36), (0.16, 0.17, 0.14), knochen='head', beule=0.012)
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.rohr('leere', [(0.2 * s, 0, 0.58), (0.23 * s, -0.04, 0.32), (0.2 * s, -0.08, 0.06)], [0.1, 0.08, 0.06],
+               knochen='leg.' + sd, seg=12)
+        f.kugel('leere_hell', (0.2 * s, -0.12, 0.04), (0.08, 0.12, 0.05), knochen='leg.' + sd)
+    f.kugel('leere', (0, 0.06, 0.92), (0.4, 0.36, 0.42), beule=0.012)
+    for i, (x, z) in enumerate(((0.2, 1.1), (-0.18, 1.05), (0.05, 1.25), (0.26, 0.82), (-0.25, 0.85), (0, 0.95))):
+        f.kugel('leere_hell', (x, 0.3, z), (0.12, 0.08, 0.12), beule=0.006)                  # weiche Rückenbuckel
+        f.kugel('riss', (x, 0.37, z), (0.03, 0.015, 0.03), stufe=1)
+    f.kugel('riss', (0, -0.31, 0.92), (0.06, 0.03, 0.24), dreh=(0, 8, 0))                       # Riss in der Brust
+    f.kugel('stern', (0, -0.33, 0.94), (0.025, 0.02, 0.16), dreh=(0, 8, 0))
+    f.paar(f.kugel, 'leere_hell', (0.44, 0, 1.2), (0.17, 0.17, 0.15), knochen='arm.X')
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.rohr('leere', [(0.48 * s, -0.02, 1.15), (0.56 * s, -0.08, 0.9), (0.56 * s, -0.1, 0.66)], [0.08, 0.07, 0.06],
+               knochen='arm.' + sd, seg=12)
+        f.kugel('leere_hell', (0.56 * s, -0.1, 0.64), (0.075, 0.075, 0.075), knochen='hand.' + sd)
+        # Sichel: flache, gebogene Lichtklinge mit hellem Kern
+        f.bogen('leere_hell', (0.56 * s, -0.12, 0.62), (0, -0.25, -1), 0.5, (0.02, 0.075), krumm=(0, -0.4, 0.12),
+                knochen='hand.' + sd, seg=10, n=8)
+        f.bogen('riss', (0.56 * s, -0.16, 0.6), (0, -0.25, -1), 0.46, (0.012, 0.03), krumm=(0, -0.44, 0.12),
+                knochen='hand.' + sd, seg=8, n=8)
+    _schleier(f, (0, 0.1, 0), 0.38, 0.28, 1.22, 7, 0.75, 0.07, von=100, bis=260)
+    f.kugel('leere', (0, -0.2, 1.36), (0.16, 0.17, 0.14), knochen='head', beule=0.008)
     _auge(f, (0.07, -0.33, 1.38), 0.04)
     _auge(f, (-0.07, -0.33, 1.38), 0.04)
-    f.paar(f.kegel, 'chitin', (0.1, -0.34, 1.26), 0.03, 0.14, dreh=(160, 0, 0), knochen='head', seg=4)      # Mandibeln
+    f.paar(f.bogen, 'leere_hell', (0.08, -0.32, 1.28), (0.2, -0.6, -1), 0.16, 0.022, krumm=(-0.04, -0.03, 0), knochen='head', seg=8)
+    _nebel(f, (0, 0.06, 0.92), 0.55, 6)
     return f
 
 
 def leerenschwinge():
-    """Flieger: Leerenrochen mit breiten Flossenflügeln, Stachelschwanz und Sternenaugen (0,5)."""
-    # Flügel/Hände starr am Arm (2026-11-17): eigener Handknochen drehte sie sonst vom Arm weg.
+    """Flieger: Leerenrochen mit weichen, wehenden Flossenflügeln, Peitschenschwanz und Sternenaugen (0,5)."""
     f = Figur('leerenschwinge', 54)
-    f.kugel('leere', (0, 0.02, 0.3), (0.16, 0.3, 0.07), stufe=2)
+    f.kugel('leere', (0, 0.02, 0.3), (0.16, 0.3, 0.07))
     f.kugel('leere_hell', (0, -0.02, 0.27), (0.1, 0.2, 0.04))
     f.kugel('leere', (0, -0.28, 0.31), (0.1, 0.1, 0.06), knochen='head')
     _auge(f, (0.05, -0.36, 0.33), 0.03)
     _auge(f, (-0.05, -0.36, 0.33), 0.03)
-    f.paar(f.kegel, 'chitin', (0.07, -0.4, 0.28), 0.02, 0.14, dreh=(95, 0, 12), knochen='head', seg=4)
-    for i in range(3):
-        f.paar(f.quader, 'leere' if i % 2 == 0 else 'leere_hell', (0.24 + i * 0.2, 0.02 + i * 0.05, 0.3),
-               (0.22, 0.44 - i * 0.11, 0.014), dreh=(0, -6, -10 - i * 8), knochen='arm.X', beule=0.005)
-    f.paar(f.kegel, 'riss', (0.78, 0.14, 0.31), 0.03, 0.16, dreh=(0, -90, 0), knochen='arm.X', seg=4)
-    f.zyl('leere_hell', (0, 0.44, 0.3), 0.025, 0.4, dreh=(90, 0, 0), seg=5, r2=0.01)                        # Schwanz
-    f.kegel('riss', (0, 0.7, 0.3), 0.035, 0.16, dreh=(-90, 0, 0), seg=4)
+    f.paar(f.bogen, 'leere_hell', (0.06, -0.36, 0.28), (0.3, -1, -0.2), 0.12, 0.018, krumm=(-0.04, 0, 0), knochen='head', seg=8)
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        # Flossenflügel: flache Röhre, vorn breit, zur Spitze schmal, nach hinten geschwungen
+        pts = [(0.1 * s, 0.0, 0.3), (0.3 * s, -0.02, 0.32), (0.5 * s, 0.04, 0.33), (0.68 * s, 0.14, 0.32), (0.82 * s, 0.26, 0.3)]
+        f.rohr('leere', pts, [(0.3, 0.02), (0.26, 0.018), (0.2, 0.015), (0.12, 0.012), (0.0, 0.0)], knochen='arm.' + sd, seg=14,
+               wobbel=0.35)
+        pts2 = [(p[0], p[1] + 0.06, p[2] - 0.005) for p in pts]
+        f.rohr('schleier', pts2, [(0.32, 0.008), (0.29, 0.008), (0.23, 0.007), (0.15, 0.006), (0.0, 0.0)], knochen='arm.' + sd,
+               seg=14, wobbel=0.8)
+        for k in range(3):
+            f.kugel('stern', (0.25 * s + k * 0.15 * s, 0.03 + k * 0.05, 0.345), (0.014, 0.014, 0.008), knochen='arm.' + sd, stufe=1)
+    _ranke(f, 'leere_hell', (0, 0.3, 0.3), (0, 1, 0), 0.5, 0.03, krumm=(0, 0, 0.04), n=9)       # Peitschenschwanz
+    f.kugel('riss', (0, 0.8, 0.33), (0.025, 0.04, 0.02), wobbel='ganz')
     return f
 
 
 def riftrufer():
-    """Beschwörer: schwebende Leerenpriesterin, hält einen aufgerissenen Riss zwischen den Händen (1,5)."""
+    """Beschwörerin: schwebende Leerenpriesterin in wehender Robe, hält einen Riss zwischen den Händen (1,5)."""
     f = Figur('riftrufer', 55)
-    f.zyl('leere', (0, 0, 0.42), 0.26, 0.7, r2=0.12, seg=10, beule=0.012)
-    for i in range(8):
-        a = i / 8 * math.tau
-        f.kegel('leere_hell', (math.cos(a) * 0.22, math.sin(a) * 0.22, 0.06), 0.06, 0.24, dreh=(180, 0, 0), seg=4)
-    f.zyl('leere_hell', (0, 0, 0.88), 0.14, 0.3, r2=0.2, seg=8)
-    f.zyl('chitin', (0, 0, 1.02), 0.26, 0.05, r2=0.16, seg=6)                                               # Kragenplatte
-    f.paar(f.zyl, 'leere', (0.24, -0.1, 0.9), 0.035, 0.36, dreh=(55, -18, 0), knochen='arm.X', seg=5)
-    f.paar(f.kugel, 'chitin', (0.2, -0.3, 0.8), (0.04, 0.04, 0.04), knochen='hand.X')
-    f.quader('riss', (0, -0.34, 0.8), (0.05, 0.03, 0.42), dreh=(0, 12, 0))                                  # der Riss
-    f.quader('stern', (0, -0.35, 0.8), (0.02, 0.02, 0.3), dreh=(0, 12, 0))
-    for i in range(4):
-        f.kugel('riss', (math.cos(i * 1.7) * 0.1, -0.34, 0.66 + i * 0.1), (0.018, 0.018, 0.018))
-    f.kugel('leere', (0, -0.03, 1.18), (0.12, 0.13, 0.14), knochen='head', stufe=2)
-    _auge(f, (0, -0.14, 1.2), 0.05)
-    f.zyl('chitin', (0, -0.02, 1.34), 0.14, 0.03, knochen='head', seg=6)                                    # Reif
-    for i in range(6):
+    f.rohr('leere', [(0, 0, 0.05), (0, 0, 0.3), (0, 0, 0.6), (0, 0, 0.85), (0, 0, 0.98)], [0.28, 0.23, 0.17, 0.14, 0.13],
+           seg=18, wobbel=0)
+    _schleier(f, (0, 0, 0), 0.26, 0.26, 0.2, 12, 0.3, 0.07, aussen=0.15)
+    f.rohr('leere_hell', [(0, 0, 0.82), (0, 0, 0.95), (0, 0, 1.06)], [0.15, 0.16, 0.12], seg=14)
+    f.kugel('leere_hell', (0, 0.01, 1.03), (0.22, 0.2, 0.05))                                   # weicher Kragen
+    _schleier(f, (0, 0.02, 0), 0.2, 0.18, 1.03, 8, 0.5, 0.05, von=110, bis=250)
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.rohr('leere', [(0.13 * s, 0, 1.0), (0.24 * s, -0.1, 0.9), (0.2 * s, -0.28, 0.82)], [0.04, 0.035, 0.03],
+               knochen='arm.' + sd, seg=10)
+        f.kugel('leere_hell', (0.2 * s, -0.3, 0.8), (0.04, 0.04, 0.04), knochen='hand.' + sd)
+        f.klauen('leere_hell', (0.2 * s, -0.32, 0.8), (-0.6 * s, -0.5, 0), n=4, laenge=0.06, r=0.009, spreiz=20, knochen='hand.' + sd)
+    f.kugel('riss', (0, -0.36, 0.8), (0.06, 0.03, 0.22), dreh=(0, 12, 0))                       # der Riss
+    f.kugel('stern', (0, -0.37, 0.8), (0.02, 0.02, 0.16), dreh=(0, 12, 0))
+    _ring(f, 'schleier', (0, -0.36, 0.8), 0.09, 0.26, 0.008, kipp=(90, 12, 0), knochen='body')
+    f.kugel('leere', (0, -0.03, 1.18), (0.12, 0.13, 0.14), knochen='head')
+    f.kugel('leere_hell', (0, 0.03, 1.21), (0.15, 0.15, 0.16), knochen='head')                  # Kapuze
+    _auge(f, (0, -0.145, 1.2), 0.05)
+    for i in range(6):                                                                       # schwebende Lichterkrone
         a = i / 6 * math.tau
-        f.kegel('riss' if i % 2 else 'chitin', (math.cos(a) * 0.14, -0.02 + math.sin(a) * 0.14, 1.44), 0.022, 0.18, knochen='head', seg=4)
+        f.kugel('riss' if i % 2 else 'stern', (math.cos(a) * 0.16, -0.02 + math.sin(a) * 0.16, 1.44), (0.022,) * 3,
+                knochen='head', wobbel='ganz')
+    _ring(f, 'schleier', (0, -0.02, 1.44), 0.16, 0.16, 0.006)
     return f
 
 
 def leerenhueter():
-    """Elite: gepanzerter Hüter mit Sternenschild, Hörnerhelm und Rissklinge (2,1)."""
+    """Elite: Hüter in weicher Chitinhülle, wehender Schleiermantel, Sternenschild, Klinge aus Licht (2,1)."""
     f = Figur('leerenhueter', 56)
-    f.paar(f.zyl, 'chitin', (0.2, 0, 0.3), 0.11, 0.6, knochen='leg.X', r2=0.13, seg=6)
-    f.paar(f.quader, 'chitin', (0.2, -0.06, 0.06), (0.2, 0.3, 0.12), knochen='leg.X')
-    f.zyl('leere', (0, 0, 0.74), 0.3, 0.3, r2=0.26, seg=8)
-    f.zyl('chitin', (0, 0, 1.14), 0.3, 0.52, r2=0.44, seg=8, beule=0.012)
-    f.quader('riss', (0, -0.37, 1.16), (0.04, 0.03, 0.34))
-    f.paar(f.quader, 'riss', (0.12, -0.36, 1.22), (0.16, 0.03, 0.035), dreh=(0, 30, 0))
-    f.paar(f.kugel, 'chitin', (0.5, 0, 1.4), (0.24, 0.24, 0.18), knochen='arm.X', beule=0.012)
-    f.paar(f.kegel, 'leere_hell', (0.6, 0.0, 1.56), 0.06, 0.3, dreh=(0, -30, 0), knochen='arm.X', seg=4)
-    f.paar(f.zyl, 'leere', (0.54, -0.04, 1.04), 0.09, 0.46, dreh=(0, -8, 0), knochen='arm.X', seg=6)
-    f.rund('chitin', (0, -0.02, 1.62), (0.19, 0.2, 0.2), knochen='head', seg=8, ringe=5)
-    f.quader('riss', (0, -0.2, 1.62), (0.05, 0.03, 0.2), knochen='head')
-    f.quader('riss', (0, -0.2, 1.66), (0.22, 0.03, 0.04), knochen='head')
-    f.paar(f.kegel, 'leere_hell', (0.2, 0.0, 1.8), 0.05, 0.4, dreh=(0, -25, 0), knochen='head', seg=5)
-    f.zyl('chitin', (0.62, -0.34, 0.96), 0.42, 0.05, dreh=(90, 0, 10), knochen='hand.L', seg=6)             # Schild
-    f.zyl('leere_hell', (0.62, -0.37, 0.96), 0.3, 0.03, dreh=(90, 0, 10), knochen='hand.L', seg=6)
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.rohr('leere', [(0.2 * s, 0, 0.66), (0.21 * s, -0.03, 0.36), (0.2 * s, -0.04, 0.08)], [0.11, 0.1, 0.08],
+               knochen='leg.' + sd, seg=12)
+        f.kugel('chitin', (0.21 * s, -0.08, 0.36), (0.09, 0.08, 0.1), knochen='leg.' + sd)
+        f.kugel('chitin', (0.2 * s, -0.1, 0.05), (0.1, 0.16, 0.06), knochen='leg.' + sd)
+    f.kugel('leere', (0, 0, 0.78), (0.28, 0.24, 0.2))
+    f.rohr('leere', [(0, 0, 0.86), (0, 0, 1.05), (0, 0, 1.28), (0, 0, 1.48)], [0.28, 0.33, 0.4, 0.28], seg=18)
+    f.kugel('chitin', (0, -0.18, 1.2), (0.3, 0.14, 0.26))                                       # Brusthülle
+    f.kugel('riss', (0, -0.32, 1.2), (0.03, 0.015, 0.16))
+    f.kugel('riss', (0, -0.31, 1.26), (0.12, 0.015, 0.025))
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.kugel('chitin', (0.5 * s, 0, 1.4), (0.24, 0.24, 0.18), knochen='arm.' + sd)
+        f.rohr('leere', [(0.5 * s, -0.02, 1.3), (0.55 * s, -0.04, 1.05), (0.55 * s, -0.06, 0.82)], [0.09, 0.08, 0.07],
+               knochen='arm.' + sd, seg=12)
+        f.kugel('chitin', (0.55 * s, -0.07, 0.8), (0.1, 0.1, 0.1), knochen='arm.' + sd)
+        _schleier(f, (0.5 * s, 0, 0), 0.18, 0.16, 1.32, 3, 0.4, 0.05, knochen='arm.' + sd, von=-60 * s, bis=60 * s)
+    _schleier(f, (0, 0.12, 0), 0.38, 0.26, 1.4, 7, 1.25, 0.08, von=110, bis=250, aussen=0.15)   # Mantel
+    f.kugel('chitin', (0, -0.02, 1.62), (0.19, 0.2, 0.2), knochen='head')
+    f.kugel('riss', (0, -0.2, 1.62), (0.12, 0.02, 0.025), knochen='head')                       # Sehschlitz
+    for i in range(3):
+        _ranke(f, 'schleier', ((i - 1) * 0.07, 0.1, 1.74), ((i - 1) * 0.3, 1, 0.1), 0.5, (0.06, 0.006),
+               krumm=(0, 0.05, -0.4), knochen='head', seg=6)
+    # Schild: runde, weiche Scheibe mit Sternenkern und Rissring
+    f.ell('chitin', (0.62, -0.34, 0.96), 0.4, 0.4, 0.06, dreh=(90, 0, 10), knochen='hand.L', seg=24)
+    _ring(f, 'riss', (0.62, -0.38, 0.96), 0.3, 0.3, 0.014, kipp=(90, 0, 10), knochen='hand.L')
     f.kugel('stern', (0.625, -0.39, 0.96), (0.08, 0.04, 0.08), knochen='hand.L', stufe=2)
-    f.quader('riss', (-0.58, -0.36, 1.2), (0.07, 0.03, 1.3), dreh=(25, 0, 0), knochen='hand.R')             # Rissklinge
-    f.quader('stern', (-0.58, -0.37, 1.22), (0.025, 0.02, 1.1), dreh=(25, 0, 0), knochen='hand.R')
-    f.quader('chitin', (-0.58, -0.1, 0.64), (0.26, 0.04, 0.05), dreh=(25, 0, 0), knochen='hand.R')
+    # Klinge aus Licht
+    f.bogen('riss', (-0.58, -0.12, 0.72), (0, -0.4, 1), 1.25, (0.02, 0.07), krumm=(0, -0.12, 0), knochen='hand.R', seg=10, n=6)
+    f.bogen('schleier', (-0.58, -0.12, 0.72), (0, -0.4, 1), 1.3, (0.035, 0.12), krumm=(0, -0.12, 0), knochen='hand.R', seg=10, n=6,
+            wobbel=0.4)
+    f.kugel('chitin', (-0.58, -0.1, 0.68), (0.09, 0.06, 0.05), knochen='hand.R')
+    _nebel(f, (0, 0, 1.1), 0.6, 6, seed=3)
     return f
 
 
 def verschlinger():
-    """Endboss alter Art: Der Verschlinger. Berg aus Leerenfleisch mit senkrechtem Schlund, Augenkranz, Tentakelarmen (4,6)."""
+    """Endboss alter Art: Der Verschlinger. Berg aus weichem Leerenfleisch mit senkrechtem Schlund, Augenkranz,
+    Tentakeln und wehenden Schleiern (4,6)."""
     f = Figur('verschlinger', 57)
-    f.kugel('leere', (0, 0.1, 0.62), (0.62, 0.56, 0.6), beule=0.04, stufe=2)
+    f.kugel('leere', (0, 0.1, 0.62), (0.62, 0.56, 0.6), beule=0.02)
     for i in range(10):
         a = i / 10 * math.tau
-        f.zyl('leere_hell', (math.cos(a) * 0.5, 0.1 + math.sin(a) * 0.46, 0.14), 0.09, 0.36, dreh=(math.sin(a) * 30, -math.cos(a) * 30, 0),
-              seg=5, r2=0.03, knochen='leg.L' if math.cos(a) > 0 else 'leg.R')                             # Kriechtentakel
-    f.kugel('chitin', (0, 0.3, 1.0), (0.5, 0.36, 0.3), beule=0.03, stufe=2)
-    for i in range(7):
-        a = (i / 6 - 0.5) * 2.4
-        f.kegel('chitin', (math.sin(a) * 0.4, 0.42, 1.14 + math.cos(a) * 0.12), 0.07, 0.4, dreh=(-45, a * 30, 0), seg=4)
-    # Schlund: senkrechter Spalt mit Zahnreihen und leuchtendem Inneren
-    f.kugel('schwarz', (0, -0.36, 0.66), (0.2, 0.14, 0.42), stufe=2)
+        _ranke(f, 'leere_hell', (math.cos(a) * 0.45, 0.1 + math.sin(a) * 0.42, 0.3), (math.cos(a), math.sin(a), -0.6), 0.55, 0.07,
+               krumm=(math.cos(a + 1.3) * 0.16, math.sin(a + 1.3) * 0.16, 0.1), knochen='leg.L' if math.cos(a) > 0 else 'leg.R',
+               wobbel=0.5, n=9)
+    for i, (x, z) in enumerate(((0.3, 1.0), (-0.3, 0.98), (0.0, 1.08), (0.45, 0.78), (-0.45, 0.8))):
+        f.kugel('leere_hell', (x, 0.4, z), (0.16, 0.12, 0.14), beule=0.01)
+        f.kugel('riss', (x, 0.5, z), (0.035, 0.02, 0.035), stufe=1)
+    for i in range(6):                                                                       # lange Rückententakel
+        a = (i / 5 - 0.5) * 2.4
+        _ranke(f, 'leere_hell', (math.sin(a) * 0.4, 0.4, 0.95 + math.cos(a) * 0.1), (math.sin(a) * 0.4, 0.5, 1), 0.75, 0.04,
+               krumm=(math.sin(a) * 0.15, 0.45, -0.5), n=10)
+    # Schlund: senkrechter Spalt, leuchtendes Inneres, gebogene Zähne
+    f.kugel('schwarz', (0, -0.36, 0.66), (0.2, 0.14, 0.42), stufe=3)
     f.kugel('riss', (0, -0.3, 0.66), (0.12, 0.1, 0.3), stufe=2)
     for i in range(8):
         z = 0.34 + i * 0.09
         for s in (1, -1):
-            f.kegel('zahn', (0.15 * s * (1.0 - abs(i - 3.5) / 6.0), -0.47, z), 0.03, 0.14, dreh=(0, 90 * s, 0), seg=4)
-    f.paar(f.kugel, 'leere_hell', (0.66, -0.06, 0.86), (0.2, 0.2, 0.18), knochen='arm.X', beule=0.02)
-    f.paar(f.zyl, 'leere', (0.82, -0.2, 0.62), 0.11, 0.6, dreh=(25, -22, 0), knochen='arm.X', seg=6, r2=0.07)
-    f.paar(f.kugel, 'leere', (0.88, -0.3, 0.4), (0.1, 0.1, 0.1), knochen='arm.X')
-    f.paar(f.zyl, 'leere_hell', (0.9, -0.52, 0.34), 0.085, 0.5, dreh=(75, -6, 0), knochen='hand.X', seg=6, r2=0.035)
-    f.paar(f.kegel, 'riss', (0.92, -0.84, 0.28), 0.05, 0.22, dreh=(95, 0, 0), knochen='hand.X', seg=4)
-    f.kugel('leere', (0, -0.1, 1.22), (0.3, 0.3, 0.22), knochen='head', beule=0.02, stufe=2)
+            f.bogen('zahn', (0.16 * s * (1.0 - abs(i - 3.5) / 6.0), -0.44, z), (-s, -0.4, 0), 0.13, 0.03, krumm=(0, -0.03, 0),
+                    seg=8, n=4)
+    for i in range(4):                                                                       # Zungen
+        _ranke(f, 'riss', ((i - 1.5) * 0.04, -0.4, 0.5 + i * 0.05), ((i - 1.5) * 0.3, -1, -0.3), 0.2, 0.025, krumm=(0, 0, -0.06))
+    for s, sd in ((1, 'L'), (-1, 'R')):
+        f.kugel('leere_hell', (0.66 * s, -0.06, 0.86), (0.2, 0.2, 0.18), knochen='arm.' + sd)
+        f.rohr('leere', [(0.7 * s, -0.08, 0.8), (0.84 * s, -0.22, 0.6), (0.88 * s, -0.36, 0.42)], [0.11, 0.09, 0.08],
+               knochen='arm.' + sd, seg=12)
+        _ranke(f, 'leere_hell', (0.88 * s, -0.36, 0.4), (0.05 * s, -1, -0.2), 0.5, 0.08, krumm=(0, 0, -0.1), knochen='hand.' + sd,
+               wobbel=0.4)
+        f.klauen('riss', (0.9 * s, -0.84, 0.3), (0, -1, -0.2), n=3, laenge=0.14, r=0.025, spreiz=30, knochen='hand.' + sd)
+    f.kugel('leere', (0, -0.1, 1.22), (0.3, 0.3, 0.22), knochen='head', beule=0.01)
     _auge(f, (0, -0.37, 1.24), 0.1)
     for i in range(6):
         a = (i / 5 - 0.5) * 2.6
         _auge(f, (math.sin(a) * 0.26, -0.3 + abs(math.sin(a)) * 0.12, 1.24 + math.cos(a) * 0.14 - 0.04), 0.04)
-    for i in range(5):
+    for i in range(5):                                                                       # Schleierkrone
         a = (i / 4 - 0.5) * 1.8
-        f.kegel('chitin', (math.sin(a) * 0.22, -0.06, 1.46 + math.cos(a) * 0.06), 0.05, 0.36, dreh=(0, math.degrees(a) * 0.6, 0), knochen='head', seg=5)
+        _ranke(f, 'schleier', (math.sin(a) * 0.22, 0.0, 1.38 + math.cos(a) * 0.04), (math.sin(a) * 0.4, 1, 0.2), 0.6, (0.08, 0.008),
+               krumm=(0, 0.05, -0.45), knochen='head', seg=6)
+    _schleier(f, (0, 0.1, 0), 0.55, 0.5, 0.95, 10, 0.5, 0.1, von=60, bis=300)
+    _nebel(f, (0, 0.1, 0.7), 0.8, 6, seed=5)
     return f
+
 
 # ---------------------------------------------------------------- Sonderzonen und Ereignisse
 
@@ -1605,7 +1772,7 @@ def funken(f, mitte, r, n, knochen='body', farbe='glut_hell', seed=5):
     for _ in range(n):
         p = (mitte[0] + rng.uniform(-r, r), mitte[1] + rng.uniform(-r, r), mitte[2] + rng.uniform(0, r * 1.5))
         k = rng.uniform(0.008, 0.016)
-        f.kugel(farbe, p, (k, k, k), knochen=knochen, stufe=1)
+        f.kugel(farbe, p, (k, k, k), knochen=knochen, stufe=1, wobbel='ganz')
 
 
 def v_glutling(f):
@@ -1698,82 +1865,6 @@ def v_ignar(f):
     funken(f, (-0.68, -0.1, 0.6), 0.15, 5, knochen='hand.R', seed=9)
 
 
-def v_leerling(f):
-    f.schuppen('chitin', (0, 0.06, 0.4), 0.18, 0.22, 0.48, 2, 7, 0.08, von=100, bis=260, kipp=30)   # Rückenpanzer
-    f.paar(f.klauen, 'chitin', (0.16, -0.08, 0.02), (0.3, -1, -0.1), n=2, laenge=0.06, r=0.012, spreiz=40, knochen='leg.X')
-    f.paar(f.kugel, 'leere_hell', (0.26, -0.18, 0.3), (0.035, 0.035, 0.035), knochen='arm.X')
-    f.zahnreihe('zahn', (-0.07, -0.29, 0.48), (0.07, -0.29, 0.48), 6, 0.01, 0.04, richtung=(0, -0.2, -1))
-    flecken(f, 'riss', (0, 0.04, 0.36), 0.2, 0.24, 0.18, 6, 0.012, oben=0.2)
-
-
-def v_leerenseher(f):
-    f.fetzen('leere_hell', (0, 0, 0.92), 0.2, 0.2, 0.92, 9, 0.18, spreiz=14, farbe2='leere')
-    for i in range(4):                                                                       # Chitinringe am Leib
-        f.zyl('chitin', (0, 0, 0.42 + i * 0.12), 0.13 + i * 0.012, 0.025, seg=12)
-    f.paar(f.klauen, 'chitin', (0.33, -0.2, 0.52), (0, -0.4, -1), n=3, laenge=0.06, r=0.01, knochen='arm.X')
-    flecken(f, 'riss', (0, -0.04, 1.14), 0.17, 0.17, 0.2, 6, 0.012, knochen='head', oben=0.0)
-    for i in range(3):                                                                       # kreisende Splitter
-        a = i / 3 * math.tau
-        f.kegel('riss', (math.cos(a) * 0.3, math.sin(a) * 0.3, 1.0 + i * 0.08), 0.02, 0.07, dreh=(30, 0, i * 50), seg=4)
-
-
-def v_nichtswandler(f):
-    f.schuppen('chitin', (0, 0.06, 0), 0.4, 0.36, 1.05, 3, 10, 0.12, von=100, bis=260, kipp=30)
-    f.paar(f.schuppen, 'chitin', (0.44, 0, 0), 0.18, 0.18, 1.25, 2, 5, 0.08, knochen='arm.X', von=-90, bis=90, kipp=25)
-    f.zahnreihe('chitin', (0, 0.36, 1.3), (0, 0.38, 0.75), 6, 0.025, 0.12, richtung=(0, 1, 0.4))     # Rückenstacheln
-    flecken(f, 'riss', (0, 0.06, 0.92), 0.4, 0.36, 0.42, 10, 0.015, oben=-0.3)
-    f.paar(f.klauen, 'chitin', (0.2, -0.24, 0.03), (0.2, -1, -0.1), n=3, laenge=0.06, r=0.016, spreiz=30, knochen='leg.X')
-    f.paar(f.zyl, 'chitin', (0.2, 0, 0.42), 0.13, 0.08, knochen='leg.X', seg=8)
-    f.zahnreihe('zahn', (-0.06, -0.33, 1.28), (0.06, -0.33, 1.28), 4, 0.01, 0.04, richtung=(0, 0, -1))
-
-
-def v_leerenschwinge(f):
-    for k in range(3):                                                                       # Flossenstrahlen
-        f.paar(f.bogen, 'chitin', (0.12, -0.04 + k * 0.08, 0.31), (1, -0.1 + k * 0.25, 0), 0.62 - k * 0.12, 0.007,
-               krumm=(0, 0.06, -0.02), knochen='arm.X', seg=4)
-    flecken(f, 'stern', (0, 0.02, 0.3), 0.16, 0.3, 0.07, 8, 0.01, oben=0.3)
-    f.zahnreihe('chitin', (0, -0.2, 0.36), (0, 0.4, 0.33), 7, 0.01, 0.04, richtung=(0, 0, 1))
-    f.paar(f.kugel, 'riss', (0.6, 0.06, 0.32), (0.02, 0.02, 0.012), knochen='arm.X')
-
-
-def v_riftrufer(f):
-    f.fetzen('leere_hell', (0, 0, 0.08), 0.25, 0.25, 0.1, 12, 0.1, spreiz=4, farbe2='leere')
-    f.gurt('chitin', (0, 0, 0.74), 0.15, 0.15, 0.03, schnalle='riss')
-    f.fetzen('chitin', (0, 0, 1.0), 0.24, 0.2, 1.0, 10, 0.06, spreiz=30)
-    f.paar(f.klauen, 'chitin', (0.2, -0.33, 0.79), (-0.3, -0.6, -0.3), n=4, laenge=0.05, r=0.008, knochen='hand.X')
-    for i in range(6):                                                                       # Funken aus dem Riss
-        a = i / 6 * math.tau
-        f.kugel('stern' if i % 2 else 'riss', (math.cos(a) * 0.08, -0.36, 0.8 + math.sin(a) * 0.22), (0.012,) * 3, stufe=1)
-    f.zahnreihe('riss', (-0.05, -0.18, 1.08), (0.05, -0.18, 1.08), 3, 0.008, 0.04, richtung=(0, 0, -1), knochen='head')
-
-
-def v_leerenhueter(f):
-    f.nieten('leere_hell', (0, 0, 0), 0.46, 0.46, 1.36, 12, r=0.016, von=-90, bis=90)
-    f.schuppen('chitin', (0, 0, 0), 0.31, 0.28, 0.66, 2, 12, 0.12, kipp=8)
-    f.paar(f.schuppen, 'chitin', (0.5, 0, 0), 0.24, 0.22, 1.32, 2, 6, 0.09, knochen='arm.X', von=-90, bis=90, kipp=25)
-    f.fetzen('leere', (0, 0.12, 1.36), 0.4, 0.3, 1.36, 6, 0.85, von=120, bis=240, spreiz=8, farbe2='leere_hell')
-    f.paar(f.zyl, 'chitin', (0.54, -0.04, 0.88), 0.105, 0.14, knochen='arm.X', seg=10)
-    f.paar(f.klauen, 'chitin', (0.55, -0.1, 0.76), (0, -0.4, -1), n=4, laenge=0.08, r=0.018, knochen='arm.X')
-    f.paar(f.klauen, 'chitin', (0.2, -0.22, 0.02), (0, -1, -0.1), n=3, laenge=0.06, r=0.02, spreiz=28, knochen='leg.X')
-    for w in range(0, 360, 60):                                                              # Schildrand-Splitter
-        a = math.radians(w)
-        f.kegel('riss', (0.62 + math.cos(a) * 0.4, -0.37, 0.96 + math.sin(a) * 0.4), 0.025, 0.08,
-                dreh=(0, 90 - w, 0), knochen='hand.L', seg=4)
-
-
-def v_verschlinger(f):
-    flecken(f, 'leere_hell', (0, 0.1, 0.62), 0.62, 0.56, 0.6, 24, 0.05, oben=-0.4)
-    flecken(f, 'riss', (0, 0.1, 0.62), 0.62, 0.56, 0.6, 14, 0.018, oben=-0.4, seed=17)
-    f.schuppen('chitin', (0, 0.3, 0), 0.5, 0.36, 1.12, 3, 12, 0.14, von=90, bis=270, kipp=30)
-    for i in range(6):                                                                       # Tentakel aus dem Rücken
-        a = (i / 5 - 0.5) * 2.4
-        f.bogen('leere_hell', (math.sin(a) * 0.45, 0.4, 0.9 + math.cos(a) * 0.1), (math.sin(a) * 0.6, 0.6, 0.6), 0.5, 0.05,
-                krumm=(0, 0.15, -0.2), seg=8)
-    for i in range(4):                                                                       # Zungen aus dem Schlund
-        f.bogen('riss', ((i - 1.5) * 0.04, -0.4, 0.5 + i * 0.05), ((i - 1.5) * 0.3, -1, -0.3), 0.18, 0.025, krumm=(0, 0, -0.06), seg=6)
-    f.paar(f.klauen, 'chitin', (0.92, -0.8, 0.28), (0, -1, -0.2), n=3, laenge=0.14, r=0.025, spreiz=30, knochen='hand.X')
-
-
 def v_arenawaechter(f):
     # Muskeln und Narben, Lederriemen, Schuppenrock, Netz über der Schulter
     f.paar(f.kugel, 'haut', (0.13, -0.27, 1.2), (0.13, 0.06, 0.1))                               # Brustmuskeln
@@ -1823,7 +1914,7 @@ def v_haingeist(f):
     for i in range(4):
         a = i / 4 * math.tau + 0.7
         p = (math.cos(a) * 0.32, math.sin(a) * 0.3, 0.45 + (i % 2) * 0.35)
-        f.kugel('geist_hell', p, (0.025,) * 3, stufe=2)
+        f.kugel('geist_hell', p, (0.025,) * 3, stufe=2, wobbel='ganz')
 
 
 def v_pruefling(f):
