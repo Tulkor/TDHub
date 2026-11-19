@@ -9,7 +9,6 @@ var _embers: Array[CPUParticles3D] = []
 var _clock := 0.0
 var _wait := 0.0
 var _lane_skips := 0
-var _pool_material: ShaderMaterial
 
 
 func _ready() -> void:
@@ -35,8 +34,7 @@ func _ready() -> void:
 	for lamp in candidates:
 		var point: Vector3=lamp.pos
 		if not _separated(point,9.0):continue
-		_lantern(builder,point,float(lamp.yaw))
-		fires.append(point+Vector3.UP*2.02)
+		fires.append(_lantern(builder,point,float(lamp.yaw)))
 		street_lamps.append(point)
 	set_meta("street_lantern_positions",street_lamps)
 	for road in game.arena_layout.paths:
@@ -50,8 +48,7 @@ func _ready() -> void:
 				_lane_skips+=1
 				continue
 			if _separated(point, 10.0):
-				fires.append(point + Vector3.UP * 2.0)
-				_lantern(builder, point, atan2(direction.x, direction.z))
+				fires.append(_lantern(builder, point, atan2(direction.x, direction.z)))
 				if (distance/13)%2==0:_clutter(builder, point - direction * 3.0, atan2(direction.x, direction.z), int(distance / 26) % 3)
 	for zone in game.cfg.zones.list:
 		var center: Vector3 = game.zones.center(str(zone.id))
@@ -60,14 +57,17 @@ func _ready() -> void:
 			_brazier(builder, point)
 			fires.append(point + Vector3.UP * 1.4)
 	add_child(builder.commit())
-	_build_pools(street_lamps)
 	var count := 5 if Display.quality == Display.LOW else 14
 	for i in count:
 		var light := OmniLight3D.new()
 		light.light_color = Color("ffb567")
 		light.omni_range = 15.0
 		light.omni_attenuation = 1.3
-		light.shadow_enabled = false
+		# Echte Schatten für die nächsten Laternen (Lukas 2026-11-19): Mast, Häuser und Helden werfen Schatten.
+		light.shadow_enabled = i < (6 if Display.quality == Display.HIGH else 3) and Display.quality != Display.LOW
+		light.shadow_bias = .04
+		light.shadow_normal_bias = 1.0
+		light.light_size = .12
 		add_child(light)
 		_lamps.append(light)
 		if Display.quality != Display.LOW:
@@ -81,33 +81,6 @@ func _ready() -> void:
 	set_meta("light_budget", count)
 
 
-## Jede Laterne wirft nachts einen schwachen warmen Schein auf den Boden; ein MultiMesh, keine Lichtquellen.
-func _build_pools(street_lamps: Array) -> void:
-	_pool_material=ShaderMaterial.new()
-	_pool_material.shader=preload("res://assets/shaders/hd_lamp_pool.gdshader")
-	var quad := QuadMesh.new()
-	quad.size=Vector2(10,10)
-	quad.orientation=PlaneMesh.FACE_Y
-	var mm := MultiMesh.new()
-	mm.transform_format=MultiMesh.TRANSFORM_3D
-	mm.mesh=quad
-	var spots: Array=[]
-	for at: Vector3 in fires:
-		if at.y-HdArenaMountains.ground_height(game.arena_layout,at)>1.6:spots.append(at)
-	mm.instance_count=spots.size()
-	for i in spots.size():
-		var at: Vector3=spots[i]
-		at.y=HdArenaMountains.ground_height(game.arena_layout,at)+.07
-		mm.set_instance_transform(i,Transform3D(Basis(),at))
-	var node := MultiMeshInstance3D.new()
-	node.name="LampPools"
-	node.multimesh=mm
-	node.material_override=_pool_material
-	node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(node)
-	set_meta("lamp_pools",spots.size())
-
-
 func _separated(point: Vector3, radius: float) -> bool:
 	for existing in fires:
 		if Vector2(existing.x-point.x, existing.z-point.z).length() < radius: return false
@@ -119,9 +92,6 @@ func _process(dt: float) -> void:
 	_wait -= dt
 	if _wait > 0: return
 	_wait = .16
-	if _pool_material:
-		var dark: float = game.day_cycle.night_amount() if game.day_cycle != null else 1.0
-		_pool_material.set_shader_parameter("strength",.02+.17*dark)
 	var actor = game.get("hero")
 	if not is_instance_valid(actor): return
 	var nearby := fires.duplicate()
@@ -140,7 +110,9 @@ func _process(dt: float) -> void:
 			_embers[i].emitting = true
 
 
-static func _lantern(b: HdGothic, at: Vector3, yaw: float) -> void:
+## Gibt den Lichtpunkt zurück: knapp unter dem Laternenkopf, damit Mast und Ausleger echte Schatten werfen
+## und das Gehäuse das Licht nicht selbst verdeckt.
+static func _lantern(b: HdGothic, at: Vector3, yaw: float) -> Vector3:
 	b.add("prism", HdGothic.stone(), Vector3(.38,.25,.38), at + Vector3.UP*.125)
 	b.add("prism", HdGothic.iron(), Vector3(.07,2.15,.07), at + Vector3.UP*1.2)
 	b.add("box", HdGothic.iron(), Vector3(.72,.075,.08), at + Vector3.UP*2.3, yaw)
@@ -151,6 +123,7 @@ static func _lantern(b: HdGothic, at: Vector3, yaw: float) -> void:
 			b.add("box", HdGothic.iron(), Vector3(.035,.44,.035), p + Vector3(x*.13,0,z*.13))
 	b.add("pyramid", HdGothic.iron(), Vector3(.26,.22,.26), p + Vector3.UP*.32)
 	b.add("box", HdGothic.brass(), Vector3(.32,.06,.32), p - Vector3.UP*.23)
+	return p - Vector3.UP*.34
 
 
 static func _brazier(b: HdGothic, at: Vector3) -> void:
