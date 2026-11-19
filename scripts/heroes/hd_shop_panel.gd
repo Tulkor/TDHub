@@ -1,6 +1,6 @@
 class_name HdShopUi
 extends Control
-## Wirtschafts-Oberfläche von Bollwerk im Arcade-Stil (UiTheme), Teil von HdHud:
+## Wirtschafts-Oberfläche von Bollwerk in Eisenliturgie (UiTheme), Teil von HdHud:
 ## - Inventarleiste unten rechts: Gold, Holz, 6 Heldenplätze (gemeinsames Inventar InvSlot: ziehen =
 ##   tauschen, Klick auf Trank = benutzen), Knopf Shop (B).
 ## - Straßenleiste oben links: aktive Straßen mit Vorwerk/Innentor und Gegnerzahl, Teleport-Fortschritt.
@@ -28,6 +28,10 @@ var _list: VBoxContainer
 var _detail: VBoxContainer
 var _note: Label
 var _sig := ""
+var _resource_panel: PanelContainer
+var _inventory_panel: PanelContainer
+var _roads_panel: PanelContainer
+var _clock: Label
 
 
 func _init(g) -> void:
@@ -63,19 +67,21 @@ func _label(text: String, parent: Node, size := 14, color := UiTheme.TEXT, bold 
 
 func _build_bar() -> void:
 	var p := _panel(self, 10)
-	p.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	p.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	p.offset_right = -14
-	p.offset_bottom = -14
+	_inventory_panel = p
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
+	UiTheme.caption("Inventar", v)
+	_resource_panel = _panel(self, 9)
+	var resources := VBoxContainer.new()
+	resources.add_theme_constant_override("separation", 5)
+	_resource_panel.add_child(resources)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
-	v.add_child(row)
-	_gold = _label("", row, 16, UiTheme.COIN, true)
-	_wood = _label("", row, 16, UiTheme.HAVE, true)
+	resources.add_child(row)
+	_gold = _label("", row, 14, UiTheme.COIN, true)
+	_wood = _label("", row, 14, UiTheme.HAVE, true)
+	_clock = _label("", resources, 12, UiTheme.MUTED)
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 4)
@@ -95,6 +101,7 @@ func _build_bar() -> void:
 
 func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 	for c in s.get_children():
+		if c.has_meta("bollwerk_metal_layer"):continue
 		c.queue_free()
 	s.icon_node = null
 	s.texture = null
@@ -109,7 +116,7 @@ func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 		s.tooltip_text = ""
 		s.queue_redraw()
 		return
-	s.show_abbr(tr(str(shop.item(entry.id).name)), shop.tier_color(entry.id))
+	s.show_item(preload("res://scripts/heroes/hd_item_icons.gd").texture(str(entry.id)), shop.tier_color(entry.id),shop.item(entry.id).get("consumable",false))
 	s.consumable = shop.consumable(entry.id)
 	if shop.item(entry.id).has("stack"):
 		s.set_count(str(int(entry.n)))
@@ -147,7 +154,8 @@ func _say(why: String) -> void:
 
 func _build_roads() -> void:
 	var p := _panel(self, 8)
-	p.position = Vector2(12, 92)
+	_roads_panel = p
+	p.position = Vector2(16, 190)
 	_roads = VBoxContainer.new()
 	_roads.add_theme_constant_override("separation", 2)
 	p.add_child(_roads)
@@ -155,6 +163,8 @@ func _build_roads() -> void:
 	for r in game.roads:
 		_road_rows.append({"road": r, "label": _label("", _roads, 12, UiTheme.TEXT)})
 	_tp = _label("", _roads, 12, UiTheme.PURPLE_LIGHT, true)
+	_tp.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tp.custom_minimum_size.x = 228
 
 
 func _gate_text(g) -> String:
@@ -166,7 +176,7 @@ func _gate_text(g) -> String:
 
 
 func _update_roads() -> void:
-	if _road_rows.size() != game.roads.size():
+	if _road_rows.map(func(row): return row.road) != game.roads:
 		for row in _road_rows:
 			row.label.queue_free()
 		_road_rows.clear()
@@ -184,6 +194,10 @@ func _update_roads() -> void:
 		var hurt: bool = r.gate("vorwerk").destroyed
 		row.label.text = tr("%s · Vorwerk %s · Innentor %s · %d Gegner") % [tr(r.name), _gate_text(r.gate("vorwerk")),
 			_gate_text(r.gate("innentor")), n]
+		row.label.tooltip_text = row.label.text
+		row.label.text = "%s  ·  %s / %s  ·  %d" % [tr(r.name), _gate_text(r.gate("vorwerk")), _gate_text(r.gate("innentor")), n]
+		row.label.clip_text = true
+		row.label.add_theme_font_size_override("font_size", 11)
 		row.label.add_theme_color_override("font_color", UiTheme.MISSING if hurt else (UiTheme.GOLD if n > 0 else UiTheme.TEXT))
 	if not game.tp_stone.is_empty():
 		var hold := float(game.cfg.arena.teleport.get("hold", 0.8))
@@ -195,6 +209,21 @@ func _update_roads() -> void:
 		_tp.text = tr("Teleport %s %d %%") % [dest, roundi(clampf(game.tp_hold / hold, 0, 1) * 100.0)]
 	else:
 		_tp.text = ""
+	_tp.visible = _tp.text != ""
+
+
+func fit_layout(area: Vector2) -> void:
+	if _inventory_panel == null:
+		return
+	var inventory_width := 188.0
+	_inventory_panel.size = Vector2(inventory_width, 0)
+	_inventory_panel.position = Vector2(area.x - inventory_width - 16, area.y - _inventory_panel.get_combined_minimum_size().y - 39)
+	_resource_panel.size = Vector2(256, 0)
+	_resource_panel.position = Vector2(area.x - 272, 68)
+	_roads_panel.size = Vector2(270, 0)
+	_roads_panel.position = Vector2(16, 190)
+	_window.offset_top = 190
+	_window.offset_bottom = -190
 
 
 # ---------------------------------------------------------------- Shop-Fenster
@@ -337,6 +366,13 @@ func _item_row(id: String) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
+	var icon := TextureRect.new()
+	icon.texture = preload("res://scripts/heroes/hd_item_icons.gd").texture(id)
+	icon.custom_minimum_size = Vector2(44,44)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(icon)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 0)
@@ -449,12 +485,14 @@ func _fill_gates() -> void:
 func refresh() -> void:
 	_gold.text = tr("%d Gold") % shop.gold
 	_wood.text = tr("%d Holz") % shop.wood
+	var hour: float = game.time_of_day()
+	_clock.text = "%02d:%02d · %s" % [int(hour), int(fmod(hour, 1.0) * 60), tr("Nacht") if game.is_night() else tr("Tag")]
 	_where.text = tr("In der Feste") if shop.in_fortress() else tr("Unterwegs: Käufe ins Lager")
 	for i in _inv_slots.size():
 		_paint(_inv_slots[i], shop.inv[i], "hero", i)
 	for i in _stash_slots.size():
 		_paint(_stash_slots[i], shop.stash[i], "stash", i)
 	_update_roads()
-	_roads.get_parent().visible = not _window.visible and not game.final.active
+	_roads.get_parent().visible = not _window.visible and not game.final.active and not game.event_arena.active
 	if _window.visible:
 		_rebuild()

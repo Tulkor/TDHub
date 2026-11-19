@@ -72,6 +72,11 @@ func allowed(d: Dictionary) -> bool:
 
 
 func start(id: String) -> void:
+	if game.event_arena.active:
+		if busy() and not (str(active.get("id", "")) == "gefangener" and active.has("ally")):
+			return
+		game.event_arena.leave()
+	game.event_arena.enter()
 	last_id = id
 	history.append([game.wave, id])
 	var d := def(id)
@@ -196,7 +201,7 @@ func _start_merchant(d: Dictionary) -> void:
 
 func _start_caravan(d: Dictionary) -> void:
 	var b: Array = game.bounds()
-	var z := 36.0 if game.rng.randf() < 0.5 else -36.0
+	var z := 12.0 if game.rng.randf() < 0.5 else -12.0
 	var x0 := float(b[0]) + 4.0
 	var x1 := float(b[2]) - 4.0
 	if game.rng.randf() < 0.5:
@@ -206,7 +211,7 @@ func _start_caravan(d: Dictionary) -> void:
 	var c := HdAlly.new()
 	var hp: float = float(d.hp) * (1.0 + 0.06 * game.wave)
 	c.setup_ally(game, {"name": d.name, "hp": hp, "armor": 3, "radius": 1.3, "speed": float(d.speed), "range": 0, "damage": 0, "interval": 99}, "caravan", Vector3(x0, 0, z))
-	c.route = [Vector3(x0 * 0.5, 0, z), Vector3(0, 0, z), Vector3(x1 * 0.5, 0, z), Vector3(x1, 0, z)]
+	c.route = [Vector3(lerpf(x0, x1, 0.25), 0, z), Vector3(lerpf(x0, x1, 0.5), 0, z), Vector3(lerpf(x0, x1, 0.75), 0, z), Vector3(x1, 0, z)]
 	game.add_child(c)
 	game.buildings.append(c)
 	active = {"id": "karawane", "ally": c, "raid_t": 4.0, "def": d}
@@ -271,6 +276,8 @@ func _start_prisoner(d: Dictionary) -> void:
 	var r: HdRoad = game.roads[game.rng.randi() % game.roads.size()]
 	var s: float = r.length * 0.3
 	var p: Vector3 = r.point(s) + r.side(s) * 9.0
+	if game.event_arena.active:
+		p = game.event_arena.point()
 	p = game.free_point(p, 1.5)
 	var cage := Node3D.new()
 	cage.position = p
@@ -343,6 +350,8 @@ func _end_prisoner(text: String) -> void:
 
 ## Zeile für die Seitenleiste ("" = nichts).
 func status() -> String:
+	if game.coop and not game.coop.host:
+		return game.coop.event_status
 	var card := kinds.card()
 	if not card.is_empty():
 		return "%s: %s" % [card.title, card.line]
@@ -357,6 +366,8 @@ func status() -> String:
 			if active.has("ally"):
 				return tr("Befreite kämpft bis Welle %d") % int(active.until)
 			if guards_left() > 0:
+				if game.event_arena.active:
+					return tr("Gefangener im Ereignisgebiet: %d Wachen") % guards_left()
 				return tr("Gefangener an der %s: %d Wachen") % [tr(game.nearest_road(active.pos).name), guards_left()]
 			return tr("Gefangener: am Käfig stehen, um ihn zu befreien")
 	if not game.blessing.is_empty():

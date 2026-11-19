@@ -27,12 +27,12 @@ func setup_ally(g, d: Dictionary, k: String, at: Vector3) -> void:
 	speed = float(d.get("speed", 2.4))
 	position = at
 	if kind == "caravan":
-		var wood := HdDev.mat(Color("8a5a2a"), 0.5)
+		var wood := HdDev.surface("holz", Color("8a5a2a"), 0.5)
 		_meshes.append(HdDev.box(Vector3(1.6, 1.0, 2.4), wood, Vector3(0, 0.9, 0)))
 		_meshes.append(HdDev.box(Vector3(1.2, 0.7, 1.4), HdDev.mat(UiTheme.COIN, 0.5, 0.9), Vector3(0, 1.75, -0.2)))
 		for sx in [-0.85, 0.85]:
 			for sz in [-0.8, 0.8]:
-				_meshes.append(HdDev.cyl(0.35, 0.35, 0.15, HdDev.mat(Color("3a2a1a"), 0.5), Vector3(sx, 0.35, sz), 10))
+				_meshes.append(HdDev.cyl(0.35, 0.35, 0.15, HdDev.surface("holz", Color("3a2a1a"), 0.5), Vector3(sx, 0.35, sz), 10))
 	else:
 		_meshes.append(HdDev.cyl(0.5, 0.6, 1.5, HdDev.mat(Color("5aa0e0"), 0.5), Vector3(0, 0.75, 0)))
 		_meshes.append(HdDev.sphere(0.35, HdDev.mat(Color("e0c8a0"), 0.5), Vector3(0, 1.75, 0)))

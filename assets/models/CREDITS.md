@@ -175,6 +175,7 @@ und `steinschleuder` (Randgruppen TD), `buehne` (Randgruppen Bühnennebel, darau
 
 ## Heldenmodelle `heroes/` (eigene, CC0, 2026-11-07)
 Torvik, Unrat, Vesna, Zix für Bollwerk: im Projekt gebaut mit `tools/modelle/helden_bau.py` (Blender), keine fremden Vorlagen.
+Erweiterter Kader (2026-11-15): Brennholt, Mira, Grauhirte, Sirra, Kaspar, Yuna, Orrin, Ilsabet, Tamo, Albe, Fenn, Ralda, Varg, Lior, Krähenfrau, Bruno, Tessa, Totengräber, Ada und Sorek. Eigene CC0-Geometrie aus `tools/modelle/kader_bau.py`, Blender 5.3, gemeinsames Humanoid-Rig und Fluid-Pass; keine fremden Modelle oder zusätzlichen Plugins.
 
 ## Bezirk „Überwuchert“ (2026-11-08)
 

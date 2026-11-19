@@ -16,6 +16,7 @@ var destroyed := false
 var gate_kind := ""
 var road  ## HdRoad
 var _meshes: Array = []
+var _ruin: MeshInstance3D      ## Trümmer des gefallenen Torwerks
 var boost_until := 0.0         ## Hochdosis: mehr Schaden, weniger erlittener Schaden
 var shield := 0.0
 var shield_until := 0.0
@@ -34,17 +35,20 @@ func setup(g, d: Dictionary, r = null) -> void:
 	radius = float(d.radius)
 	if r != null:
 		var s: float = r.length * float(d.at)
-		position = r.point(s) + r.side(s) * float(d.get("side", 1)) * (float(g.cfg.arena.road_width) * 0.5 + radius + 0.8)
+		position = r.point(s) + r.side(s) * float(d.get("side", 1)) * r.gate_side * (float(g.cfg.arena.road_width) * 0.5 + radius + 0.8)
 	else:
 		var p: Array = d.pos
 		position = Vector3(float(p[0]), 0, float(p[1]))
-	var stone := HdDev.mat(Color("8d8f96"), 0.5)
 	var h := 3.2 if gate_kind == "vorwerk" else 4.2
-	_meshes.append(HdDev.cyl(radius * 0.8, radius, h, stone, Vector3(0, h * 0.5, 0), 8))
-	_meshes.append(HdDev.cyl(radius * 0.95, radius * 0.95, 0.5, HdDev.mat(Color("6d6f76"), 0.5), Vector3(0, h + 0.25, 0), 8))
-	_meshes.append(HdDev.box(Vector3(0.25, 1.2, 0.25), HdDev.mat(Color("5a3a22"), 0.5), Vector3(0, h + 1.0, 0)))
-	_meshes.append(HdDev.box(Vector3(0.9, 0.55, 0.05), HdDev.mat(UiTheme.CYAN if gate_kind == "vorwerk" else UiTheme.COIN, 0.5, 0.8), Vector3(0.5, h + 1.3, 0)))
+	HdTerrain.patch(self, Vector3.ZERO, radius + 2.8)
+	_meshes = HdGothic.gate_tower(radius, h, gate_kind != "vorwerk", UiTheme.CYAN if gate_kind == "vorwerk" else UiTheme.COIN)
+	_ruin = HdGothic.gate_ruin(radius)
+	_ruin.visible = false
+	add_child(_ruin)
+	# Die Fahne zeigt zur Straße.
+	var toward: Vector3 = (r.point(r.length * float(d.at)) - position) if r != null else Vector3.BACK
 	for m in _meshes:
+		m.rotation.y = atan2(toward.x, toward.z)
 		add_child(m)
 
 
@@ -67,7 +71,8 @@ func boosted() -> bool:
 
 ## Schadensfaktor eigener Angriffe (Hochdosis +50 %).
 func out_mult() -> float:
-	return 1.5 if boosted() else 1.0
+	var exploration_bonus: float = game.exploration.tower_multiplier() if game.exploration != null and road != null else 1.0
+	return (1.5 if boosted() else 1.0) * exploration_bonus
 
 
 ## Eingehender Schaden nach Hochdosis und Schild (Rüstung rechnet HdGame).
@@ -115,6 +120,11 @@ func step(dt: float) -> void:
 
 func destroy() -> void:
 	destroyed = true
+	if _ruin != null:
+		for c in _meshes:
+			c.visible = false
+		_ruin.visible = true
+		return
 	for c in _meshes:
 		c.set_meta("mat", c.material_override)
 		c.material_override = HdDev.mat(Color("3a3a3e"), 0.5)
@@ -126,7 +136,10 @@ func rebuild(hp_share: float) -> void:
 	destroyed = false
 	hp = max_hp * clampf(hp_share, 0.05, 1.0)
 	cd = 0.5
+	if _ruin != null:
+		_ruin.visible = false
 	for c in _meshes:
+		c.visible = true
 		if c.has_meta("mat"):
 			c.material_override = c.get_meta("mat")
 	scale = Vector3.ONE

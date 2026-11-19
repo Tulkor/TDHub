@@ -1,5 +1,9 @@
 .godot/
 *.import
+!assets/models/heroes/torvik.glb.import
+!assets/models/heroes/unrat.glb.import
+!assets/models/heroes/vesna.glb.import
+!assets/models/heroes/*.glb.import
 export/
 # Beim Import aus den .glb-Modellen erzeugte Texturen
 assets/models/**/*_texture_*.png

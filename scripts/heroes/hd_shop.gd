@@ -227,9 +227,14 @@ func _changed() -> void:
 # ---------------------------------------------------------------- Befehle
 
 func act(cmd: Dictionary) -> String:
+	if game.coop and not game.coop.host:
+		game.coop.command({"kind":"shop", "cmd":cmd})
+		return ""
 	if game.state != "play" and game.state != "setup":
 		return tr("Das Spiel ist vorbei")
 	match str(cmd.get("kind", "")):
+		"explore":
+			return game.exploration.act(cmd)
 		"buy":
 			return buy(str(cmd.id))
 		"craft":
@@ -345,6 +350,8 @@ func missing(id: String) -> Array:
 ## Gold für das Rezept, mit buy_missing auch für fehlende Bauteile (die selbst Rezepte sein können).
 func craft_cost(id: String, buy_missing := false) -> int:
 	var c := int(item(id).get("price", 0))
+	if str(game.hero.def.get("passive_kind", "")) == "craft":
+		c = ceili(c * .9)
 	if buy_missing:
 		for m in missing(id):
 			c += total_cost(m)

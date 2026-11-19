@@ -112,6 +112,13 @@
 			"eigen": [],
 			"haken": ["_on_click", "_update_hover", "_box_select", "select", "_select", "set_user_paused", "_on_pause_toggled", "paused_input"]
 		},
+		"effect_script": {
+			"titel": "Skriptbare Item- und Tower-Effekte",
+			"klasse": "EffectScript",
+			"etappe": 0,
+			"eigen": [],
+			"haken": ["effect_script_action"]
+		},
 		"visuals": {
 			"titel": "Gemeinsame Shader und visuelle Effekte",
 			"klasse": "VisualFx",

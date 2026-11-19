@@ -153,15 +153,13 @@ func _add_walks(walks: Array[Vector2]) -> void:
 	var block := 4.0 * Board3D.CELL
 	var slab := BoxMesh.new()
 	slab.size = Vector3(block, CURB_HEIGHT, block)
-	var walk := StandardMaterial3D.new()
-	walk.albedo_texture = load("res://assets/textures/ground/cobble.jpg")
-	walk.normal_enabled = true
-	walk.normal_texture = load("res://assets/textures/ground/cobble_normal.jpg")
-	walk.uv1_triplanar = true
-	walk.uv1_world_triplanar = true
-	walk.uv1_scale = Vector3.ONE * 0.6
-	walk.albedo_color = Color(0.92, 0.9, 0.86)
-	walk.roughness = 0.9
+	var walk := ShaderMaterial.new()
+	walk.shader = load("res://assets/shaders/ground_surface.gdshader")
+	walk.set_shader_parameter("albedo_tex", load("res://assets/textures/ground/cobble.jpg"))
+	walk.set_shader_parameter("normal_tex", load("res://assets/textures/ground/cobble_normal.jpg"))
+	walk.set_shader_parameter("specular_tex", load("res://assets/textures/ground/cobble_specular.png"))
+	walk.set_shader_parameter("texture_scale", 0.6)
+	walk.set_shader_parameter("tint", Color(0.92, 0.9, 0.86))
 	slab.material = walk
 	_add_flat(slab, walks, CURB_HEIGHT / 2.0)
 	# Bordstein: heller Rand um die Platte
@@ -240,6 +238,10 @@ func _add_soil(at: Array[Vector2]) -> void:
 	mat.shader = load(SOIL_SHADER)
 	mat.set_shader_parameter("dirt", load("res://assets/textures/ground/dirt.jpg"))
 	mat.set_shader_parameter("grass", load("res://assets/textures/ground/grass_a.jpg"))
+	mat.set_shader_parameter("dirt_normal", load("res://assets/textures/ground/dirt_normal.jpg"))
+	mat.set_shader_parameter("grass_normal", load("res://assets/textures/ground/grass_a_normal.jpg"))
+	mat.set_shader_parameter("dirt_specular", load("res://assets/textures/ground/dirt_specular.png"))
+	mat.set_shader_parameter("grass_specular", load("res://assets/textures/ground/grass_a_specular.png"))
 	quad.material = mat
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D

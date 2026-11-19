@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+<defs><linearGradient id="leather"><stop stop-color="#8e6548"/><stop offset="1" stop-color="#302727"/></linearGradient></defs>
+<path d="M23 20 57 17 53 65 65 80 62 100 15 104 12 90 27 70Z" fill="#151a22" stroke="#0a1018" stroke-width="7"/>
+<path d="M61 16 96 20 89 73 114 87 113 104 66 104 59 90 68 66Z" fill="url(#leather)" stroke="#171b22" stroke-width="7" stroke-linejoin="round"/>
+<path d="M23 20 57 17 53 65 65 80 62 100 15 104 12 90 27 70Z" fill="url(#leather)" stroke="#b69a65" stroke-width="2"/>
+<path d="M61 16 96 20 89 73 114 87 113 104 66 104 59 90 68 66Z" fill="none" stroke="#c4a56c" stroke-width="2"/>
+<path d="m23 30 33-3m9 1 29 4M27 55l26-3m15 2 24 3M15 97l47-3m4 3 46 1" fill="none" stroke="#c4a56c" stroke-width="4"/>
+<path d="m34 41 11-1-1 10-11 1Zm41 1 11 1-1 10-11-1Z" fill="#292b32" stroke="#d0b47b" stroke-width="3"/>
+</svg>

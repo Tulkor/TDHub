@@ -11,7 +11,7 @@ const SHOT := Color("7ad8c8")
 var ammo := 8
 var reload_t := 0.0
 var link: Dictionary = {}     ## Aderlass {enemy, until}
-var capsules: Array = []      ## {target, until, node}
+var capsules: Array = []      ## {target, until}; die Kapsel zeichnet HdFx.hold
 
 
 func _build_body() -> void:
@@ -48,9 +48,11 @@ func _ranged_shot(dir: Vector3, target) -> void:
 		if b.hp >= b.max_hp:
 			return false
 		game.heal_target(b, heal_amt)
+		game.fx.play("heal", b.position, Vector3.FORWARD, 1.0, UiTheme.HAVE)
 		return true
 	game.shoot(position + dir * (radius + 0.2), dir, float(at.speed), float(at.range), float(at.width), dmg,
-		{"color": SHOT, "size": 0.18, "hit": on_hit, "ally": on_ally})
+		{"color": SHOT, "size": 0.18, "hit": on_hit, "ally": on_ally, "look": "dart"})
+	game.fx.play("muzzle", position + dir * (radius + 0.5) + Vector3(0, 1.2, 0), dir, 1.0, SHOT)
 	ammo -= 1
 	if ammo <= 0:
 		reload_t = float(at.reload)
@@ -66,6 +68,8 @@ func _kit_step(dt: float, now: float) -> void:
 		reload_t = float(def.attack.reload)
 	_step_link(dt, now)
 	_step_capsules(now)
+	if has_buff("hochdosis") and alive():
+		game.fx.hold("dose:%d" % get_instance_id(), "aura", position, 1.0, UiTheme.GOLD)
 
 
 func _step_link(dt: float, now: float) -> void:
@@ -78,9 +82,9 @@ func _step_link(dt: float, now: float) -> void:
 		link = {}
 		return
 	var amt := float(a.dps) * float(link.pw) * dt
-	game.hero_hit(e, amt, "q", true)
+	game.hero_hit(e, amt, "drain", true)
 	game.heal_target(self, amt * out_mult(), true)
-	game.fx.beam(position + Vector3(0, 1.2, 0), e.position + Vector3(0, e.height() * 0.6, 0), Color("c02040"), 0.1)
+	game.fx.hold("drain:%d" % get_instance_id(), "drain", e.position + Vector3(0, e.height() * 0.6, 0), 1.0, Color("d0203f"), position + Vector3(0, 1.2, 0))
 
 
 func _step_capsules(now: float) -> void:
@@ -89,20 +93,24 @@ func _step_capsules(now: float) -> void:
 		var c: Dictionary = capsules[i]
 		var t = c.target
 		var gone: bool = not is_instance_valid(t) or not t.alive()
+		var above := Vector3.ZERO
 		if not gone:
-			c.node.position = t.position + Vector3(0, (t.height() if t is HdBuilding else 2.0) + 0.9, 0)
+			above = t.position + Vector3(0, (t.height() if t is HdBuilding else 2.0) + 0.9, 0)
 		if gone:
 			pass
 		elif t.hp < t.max_hp * float(a.threshold):
 			game.heal_target(t, t.max_hp * float(a.heal))
 			t.add_shield(t.max_hp * float(a.shield), float(a.shield_time))
 			game.floater(t.position + Vector3(0, 2.8, 0), tr("Kapsel platzt"), UiTheme.HAVE)
+			game.fx.play("capsule_pop", above, Vector3.FORWARD, 1.0, UiTheme.HAVE)
 		elif now >= float(c.until):
 			game.heal_target(t, t.max_hp * float(a.end_heal))
 			cd[2] *= float(a.refund)
+			game.fx.play("heal", t.position, Vector3.FORWARD, 1.0, UiTheme.HAVE)
 		else:
+			game.fx.hold("capsule:%d" % t.get_instance_id(), "capsule", above, 1.0, UiTheme.HAVE)
 			continue
-		c.node.queue_free()
+		game.fx.release("capsule:%d" % t.get_instance_id() if is_instance_valid(t) else "")
 		capsules.remove_at(i)
 
 
@@ -128,19 +136,21 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 			var dmg := float(a.damage) * pw
 			var on_hit := func(e):
 				game.hero_hit(e, dmg, "w")
+				game.fx.play("stun_hit", e.position + Vector3(0, e.height() * 0.7, 0), dir, 1.0, Color("f2e27a"))
 				if not e.dead:
 					game.stun(e, float(a.stun))
 			game.shoot(position + dir * (radius + 0.2), dir, float(a.speed), float(a.range), float(a.width), dmg,
-				{"color": Color("e0d070"), "size": 0.22, "hit": on_hit})
+				{"color": Color("e0d070"), "size": 0.26, "hit": on_hit, "look": "dart"})
+			game.fx.play("muzzle", position + dir * (radius + 0.5) + Vector3(0, 1.2, 0), dir, 1.5, Color("f2e27a"))
 		2:
 			var t := _ally_at(at, a)
 			for c in capsules:
 				if c.target == t:
 					return false
-			var node := HdDev.sphere(0.25, HdDev.mat(UiTheme.HAVE, 0.5, 1.2))
-			game.add_child(node)
-			capsules.append({"target": t, "until": game.play_time + float(a.time), "node": node})
-			game.fx.tracer(position + Vector3(0, 1.3, 0), t.position + Vector3(0, 1.5, 0), UiTheme.HAVE)
+			capsules.append({"target": t, "until": game.play_time + float(a.time)})
+			if t != self:
+				game.fx.tracer(position + Vector3(0, 1.3, 0), t.position + Vector3(0, 1.5, 0), UiTheme.HAVE)
+			game.fx.play("heal", t.position, Vector3.FORWARD, 1.0, UiTheme.HAVE)
 		3:
 			var t := _ally_at(at, a)
 			game.heal_target(t, t.max_hp * float(a.heal))
@@ -148,15 +158,12 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 				add_buff("hochdosis", {"dmg_out": float(a.dmg_out), "dmg_in": float(a.dmg_in), "speed": float(a.speed)}, float(a.duration))
 			else:
 				t.boost_until = game.play_time + float(a.duration)
-			game.fx.nova(t.position, 2.0, UiTheme.GOLD)
+			game.fx.play("overdose", t.position, Vector3.FORWARD, 1.0, UiTheme.GOLD)
 			game.floater(t.position + Vector3(0, 3.0, 0), tr("Hochdosis"), UiTheme.GOLD)
 	return true
 
 
 func free_kit() -> void:
-	for c in capsules:
-		if is_instance_valid(c.node):
-			c.node.queue_free()
 	capsules.clear()
 	link = {}
 

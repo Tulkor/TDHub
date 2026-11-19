@@ -11,9 +11,8 @@ const MAX_DISTANCE := 90.0
 const EDGE_MARGIN := 6.0
 ## Ab so vielen Pixeln Mausweg gilt ein Rechtsklick als Ziehen und nicht als Klick.
 const DRAG_THRESHOLD := 6.0
-## So weit (Einheiten) darf das Bild über den Kartenrand hinausreichen (Wunsch von Lukas: Kamera auf das
-## Spielfeld und nur minimal außerhalb beschränkt, in allen Modi).
-const VIEW_MARGIN := 3.0
+## Erlaubter Überhang über den Kartenrand in Welteinheiten (Lukas 2026-11-17: etwas mehr Spielraum).
+const VIEW_MARGIN := 8.0
 ## Strahlen am oberen Bildrand mindestens so steil nach unten rechnen: bei flacher Kamera träfen sie den
 ## Boden erst am Horizont (Neigung -20°), der Bereich dahinter zählt nicht.
 const MIN_RAY_DOWN := 0.3
@@ -144,8 +143,9 @@ func _edge_input() -> Vector2:
 
 
 func _clamp_target() -> void:
-	target.x = clampf(target.x, bounds.position.x, bounds.end.x)
-	target.z = clampf(target.z, bounds.position.y, bounds.end.y)
+	var room := bounds.grow(VIEW_MARGIN)
+	target.x = clampf(target.x, room.position.x, room.end.x)
+	target.z = clampf(target.z, room.position.y, room.end.y)
 
 
 func _apply() -> void:

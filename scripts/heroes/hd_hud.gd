@@ -1,6 +1,7 @@
 class_name HdHud
 extends CanvasLayer
-## Oberfläche von Bollwerk im Arcade-Stil (UiTheme): Leiste oben (Welle, Feste, Kills, Früher rufen),
+## Oberfläche von Bollwerk im Stil Eisenliturgie (UiTheme.BOLLWERK): getrennte Goldrahmen für
+## Welle, Feste, Ressourcen, Heldenwerte und Fähigkeiten; kompakter Aufbau bei schmalen Fenstern.
 ## Bossleiste, Heldenleiste unten (Leben, Mana, EP, Fähigkeiten mit Abklingzeit, Ausweichen),
 ## Lebensbalken/Aufladebalken/CC-Stufe über den Einheiten, schwebende Zahlen, Startfenster,
 ## Spielmenü und Endbildschirm. Liest HdGame, Aktionen rufen dessen Befehle.
@@ -19,6 +20,7 @@ var _boss_name: Label
 var _boss_bar: ProgressBar
 var _boss_info: Label
 var _boss_move: Label
+var _imprint_showing := false
 var _name: Label
 var _hp_bar: ProgressBar
 var _hp_label: Label
@@ -35,9 +37,17 @@ var _floaters: Array = []        ## {pos, text, color, t}
 var _tick := 0.0
 var econ: HdShopUi               ## Gold, Inventar, Shop, Straßenleiste
 var side: HdSideUi               ## Ereignisse, Sonderzonen, nächster Kriegsherr (rechts)
+var _vitals_panel: PanelContainer
+var _skills_panel: PanelContainer
+var _wave_panel: PanelContainer
+var _actions_panel: PanelContainer
+var _brand: Label
+var enemy_guide: HdEnemyGuide
+var minimap: Control
 
 
 func _ready() -> void:
+	enemy_guide = HdEnemyGuide.new(game)
 	root = Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -51,6 +61,9 @@ func _ready() -> void:
 	_build_top()
 	_build_boss()
 	_build_hero()
+	minimap = preload("res://scripts/heroes/hd_minimap.gd").new()
+	minimap.game = game
+	root.add_child(minimap)
 	econ = HdShopUi.new(game)
 	root.add_child(econ)
 	side = HdSideUi.new(game)
@@ -62,7 +75,8 @@ func _ready() -> void:
 	_banner.position.y = 120
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	UiTheme.title(_banner, 34)
+	_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiTheme.title(_banner, 28)
 	_banner.modulate.a = 0.0
 	root.add_child(_banner)
 	game.changed.connect(refresh)
@@ -70,6 +84,9 @@ func _ready() -> void:
 	game.floated.connect(_on_float)
 	game.ended.connect(_show_end)
 	_set_play_visible(false)
+	get_viewport().size_changed.connect(_fit_layout)
+	_fit_layout.call_deferred()
+	preload("res://scripts/heroes/hd_ui_metal.gd").install(root)
 
 
 func _panel(parent: Node, pad := 10.0) -> PanelContainer:
@@ -101,39 +118,37 @@ func _bar(parent: Node, fill: Color, h := 12.0) -> ProgressBar:
 # ---------------------------------------------------------------- Aufbau
 
 func _build_top() -> void:
-	var p := _panel(root, 8)
-	p.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	p.offset_left = 12
-	p.offset_right = -12
-	p.offset_top = 10
+	_brand = _label("Bollwerk", root, 25)
+	UiTheme.title(_brand, 25)
+	_brand.position = Vector2(16, 10)
+	_wave_panel = _panel(root, 11)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 7)
+	_wave_panel.add_child(v)
+	_wave = _label("", v, 21, UiTheme.GOLD, true)
+	_wave_bar = _bar(v, UiTheme.GOLD, 5)
+	var values := HBoxContainer.new()
+	values.add_theme_constant_override("separation", 14)
+	v.add_child(values)
+	_lives = _label("", values, 14, UiTheme.HAVE)
+	_kills = _label("", values, 13, UiTheme.MUTED)
+	_actions_panel = _panel(root, 6)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 22)
-	p.add_child(h)
-	var t := Label.new()
-	t.text = "Bollwerk"
-	UiTheme.title(t, 20)
-	h.add_child(t)
-	var wv := VBoxContainer.new()
-	wv.custom_minimum_size.x = 260
-	h.add_child(wv)
-	_wave = _label("", wv, 15, UiTheme.TEXT, true)
-	_wave_bar = _bar(wv, UiTheme.CYAN, 8)
-	_lives = _label("", h, 17, UiTheme.HAVE, true)
-	_kills = _label("", h, 15, UiTheme.TEXT)
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(sp)
+	h.add_theme_constant_override("separation", 7)
+	_actions_panel.add_child(h)
 	_early = UiUtil.button("Früher rufen", h, func(): game.call_early())
 	_pause_button = UiUtil.button("Pause", h, func():
-		game.paused = not game.paused
+		game.set_paused(not game.paused)
 		refresh())
 	UiUtil.button("Menü", h, toggle_menu)
+	for button in h.get_children():
+		button.add_theme_font_size_override("font_size", 13)
 
 
 func _build_boss() -> void:
 	_boss_panel = _panel(root, 8)
 	_boss_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_boss_panel.position.y = 84
+	_boss_panel.position.y = 78
 	_boss_panel.custom_minimum_size.x = 520
 	_boss_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	var v := VBoxContainer.new()
@@ -152,59 +167,136 @@ func _build_boss() -> void:
 
 
 func _build_hero() -> void:
-	var p := _panel(root, 10)
-	p.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	p.offset_bottom = -14
-	p.offset_top = -14
-	p.custom_minimum_size.x = 640
+	_vitals_panel = _panel(root, 12)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 5)
-	p.add_child(v)
-	var row := HBoxContainer.new()
-	v.add_child(row)
-	_name = _label("", row, 15, UiTheme.TEXT, true)
-	_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_status = _label("", row, 13, UiTheme.CYAN, true)
+	v.add_theme_constant_override("separation", 6)
+	_vitals_panel.add_child(v)
+	_name = _label("", v, 15, UiTheme.GOLD, true)
+	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_name.custom_minimum_size.x = 190
 	var hp_row := HBoxContainer.new()
 	hp_row.add_theme_constant_override("separation", 8)
 	v.add_child(hp_row)
-	_hp_bar = _bar(hp_row, UiTheme.HAVE, 16)
+	_hp_bar = _bar(hp_row, UiTheme.HAVE, 10)
 	_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hp_label = _label("", hp_row, 13, UiTheme.TEXT)
-	_hp_label.custom_minimum_size.x = 110
+	_hp_label.custom_minimum_size.x = 82
 	var mp_row := HBoxContainer.new()
 	mp_row.add_theme_constant_override("separation", 8)
 	v.add_child(mp_row)
 	_mana_bar = _bar(mp_row, UiTheme.CYAN, 10)
 	_mana_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_mana_label = _label("", mp_row, 12, UiTheme.DIM)
-	_mana_label.custom_minimum_size.x = 110
-	_xp_bar = _bar(v, UiTheme.PURPLE_LIGHT, 5)
+	_mana_label.custom_minimum_size.x = 82
+	_xp_bar = _bar(v, UiTheme.GOLD, 3)
+	_skills_panel = _panel(root, 11)
+	var skills_v := VBoxContainer.new()
+	skills_v.add_theme_constant_override("separation", 8)
+	_skills_panel.add_child(skills_v)
+	var header := HBoxContainer.new()
+	skills_v.add_child(header)
+	var path := _label("Fähigkeiten", header, 12, UiTheme.GOLD, true)
+	path.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_status = _label("", header, 12, UiTheme.DIM)
 	var slots := HBoxContainer.new()
 	slots.add_theme_constant_override("separation", 8)
-	v.add_child(slots)
+	skills_v.add_child(slots)
 	for i in 5:
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation",2)
+		column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		slots.add_child(column)
+		var banner := PanelContainer.new()
+		banner.add_theme_stylebox_override("panel",HdUiStyle.frame(UiTheme.PANEL,UiTheme.GOLD,3,4))
+		column.add_child(banner)
+		var banner_v := VBoxContainer.new()
+		banner_v.add_theme_constant_override("separation",0)
+		banner.add_child(banner_v)
+		var nm := _label("",banner_v,11,UiTheme.TEXT)
+		nm.clip_text=true
+		nm.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 		var card := PanelContainer.new()
-		card.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER, 0, 2, 6))
-		card.custom_minimum_size = Vector2(116, 62)
+		card.add_theme_stylebox_override("panel", HdUiStyle.skill_frame())
+		card.custom_minimum_size = Vector2(94, 96)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.mouse_filter = Control.MOUSE_FILTER_PASS
-		slots.add_child(card)
+		column.add_child(card)
 		var shade := ColorRect.new()
 		shade.color = Color(0, 0, 0, 0.55)
 		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-		var cv := VBoxContainer.new()
-		cv.add_theme_constant_override("separation", 0)
+		var cv := Control.new()
+		cv.custom_minimum_size=Vector2(78,82)
 		card.add_child(cv)
-		var key := _label("", cv, 13, UiTheme.GOLD, true)
-		var nm := _label("", cv, 12, UiTheme.TEXT)
-		nm.clip_text = true
-		var cdl := _label("", cv, 12, UiTheme.MUTED)
+		var key := _label("",cv,11,UiTheme.GOLD,true)
+		key.position=Vector2(1,0)
+		key.z_index=1
+		var plus: Button = null
+		if i < 4:
+			var slot_index := i
+			plus = UiUtil.button("+", root, func(): game.hero.skills.upgrade(slot_index))
+			HdUiStyle.upgrade_button(plus)
+			plus.z_index = 2
+			card.resized.connect(_position_upgrades.call_deferred)
+			plus.visible = false
+		var glyph := TextureRect.new()
+		glyph.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+		glyph.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		glyph.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		glyph.material=HdUiStyle.icon_metal_material()
+		cv.add_child(glyph)
+		glyph.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var cdl := _label("",banner_v,10,UiTheme.MUTED)
+		cdl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		card.add_child(shade)
-		_slots.append({"panel": card, "key": key, "name": nm, "cd": cdl, "shade": shade})
+		_slots.append({"panel": card, "banner":banner,"key": key, "name": nm, "cd": cdl, "shade": shade, "plus": plus, "glyph": glyph})
+	_skills_panel.minimum_size_changed.connect(_fit_layout.call_deferred)
+
+
+func _fit_layout() -> void:
+	if not is_instance_valid(_skills_panel):
+		return
+	var area := get_viewport().get_visible_rect().size
+	var banner_width := clampf(area.x - 620.0, 400.0, 780.0)
+	_banner.size = Vector2(banner_width, 0)
+	_banner.position = Vector2((area.x - banner_width) * 0.5, 160)
+	var compact := minf(area.x, float(get_window().size.x)) < 1180.0
+	var skills_width := 560.0 if compact else minf(630.0, area.x - 540.0)
+	_wave_panel.position = Vector2(16, 67)
+	_wave_panel.size = Vector2(270, 0)
+	_actions_panel.position = Vector2(area.x - _actions_panel.get_combined_minimum_size().x - 16, 14)
+	_actions_panel.size = _actions_panel.get_combined_minimum_size()
+	_skills_panel.size = Vector2(skills_width, 0)
+	_skills_panel.position = Vector2((area.x - skills_width) * 0.5, area.y - _skills_panel.get_combined_minimum_size().y - 39)
+	_vitals_panel.size = Vector2(235, 0)
+	var vitals_bottom := area.y - 39.0
+	if compact:
+		vitals_bottom = _skills_panel.position.y - 18.0
+	_vitals_panel.position = Vector2(16, vitals_bottom - _vitals_panel.get_combined_minimum_size().y)
+	var boss_width := minf(470.0, area.x - 610.0)
+	_boss_move.custom_minimum_size.x = maxf(200.0, boss_width - 38.0)
+	_boss_panel.custom_minimum_size.x = boss_width
+	_boss_panel.size = Vector2(boss_width, 0)
+	_boss_panel.position = Vector2((area.x - _boss_panel.size.x) * 0.5, 79)
+	_hint.position = Vector2(16, area.y - 22)
+	_hint.size.x = area.x - 32
+	_hint.clip_text = true
+	_hint.add_theme_font_size_override("font_size", 11)
+	if econ:
+		econ.fit_layout(area)
+	if side:
+		side.fit_layout(area)
+	var map_size := 168.0 if compact else 210.0
+	minimap.size = Vector2.ONE * map_size
+	minimap.position = Vector2(16, _vitals_panel.position.y-map_size-12)
+	_position_upgrades.call_deferred()
+
+
+func _position_upgrades() -> void:
+	for slot in _slots:
+		if slot.plus == null:continue
+		slot.plus.size = Vector2(28,28)
+		slot.plus.global_position = Vector2(slot.panel.global_position.x+slot.panel.size.x*.5-14,_skills_panel.global_position.y-34)
 
 
 func _set_play_visible(on: bool) -> void:
@@ -221,9 +313,11 @@ func on_started() -> void:
 	_close_overlay()
 	_set_play_visible(true)
 	refresh()
+	_fit_layout.call_deferred()
 
 
 func _process(dt: float) -> void:
+	enemy_guide.step(dt)
 	if _banner_t > 0.0:
 		_banner_t -= dt
 		_banner.modulate.a = clampf(_banner_t, 0.0, 1.0)
@@ -240,7 +334,7 @@ func _process(dt: float) -> void:
 
 func show_banner(text: String) -> void:
 	_banner.text = text
-	_banner_t = 2.2
+	_banner_t = clampf(float(text.length()) / 22.0, 2.2, 8.0)
 	_banner.modulate.a = 1.0
 
 
@@ -251,11 +345,21 @@ func _on_float(pos: Vector3, text: String, c: Color) -> void:
 
 
 func refresh() -> void:
+	if game.coop and (game.coop.executing or game.coop.context_depth > 0):
+		return
 	if game.state == "setup":
 		return
 	var count: int = game.wave_count()
 	_wave.text = tr("Welle %d / %d") % [game.wave, count]
-	if game.wave < count:
+	_wave.tooltip_text = "%02d:%02d · %s" % [int(game.time_of_day()), int(fmod(game.time_of_day(), 1) * 60), tr("Nacht") if game.is_night() else tr("Tag")]
+	if game.event_arena.active:
+		_wave.text = tr("Wellen pausiert")
+	if game.exploration.active:
+		var seconds := ceili(game.exploration.remaining)
+		_wave.text = tr("Erkundung %02d:%02d") % [seconds / 60, seconds % 60]
+		_wave_bar.max_value = 300.0
+		_wave_bar.value = game.exploration.remaining
+	elif game.wave < count:
 		_wave_bar.max_value = game.wave_len(game.wave)
 		_wave_bar.value = game.wave_len(game.wave) - game.wave_time
 	else:
@@ -264,8 +368,18 @@ func refresh() -> void:
 	_lives.text = tr("Feste %d / %d") % [game.lives, game.max_lives]
 	_kills.text = tr("Kills %d") % game.kills
 	_early.disabled = not game.can_call_early()
+	var early_label := tr("Nächste Welle starten") if game.exploration.active and game.wave < count else (tr("Zum Endgebiet") if game.exploration.active else tr("Früher rufen"))
+	if _early.text != early_label:
+		_early.text = early_label
+		_fit_layout.call_deferred()
+	_early.tooltip_text = tr("Erkundungspause überspringen. Entdeckungen und Rätselstände bleiben erhalten.") if game.exploration.active else ""
 	_pause_button.text = tr("Weiter") if game.paused else tr("Pause")
 	var h: HdHero = game.hero
+	if not game.imprint_choices.is_empty() and not _imprint_showing:
+		_show_imprints()
+	elif game.imprint_choices.is_empty() and _imprint_showing:
+		_imprint_showing = false
+		_close_overlay()
 	_name.text = tr("%s · Stufe %d") % [tr(str(h.def.name)), h.level]
 	_hp_bar.max_value = h.max_hp
 	_hp_bar.value = h.hp
@@ -276,6 +390,8 @@ func refresh() -> void:
 	_xp_bar.max_value = h.xp_needed(h.level)
 	_xp_bar.value = h.xp
 	var st: Array = []
+	if h.skills.points > 0:
+		st.append(tr("Fähigkeitspunkte: %d") % h.skills.points)
 	if h.dead:
 		st.append(tr("Wiederbelebung in %d s") % ceili(h.respawn_t))
 	st.append_array(h.status_lines())
@@ -318,10 +434,13 @@ func _fill_slot(i: int) -> void:
 	var cdv := 0.0
 	var total := 1.0
 	var ready := true
+	var icon_key := "dodge"
 	if i < 4:
 		var a := h.ability(i)
+		icon_key=preload("res://scripts/heroes/hd_ability_icons.gd").key(str(h.def.id),a,i)
 		s.key.text = game.key_name(i)
 		s.name.text = tr(str(a.name))
+		s.name.tooltip_text=s.name.text
 		cdv = h.cd[i]
 		total = float(a.cooldown)
 		if not h.unlocked(i):
@@ -335,7 +454,10 @@ func _fill_slot(i: int) -> void:
 			ready = false
 		else:
 			s.cd.text = tr("%d Mana") % roundi(h.ability_cost(i))
-		s.panel.tooltip_text = "%s\n%s" % [tr(str(a.name)), tr(str(a.get("desc", "")))]
+		s.panel.tooltip_text = h.skills.tooltip(i)
+		s.plus.visible = h.skills.can_upgrade(i) and _skills_panel.visible
+		s.plus.disabled = not h.skills.can_upgrade(i)
+		s.plus.tooltip_text = h.skills.tooltip(i, true) if h.skills.can_upgrade(i) else tr("Höchstrang erreicht oder Fähigkeit noch gesperrt")
 	else:
 		s.key.text = tr("Leertaste")
 		s.name.text = tr("Ausweichen")
@@ -344,8 +466,14 @@ func _fill_slot(i: int) -> void:
 		ready = cdv <= 0.0
 		s.cd.text = "%.1f s" % cdv if cdv > 0.0 else tr("bereit")
 	var selected: bool = i == game.preview_slot
-	s.panel.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2, 6) if selected
-		else UiTheme.box(UiTheme.PANEL_2, UiTheme.GOLD if (i < 4 and h.slot_glow(i)) else UiTheme.BORDER, 0, 2, 6))
+	var highlighted: bool = selected or (i < 4 and h.slot_glow(i))
+	s.panel.add_theme_stylebox_override("panel", HdUiStyle.skill_frame(highlighted))
+	s.name.add_theme_color_override("font_color",UiTheme.TEXT)
+	s.cd.add_theme_color_override("font_color",UiTheme.MUTED)
+	s.glyph.texture=preload("res://scripts/heroes/hd_ability_icons.gd").texture(icon_key)
+	s.glyph.modulate=UiTheme.GOLD_DARK if highlighted else UiTheme.GOLD
+	for field in [s.key]:
+		field.add_theme_color_override("font_color", UiTheme.GOLD_DARK if highlighted else (UiTheme.GOLD if field == s.key else UiTheme.TEXT))
 	s.shade.visible = not ready
 	if cdv > 0.0:
 		s.shade.anchor_top = 1.0 - clampf(cdv / maxf(total, 0.01), 0.0, 1.0)
@@ -359,11 +487,12 @@ func _fill_slot(i: int) -> void:
 func _draw_world() -> void:
 	if game.state == "setup" or game.camera == null:
 		return
+	enemy_guide.draw_on(_world)
 	var cam: Camera3D = game.camera
 	var font := UiTheme.font(true)
 	var now: float = game.play_time
 	for e in game.enemies:
-		if e.dead:
+		if e.dead or game.event_arena.frozen(e):
 			continue
 		var top: Vector3 = e.position + Vector3(0, e.height() + 0.35, 0)
 		if cam.is_position_behind(top):
@@ -422,6 +551,35 @@ func _close_overlay() -> void:
 		_overlay = null
 
 
+func _show_imprints() -> void:
+	_imprint_showing = true
+	var content := _open_overlay(880)
+	_label(tr("Prägung nach Welle %d") % game.wave, content, 24, UiTheme.GOLD, true)
+	_label(tr("Wähle eine Prägung. Ihre Tags bestimmen, welche Fähigkeiten sie verstärkt."), content, 13, UiTheme.TEXT)
+	var cards := HBoxContainer.new()
+	cards.add_theme_constant_override("separation", 12)
+	content.add_child(cards)
+	var stats := {"damage": "Schaden", "protection":"Heilung / Schild", "duration": "Dauer", "range": "Reichweite", "cooldown": "Abklingzeit"}
+	for i in game.imprint_choices.size():
+		var index: int = i
+		var imprint: Dictionary = game.imprint_choices[i]
+		var panel := _panel(cards, 12)
+		panel.custom_minimum_size.x = 265
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 12)
+		panel.add_child(v)
+		var title := _label(tr(str(imprint.name)), v, 19, UiTheme.GOLD, true)
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var description := _label(tr(str(imprint.get("desc", ""))), v, 13, UiTheme.TEXT)
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var tags := _label(game.hero.skills.tag_text(imprint), v, 13, UiTheme.MUTED)
+		tags.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		for key in imprint.mods:
+			_label("%+d %% %s" % [roundi(float(imprint.mods[key]) * 100), tr(str(stats.get(key, key)))], v, 14, UiTheme.TEXT)
+		var pick := UiUtil.button("Prägung wählen", v, func(): game.choose_imprint(index))
+		UiTheme.accent_button(pick, UiTheme.GOLD, UiTheme.GOLD_DARK)
+
+
 func _open_overlay(width := 520.0) -> VBoxContainer:
 	_close_overlay()
 	var dim := ColorRect.new()
@@ -450,8 +608,8 @@ func _choice_row(parent: Node, options: Array, chosen: int, on_pick: Callable) -
 		for k in buttons.size():
 			var b: Button = buttons[k]
 			if k == pick[0]:
-				b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN))
-				b.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN))
+				b.add_theme_stylebox_override("normal", HdUiStyle.frame(UiTheme.GOLD, UiTheme.GOLD, 10.0))
+				b.add_theme_stylebox_override("hover", HdUiStyle.frame(UiTheme.GOLD, HdUiStyle.GOLD_HI, 10.0))
 				b.add_theme_color_override("font_color", UiTheme.BG)
 				b.add_theme_color_override("font_hover_color", UiTheme.BG)
 			else:
@@ -477,7 +635,7 @@ func show_setup() -> void:
 	UiTheme.title(t, 32)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	var d := _label("Halte die Feste Morgenwacht: Gegner kommen in 10 Wellen über die Straßen, Vorwerk und Innentor bremsen sie. Mit Gold kaufst du Items und schmiedest Rezepte, Holz gibt dauerhafte Werte. Farbige Flächen am Boden kündigen Gegnerfähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
+	var d := _label("Halte die Feste Morgenwacht: Gegner kommen in 40 Wellen über bis zu acht Lanes, Vorwerk und Innentor bremsen sie. Mit Gold kaufst du Items und schmiedest Rezepte, Holz gibt dauerhafte Werte. Farbige Flächen am Boden kündigen Gegnerfähigkeiten an, die Füllung zeigt, wann sie auslösen. Ausweichen schlägt Rüstung.", v, 14, UiTheme.DIM)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	UiTheme.caption("Held", v)
 	var names: Array = []
@@ -485,7 +643,14 @@ func show_setup() -> void:
 		names.append(tr(str(game.hero_defs[id].name)))
 	var info_box := VBoxContainer.new()
 	info_box.add_theme_constant_override("separation", 8)
-	_choice_row(v, names, game.hero_list.find(game.hero_id), func(k):
+	var selector := OptionButton.new()
+	selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for k in names.size():
+		var definition: Dictionary = game.hero_defs[game.hero_list[k]]
+		selector.add_item("%s · %s" % [tr(str(definition.get("combat_role", definition.role))), names[k]], k)
+	selector.select(game.hero_list.find(game.hero_id))
+	v.add_child(selector)
+	selector.item_selected.connect(func(k):
 		game.set_hero(str(game.hero_list[k]))
 		game.save_settings()
 		_fill_hero_info(info_box))
@@ -501,14 +666,26 @@ func show_setup() -> void:
 	_choice_row(v, [tr("WASD + Maus"), tr("Maus (wie WC3)")], 0 if game.control == "wasd" else 1, func(k):
 		game.control = "wasd" if k == 0 else "maus"
 		game.save_settings())
-	UiTheme.caption("Straßen", v)
-	_choice_row(v, [tr("2 (wie bei 1–3 Spielern)"), tr("alle 4")], 1 if game.road_choice == 4 else 0, func(k):
-		game.road_choice = 4 if k == 1 else 0
-		game.save_settings())
+	UiTheme.caption("Lanes (mindestens eine)", v)
+	var lane_grid := GridContainer.new()
+	lane_grid.columns = 4
+	v.add_child(lane_grid)
+	for road in game.cfg.arena.roads:
+		var lane_id := str(road.id)
+		var box := CheckBox.new()
+		box.text = tr(str(road.name))
+		box.button_pressed = game.active_road_ids().has(lane_id)
+		lane_grid.add_child(box)
+		box.toggled.connect(func(on):
+			if not game.set_lane_enabled(lane_id, on):
+				box.set_pressed_no_signal(not on))
 	_warn_options(v)
 	var go := UiUtil.button("Start", v, func(): game.start(chosen[0]))
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	go.custom_minimum_size.y = 46
+	if game.coop and not game.coop.host:
+		go.disabled = true
+		go.text = tr("Warte auf den Host")
 	UiUtil.button("Zurück zum Menü", v, func(): game.leave())
 
 
@@ -610,9 +787,9 @@ func toggle_menu() -> void:
 		return
 	if _overlay:
 		_close_overlay()
-		game.paused = false
+		game.set_paused(false)
 		return
-	game.paused = true
+	game.set_paused(true)
 	var v := _open_overlay(460)
 	var t := Label.new()
 	t.text = tr("Pause")
@@ -621,7 +798,7 @@ func toggle_menu() -> void:
 	v.add_child(t)
 	var go := UiUtil.button("Weiterspielen", v, func():
 		_close_overlay()
-		game.paused = false)
+		game.set_paused(false))
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	UiTheme.caption("Steuerung", v)
 	_choice_row(v, [tr("WASD + Maus"), tr("Maus (wie WC3)")], 0 if game.control == "wasd" else 1, func(k):

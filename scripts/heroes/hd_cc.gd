@@ -20,6 +20,18 @@ var _slows: Dictionary = {}   ## Quelle → [Anteil, bis]
 var _armor: Dictionary = {}   ## Quelle → [Menge, bis]
 
 
+func shift_time(seconds: float) -> void:
+	stun_until += seconds
+	_last_end += seconds
+	if _max_since >= 0:
+		_max_since += seconds
+	if immune_until >= 0:
+		immune_until += seconds
+	for effects in [_slows, _armor]:
+		for key in effects:
+			effects[key][1] += seconds
+
+
 func _init(cc_cfg: Dictionary, unit_rank := "normal") -> void:
 	cfg = cc_cfg
 	rank = unit_rank

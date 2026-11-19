@@ -166,6 +166,14 @@ func build(map: MaulMap) -> void:
 				var along := y if vertical else x
 				if along % FLAG_EVERY == 1 and not (x % BLOCK < STREET and y % BLOCK < STREET):
 					_flag(Vector2i(x, y), 90.0 if vertical else 0.0, cornices, flags)
+	var service_paths: Array = []
+	for y in h:
+		for x in w:
+			if used[y*w+x] != 2 or dist[y*w+x] <= GAP: continue
+			var p := Vector3((x+.5)*Board3D.CELL,0,(y+.5)*Board3D.CELL)
+			var along := Vector3.FORWARD if x % BLOCK < STREET else Vector3.RIGHT
+			service_paths.append([p-along*.28,p+along*.28])
+	preload("res://scripts/map/ground_wear.gd").add_paths(self,service_paths,.5,"deco")
 	_walls = _multimesh(walls.size(), true)
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER

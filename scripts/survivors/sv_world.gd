@@ -41,6 +41,13 @@ func build(arena_r: float, seed_ := 4711) -> void:
 	_scatter(7, 9.0, arena_r - 2.0, 0.8, 2.0, false)
 	# größere Inseln mit Bäumen draußen
 	_scatter(26, arena_r + 3.0, ICE_R - 8.0, 2.0, 5.5, true)
+	var tracks: Array = []
+	for k in 8:
+		var angle := TAU*k/8.0
+		var from := Vector3(cos(angle),0,sin(angle))*(_arena_r*.48)
+		var to := Vector3(cos(angle+.18),0,sin(angle+.18))*(_arena_r*.8)
+		tracks.append([from,to])
+	preload("res://scripts/map/ground_wear.gd").add_paths(self,tracks,.8,"snow",func(p):return height_at(p.x,p.z))
 
 
 ## Höhe des Bodens: in der Arena sanft (bis ±0,45), draußen stärker gewellt; am Lochrand flach.
@@ -177,26 +184,37 @@ func _shards() -> void:
 static func ice_material() -> StandardMaterial3D:
 	if _ice_mat:
 		return _ice_mat
-	var px := 512
+	var px := 1024
 	var noise := FastNoiseLite.new()
 	noise.seed = 3
-	noise.frequency = 0.012
+	noise.frequency = 0.018
 	noise.fractal_octaves = 4
 	var crack := FastNoiseLite.new()
 	crack.seed = 9
 	crack.noise_type = FastNoiseLite.TYPE_CELLULAR
 	crack.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_SUB
-	crack.frequency = 0.02
+	crack.frequency = 0.03
+	var variant := FastNoiseLite.new()
+	variant.seed = 23
+	variant.frequency = .021
+	variant.fractal_octaves = 4
+	var macro := FastNoiseLite.new()
+	macro.seed = 71
+	macro.frequency = .003
 	# nahtlos kachelbar, sonst sieht man die Wiederholung als Linie
 	var nimg := noise.get_seamless_image(px, px)
 	nimg.convert(Image.FORMAT_RGBA8)
 	var cimg := crack.get_seamless_image(px, px)
 	cimg.convert(Image.FORMAT_RGBA8)
+	var vimg := variant.get_seamless_image(px,px)
+	var miximg := macro.get_seamless_image(px,px)
 	var alb := Image.create(px, px, false, Image.FORMAT_RGBA8)
 	var rough := Image.create(px, px, false, Image.FORMAT_RGBA8)
+	var bump := Image.create(px, px, false, Image.FORMAT_RGBA8)
 	for y in px:
 		for x in px:
-			var n := nimg.get_pixel(x, y).r * 2.0 - 1.0
+			var blend := smoothstep(.25,.75,miximg.get_pixel(x,y).r)
+			var n := lerpf(nimg.get_pixel(x,y).r,vimg.get_pixel(x,y).r,blend)*2.0-1.0
 			var snow := smoothstep(-0.15, 0.15, n)
 			var cr := 1.0 - smoothstep(0.0, 0.08, cimg.get_pixel(x, y).r)
 			var ice := Color("a9c8da").lerp(Color("86aac2"), clampf(-n * 1.5, 0.0, 1.0))
@@ -205,14 +223,11 @@ static func ice_material() -> StandardMaterial3D:
 			alb.set_pixel(x, y, col)
 			var r := lerpf(0.12, 0.85, snow)
 			rough.set_pixel(x, y, Color(r, r, r))
+			var hgt := (n*.5+.5)*.7+(1.0-cimg.get_pixel(x,y).r)*.3
+			bump.set_pixel(x,y,Color(hgt,hgt,hgt))
 	alb.generate_mipmaps()
 	rough.generate_mipmaps()
 	# Oberfläche: Höhen aus Schnee und Rissen als Normal-Map (Verwehungen, Rillen)
-	var bump := Image.create(px, px, false, Image.FORMAT_RGBA8)
-	for y in px:
-		for x in px:
-			var hgt := nimg.get_pixel(x, y).r * 0.7 + (1.0 - cimg.get_pixel(x, y).r) * 0.3
-			bump.set_pixel(x, y, Color(hgt, hgt, hgt))
 	bump.bump_map_to_normal_map(5.0)
 	bump.generate_mipmaps()
 	var m := StandardMaterial3D.new()
@@ -225,7 +240,7 @@ static func ice_material() -> StandardMaterial3D:
 	m.metallic_specular = 0.7
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
-	m.uv1_scale = Vector3.ONE / 30.0
+	m.uv1_scale = Vector3.ONE / 90.0
 	_ice_mat = m
 	return m
 
@@ -290,7 +305,11 @@ func _island(at: Vector3, size: float, trees: bool) -> void:
 			var ang := TAU * si / segs
 			var r := outline[si] * (1.0 - t)
 			var h := top * pow(t, 0.6) + on.get_noise_2d(cos(ang) * r, sin(ang) * r) * top * 0.25 * t
-			row.append(Vector3(cos(ang) * r, h - 0.02 if ri == 0 else h, sin(ang) * r))
+			var point := Vector3(cos(ang)*r,h,sin(ang)*r)
+			var world_point: Vector3 = at + point.rotated(Vector3.UP,isl.rotation.y)
+			var ground := height_at(world_point.x,world_point.z)-at.y
+			point.y = lerpf(ground-.02,h,smoothstep(0,.5,t))
+			row.append(point)
 		pts.append(row)
 	for ri in rings:
 		for si in segs:

@@ -21,7 +21,7 @@ func _build_body() -> void:
 
 
 func ultimate() -> Dictionary:
-	return def.abilities[0]
+	return skills.resolve(def.abilities[0], 3, _rank_preview)
 
 
 func kit() -> Array:
@@ -36,13 +36,16 @@ func ability(slot: int) -> Dictionary:
 	var a := {"kind": "gadget", "gadget": id, "at_point": true, "range": PLACE_RANGE,
 		"radius": maxf(1.0, float(g.get("area", g.get("radius", 1.0)))),
 		"name": g.get("name", "?"), "cooldown": g.get("cooldown", 8.0), "mana": g.get("mana", 40)}
+	a.summary = g.get("summary", g.get("desc", ""))
+	a.tags = g.get("tags", ["spell", "construct", "minion"])
+	a.gadget_stats = g.duplicate(true)
 	a.desc = "%s %s\n%s %s\n%s" % [tr(str(g.get("role", ""))) + ":", tr(str(g.get("desc", ""))),
 		tr("Überspannung:"), tr(str(g.get("over", ""))), tr("höchstens %d") % int(g.get("max", 1))]
 	if id == "elektrozaun":
 		a.preview = "line"
 		a.at_point = false
 		a.width = float(g.width)
-	return a
+	return skills.resolve(a, slot, _rank_preview)
 
 
 func count(id: String) -> int:
@@ -63,11 +66,14 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 		over_t = float(a.duration)
 		for g in gadgets:
 			g.hp = g.max_hp
-		game.fx.nova(position, 6.0, UiTheme.CYAN)
+		game.fx.play("overcharge", position, dir, 6.0, UiTheme.CYAN)
+		for g in gadgets:
+			if is_instance_valid(g) and not g.destroyed and g.position.distance_to(position) < 30.0:
+				game.fx.bolt(position + Vector3(0, 1.4, 0), g.position + Vector3(0, 1.0, 0), UiTheme.CYAN)
 		game.floater(position + Vector3(0, 2.6, 0), tr("Überspannung!"), UiTheme.CYAN)
 		return true
 	var id := str(a.gadget)
-	var gd: Dictionary = game.gadget_defs.get(id, {})
+	var gd: Dictionary = a.get("gadget_stats", game.gadget_defs.get(id, {}))
 	if gd.is_empty():
 		return false
 	_prune()
@@ -76,7 +82,7 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 			if g.kind == id:
 				_remove_gadget(g)
 				break
-	var p := clamp_point(at, PLACE_RANGE)
+	var p := clamp_point(at, float(a.range))
 	if id == "elektrozaun":
 		p = clamp_point(position + dir * minf(position.distance_to(at), 5.0), PLACE_RANGE)
 	var g := HdGadget.new()
@@ -87,6 +93,7 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 	game.buildings.append(g)
 	gadgets.append(g)
 	game.fx.tracer(position + Vector3(0, 1.2, 0), g.position + Vector3(0, 0.5, 0), Color("ffb040"))
+	game.fx.play("build", g.position, dir, 1.0, Color("ffb040"))
 	return true
 
 
@@ -103,6 +110,8 @@ func _prune() -> void:
 
 func _kit_step(dt: float, _now: float) -> void:
 	if over_t > 0.0:
+		if alive():
+			game.fx.hold("over:%d" % get_instance_id(), "aura", position, 1.2, UiTheme.CYAN)
 		over_t -= dt
 		if over_t <= 0.0:
 			_prune()
@@ -138,6 +147,7 @@ func _repair(g) -> void:
 	attack_cd = attack_interval()
 	_face(g.position - position)
 	game.fx.tracer(position + Vector3(0, 1.2, 0), g.position + Vector3(0, 0.8, 0), Color("ffd070"))
+	game.fx.play("heal", g.position, Vector3.FORWARD, 1.0, Color("ffd070"))
 	game.heal_target(g, g.max_hp * float(def.attack.repair))
 
 
@@ -150,7 +160,32 @@ func _ranged_shot(dir: Vector3, target) -> void:
 			if HdTelegraph.in_shape(HdTelegraph.CONE, position, dir, attack_range() + radius, 0, 25.0, 0, 0, g.position, g.radius):
 				_repair(g)
 				return
-	super._ranged_shot(dir, target)
+	attack_cd = attack_interval()
+	var e = target if target else game.enemy_in_arc(position, dir, attack_range() + radius, 20.0)
+	var endpoint := Vector3.INF
+	if e:
+		endpoint = e.position + Vector3.UP * e.height() * 0.6
+	shock_fx(game.fx, position, dir, endpoint)
+	if e:
+		game.hero_hit(e, float(def.attack.damage) * power(), "attack")
+		on_hit(e)
+
+
+## Gleiche Entladung für Spiel und Animationsvorschau; bestehende FX-Budgets/Netzwerkereignisse.
+static func shock_fx(fx: HdFx, at: Vector3, direction: Vector3, endpoint := Vector3.INF) -> void:
+	var dir := Vector3(direction.x, 0, direction.z).normalized()
+	if dir.is_zero_approx():
+		dir = Vector3.FORWARD
+	var side := Vector3(-dir.z, 0, dir.x)
+	var emitter := at + dir * 0.55 + Vector3.UP * 1.15
+	var front := at + dir * 1.4 + Vector3.UP * 1.15
+	var color := Color("b6edff")
+	fx.bolt(emitter, front, color)
+	for sign_value in [-1.0, 1.0]:
+		fx.bolt(front, front + dir * 0.5 + side * sign_value * 0.55 + Vector3.UP * sign_value * 0.3, color)
+	fx.impact(front, "lightning", dir)
+	if endpoint.is_finite() and endpoint.distance_to(front) > 0.3:
+		fx.bolt(front, endpoint, color)
 
 
 func free_kit() -> void:

@@ -51,6 +51,14 @@ func _ready() -> void:
 	cam.current = true
 	resized.connect(_fit)
 	_fit()
+	visibility_changed.connect(_sync_visibility)
+	_sync_visibility()
+
+
+func _sync_visibility() -> void:
+	var shown := is_visible_in_tree()
+	set_process(shown)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown else SubViewport.UPDATE_DISABLED
 
 
 func _fit() -> void:

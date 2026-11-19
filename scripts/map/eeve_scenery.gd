@@ -88,6 +88,8 @@ var _night := 1.0  ## wie viel Nacht gerade ist (0 Tag … 1 Nacht)
 var _lamp := 1.0   ## wie hell die Laternen gerade brennen (0 aus … 1 Nacht)
 var _ambience := ""
 var _rng := RandomNumberGenerator.new()
+var _hill_material: ShaderMaterial
+var _hill_noise: FastNoiseLite
 var bezirk: BezirkUeberwuchert  ## Hof „Überwuchert“ statt Friedhof, wenn die Map district = "ueberwuchert" hat
 
 
@@ -115,12 +117,14 @@ func _ready() -> void:
 	_ground_day = [tint if tint is Vector3 else Vector3.ONE, float(bright) if bright != null else 0.72,
 		float(contrast) if contrast != null else 1.0, float(macro) if macro != null else 0.12]
 	_add_forest_floor()
+	_add_corner_mountain()
 	if map.district == BezirkUeberwuchert.ID:
 		_add_district()
 	_add_forest()
 	if bezirk == null:
 		_add_graveyard()
 	_add_mine()
+	_add_earth_walks()
 	_add_mist()
 	_add_lanterns()
 	_add_fires()
@@ -217,6 +221,8 @@ func _apply(on: bool) -> void:
 ## Szenerie zur Dunkelheit n (0 Tag, 1 Nacht; Tageszeit mischt dazwischen): Boden, Wald, Nebel, Laternen.
 func _apply_mix(n: float) -> void:
 	_night = n
+	if _hill_material:
+		_hill_material.set_shader_parameter("brightness", lerpf(.7,.49,n))
 	var on := n >= 0.5
 	# Hintergrund: Vögel am Tag, tiefes Geisterheulen in der Nacht (data/sfx.json)
 	var amb := "amb_night" if on else "amb_forest"
@@ -270,6 +276,51 @@ func _apply_mix(n: float) -> void:
 
 func _size() -> Vector2:
 	return Vector2(map.width, map.height) * Board3D.CELL
+
+
+## NW-Ecke außerhalb aller Bau-/Lauffelder: flacher bewaldeter Fuß, felsiger versetzter Gipfel.
+func _add_corner_mountain() -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_hill_noise = FastNoiseLite.new()
+	_hill_noise.seed = 1729
+	_hill_noise.frequency = .24
+	var resolution := 32
+	var center := Vector2(-8,-8)
+	var extent := 14.0
+	for z in resolution:
+		for x in resolution:
+			for offset in [Vector2i(0,0),Vector2i(1,0),Vector2i(0,1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1)]:
+				var uv := Vector2(x+offset.x,z+offset.y)/resolution
+				var p := center+(uv*2-Vector2.ONE)*extent
+				var h := _corner_height(p)
+				st.add_vertex(Vector3(p.x,h-.025,p.y))
+	st.index()
+	st.generate_normals()
+	var mountain := MeshInstance3D.new()
+	mountain.name = "CornerMountain"
+	mountain.mesh = st.commit()
+	_hill_material = preload("res://scripts/map/ground_wear.gd").rock_material()
+	_hill_material.set_shader_parameter("foot_height",3.5)
+	mountain.material_override = _hill_material
+	add_child(mountain)
+
+
+func _corner_height(p: Vector2) -> float:
+	if _hill_noise == null: return 0.0
+	var distance := ((p-Vector2(-8,-8))/Vector2(10,8)).length()
+	var foot := smoothstep(1.0,.0,distance)
+	return pow(foot,1.3)*(9.5+(1.0-absf(_hill_noise.get_noise_2d(p.x,p.y)))*2.5)
+
+
+func _add_earth_walks() -> void:
+	var paths: Array = []
+	# Vom Friedhofstor zwischen den Gräberreihen zu Kirche/Krypta; daneben der Zugang zur Mine.
+	for line in [[_gy(0,0),_gy(0,2.5),_gy(1.5,6.2)],[_gy(0,2.5),_gy(-4.2,5.6)],[_my(0,0),_my(0,3.8)]]:
+		var points: Array = []
+		for p: Vector2 in line: points.append(Vector3(p.x,0,p.y))
+		paths.append(points)
+	preload("res://scripts/map/ground_wear.gd").add_paths(self,paths,1.1,"druid")
 
 
 ## Waldboden um die Karte: derselbe Boden-Shader wie das Spielfeld, nur Gras und etwas dunkler.
@@ -350,7 +401,7 @@ func _add_forest() -> void:
 			var d := _outside(p)
 			x += step
 			# erste Reihe dicht am Rand, nach außen lichter; ganz am Rand Platz fürs Unterholz
-			if d < 0.9 or d > DEPTH or _in_clearing(p):
+			if d < 0.9 or d > DEPTH or _in_clearing(p) or _corner_height(p) > 4.5:
 				continue
 			if _rng.randf() > lerpf(0.9, 0.45, d / DEPTH):
 				continue
@@ -590,7 +641,7 @@ func _darken(model: Node, tint: Color) -> void:
 func _place(p: Vector2, h: float) -> Transform3D:
 	var b := Basis(Vector3.UP, _rng.randf() * TAU)
 	b = Basis(Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1)).normalized(), _rng.randf_range(0.0, 0.06)) * b
-	return Transform3D(b.scaled(Vector3.ONE * h), Vector3(p.x, 0.0, p.y))
+	return Transform3D(b.scaled(Vector3.ONE * h), Vector3(p.x, _corner_height(p), p.y))
 
 
 func _add_multimesh(path: String, xfs: Array, shadows: bool) -> void:

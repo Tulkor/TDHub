@@ -26,7 +26,21 @@ func check(cond: bool, msg: String) -> void:
 func _ready() -> void:
 	await get_tree().process_frame
 	Profile.dir = "user://test_heroes_profile"
+	if "--gpu-profil" in OS.get_cmdline_user_args():
+		Profile.dir += "_gpu"
 	Profile.reset_cache()
+	if "--nur=ki" in OS.get_cmdline_user_args():
+		await _ai()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures > 0 else 0)
+		return
+	if "--nur=ablauf" in OS.get_cmdline_user_args():
+		await _flyer_elite()
+		await _bosses()
+		await _final_area()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures else 0)
+		return
 	_data()
 	_cc()
 	_shapes()
@@ -160,6 +174,11 @@ func _new_game(held := "torvik") -> HdGame:
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
+	g.cfg.arena.walls = false
+	g.lane_ids = []
+	g.road_choice = 0
+	g._build_roads()
+	g.obstacles = [[Vector3(-32, 0, -32), 2.0], [Vector3(32, 0, 32), 2.0], [Vector3(-30, 0, 12), 2.0]]
 	g.spawn_queue.clear()
 	for e in g.enemies:
 		g._remove(e)
@@ -204,8 +223,10 @@ func _ai() -> void:
 	g.hero.position.x = clampf(g.hero.position.x, -40, 40)
 	_run(g, 6.0)
 	check(e.target == null and e.state in ["return", "road"], "Leine gerissen: zurück zur Straße (%s)" % e.state)
+	# Der neue Straßenbogen führt sonst später wieder direkt am wartenden Helden vorbei.
+	_park_hero(g)
 	_run(g, 6.0)
-	check(e.state == "road", "wieder auf der Straße")
+	check(e.state == "road", "wieder auf der Straße (%s, %s, Anker %s, Held %s)" % [e.state, e.position, e.anchor_point(), g.hero.position])
 	# Angegriffen außerhalb der Aggro-Reichweite (aber in Leine) → greift an
 	var at := g.road_point(e.road_s + 2.0)
 	var side := (g.road_point(e.road_s + 3.0) - at).normalized().cross(Vector3.UP)
@@ -514,6 +535,8 @@ func _no_stuck() -> void:
 	var c: Vector3 = ob[0]
 	var r: float = ob[1]
 	var e := g.spawn("moorbrute", c + Vector3(r + 1.2, 0, 0), g.road_project(c, 0, g.road_len))
+	e.zone = "test"
+	e.home = c
 	e.ab_ready.clear()
 	for a in e.def.abilities:
 		e.ab_ready[a] = 999.0
@@ -589,7 +612,7 @@ func _roads_gates() -> void:
 	await get_tree().process_frame
 	g4.road_choice = 4
 	g4._build_roads()
-	check(g4.roads.size() == 4 and g4.buildings.size() == 8, "Einstellung: alle 4 Straßen (%d, %d Torwerke)" % [g4.roads.size(), g4.buildings.size()])
+	check(g4.roads.size() == 8 and g4.buildings.size() == 16, "Einstellung: alle 8 Straßen (%d, %d Torwerke)" % [g4.roads.size(), g4.buildings.size()])
 	g4.road_choice = keep
 	g4.save_settings()
 	g4.queue_free()
@@ -687,6 +710,11 @@ func _bot_run(diff: int, held := "torvik") -> void:
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
+	g.cfg.arena.walls = false
+	g.lane_ids = []
+	g.road_choice = 0
+	g._build_roads()
+	g.obstacles = [[Vector3(-32, 0, -32), 2.0], [Vector3(32, 0, 32), 2.0], [Vector3(-30, 0, 12), 2.0]]
 	g.wave_limit = 10
 	var runs_before: int = Profile.data().get("runs", []).size() if Profile.data().has("runs") else -1
 	_run(g, 900.0, true)
@@ -812,7 +840,7 @@ func _flyer_elite() -> void:
 	f.hp = f.max_hp
 	check(f.fly and f.fly_road != null and f.fly_road.points.size() == 2, "Flieger nimmt die gerade Fluglinie")
 	var lives0 := g.lives
-	_run(g, 30.0)
+	_run(g, f.fly_road.length / maxf(f.speed, .1) + 5.0)
 	check(f.dead and g.lives < lives0, "Flieger erreicht die Feste über Felsen und Torwerke hinweg")
 	# Teiler: zerfällt in zwei schwächere
 	var t := _dummy(g, "glutling", g.road_point(20.0))
@@ -862,8 +890,13 @@ func _bosses() -> void:
 	if vargul:
 		g.hero_hit(vargul, 9999999.0, "test")
 	check(g.shop.trophies == 1, "Kriegsherr gibt eine Trophäe")
+	# Die Erkundungsrast beginnt erst, wenn die gesamte Welle besiegt ist.
+	g.spawn_queue.clear()
+	for remaining in g.enemies.duplicate():
+		g.hero_hit(remaining, 1e9, "test")
+	g.spawn_queue.clear()  # Auch verzögert wiederauferstehende Knochengegner sind beseitigt.
 	_run(g, 1.0)
-	check(g.rest_given and g.wave_len(20) - g.wave_time <= 45.1, "Rast: höchstens 45 s bis zur nächsten Welle")
+	check(g.exploration.active and g.exploration.remaining <= HdExploration.BREAK_SECONDS, "Nach Welle 20 gilt die aktuelle Erkundungsrast")
 	# Kriegsherren-Händler
 	check(g.shop.act({"kind": "buy", "id": "moorkrone"}) == "" and g.shop.trophies == 0, "Trophäe kauft die Moorkrone")
 	check(g.shop.can_buy("glutherz") != "", "Ohne Trophäe kein weiteres Trophäen-Item")
@@ -1146,6 +1179,7 @@ func _final_area() -> void:
 	check(ch != null and ch.list.size() >= 5, "Endgebiet: Challenges geladen")
 	g.wave = 40
 	g.wave_limit = 0
+	g.exploration.completed = 40  # Erkundungsrast wird separat in heroesexplore geprüft.
 	g.spawn_queue.clear()
 	for x in g.enemies.duplicate():
 		g._remove(x)

@@ -93,6 +93,7 @@ var siege_t := 0.0
 var reward := 1.0              ## Faktor auf Gold (Blutmond)
 var boss_brain = null          ## Gemeinsamer Endboss-Ablauf; normale Gegner bleiben unverändert.
 var boss_visual: HdBossVisual
+var _boss_pos := Vector3.INF
 var gold_free := false         ## kein Gold/keine Welle zählt (Sonderzonen, Prüfungen)
 
 
@@ -136,6 +137,7 @@ func _load_model() -> void:
 	for c in _body.get_children():
 		c.visible = false
 	var m: Node3D = scene.instantiate()
+	HdStoffe.modell(m)
 	m.scale = Vector3.ONE * float(def.get("model_scale", 1.0))
 	_body.add_child(m)
 	var players := m.find_children("*", "AnimationPlayer", true, false)
@@ -193,6 +195,19 @@ func _anim_step(dt: float, stunned: bool) -> void:
 
 ## Getötet: das Modell bleibt kurz liegen (Animation death), der Gegner selbst ist schon weg.
 func leave_corpse() -> void:
+	if boss_visual != null and is_inside_tree():
+		# Endbosse haben kein AnimationPlayer-Modell: die Figur bricht prozedural zusammen.
+		var holder := get_parent()
+		var at := _body.global_transform
+		remove_child(_body)
+		holder.add_child(_body)
+		_body.global_transform = at
+		boss_visual.die()
+		var fall := _body.create_tween()
+		fall.tween_interval(3.0)
+		fall.tween_property(_body, "position:y", _body.position.y - height() * 0.8, 1.2)
+		fall.tween_callback(_body.queue_free)
+		return
 	if _anim == null or not _anim.has_animation("death") or not is_inside_tree():
 		return
 	var parent := get_parent()
@@ -300,9 +315,11 @@ func casting() -> bool:
 
 ## Schadensfaktor nach Schwierigkeit, Welle und Rattenseuche.
 func out_mult() -> float:
+	var weaken: Dictionary = get_meta("roster_weaken", {})
+	var roster_mult := 1.0 - float(weaken.get("value", 0)) if game.play_time < float(weaken.get("until", -1)) else 1.0
 	if game.play_time < plague_until:
-		return dmg_mult * (1.0 - float(plague.get("weaken", 0.0)))
-	return dmg_mult
+		return dmg_mult * roster_mult * (1.0 - float(plague.get("weaken", 0.0)))
+	return dmg_mult * roster_mult
 
 
 ## Rattenschwarm: n Ratten springen auf (höchstens max), beißen jede Sekunde, senken je Biss die Rüstung.
@@ -373,7 +390,9 @@ func step(dt: float, now: float) -> void:
 	if boss_brain != null:
 		boss_brain.observe(now)
 		if boss_visual != null:
-			boss_visual.animate(now, phase, casting())
+			var moving := 0.0 if _boss_pos == Vector3.INF else Vector2(position.x - _boss_pos.x, position.z - _boss_pos.z).length() / maxf(dt, 0.0001)
+			_boss_pos = position
+			boss_visual.animate(now, phase, casting(), moving)
 	cc.update(now)
 	_anim_step(dt, cc.stunned(now))
 	hit_flash = maxf(0.0, hit_flash - dt)
@@ -433,8 +452,8 @@ func _flee(dt: float, now: float) -> void:
 	if h and h.alive() and _flat_dist(h.position) < float(def.get("aggro", 9.0)) + 4.0:
 		v = position - h.position
 		var b: Array = game.bounds()
-		if absf(position.x) > float(b[2]) - 8.0 or absf(position.z) > float(b[3]) - 8.0:
-			v += -position * 0.6
+		if position.x < float(b[0]) + 8 or position.x > float(b[2]) - 8 or position.z < float(b[1]) + 8 or position.z > float(b[3]) - 8:
+			v += (Vector3((float(b[0]) + float(b[2])) * 0.5, 0, (float(b[1]) + float(b[3])) * 0.5) - position) * 0.6
 	else:
 		if _flat_dist(home) < 2.0:
 			var b2: Array = game.bounds()
@@ -452,7 +471,8 @@ func _follow_road(dt: float, now: float) -> void:
 	if road_s >= r.length - 1.0:
 		game.leak(self)
 		return
-	var ahead: float = road_s + float(game.cfg.ai.road_lookahead)
+	# An engen Kurven muss das Ziel hinter dem seitlichen Spurversatz liegen; sonst entsteht ein Ruhepunkt vor der Ecke.
+	var ahead: float = road_s + maxf(float(game.cfg.ai.road_lookahead), absf(lane) + radius + 2.0)
 	_move(r.point(ahead, lane) - position, dt, now, r.speed_mult())
 
 
@@ -548,6 +568,8 @@ func _attack() -> void:
 	var a: Dictionary = def.attack
 	attack_cd = float(a.interval)
 	_play("attack", 0.01, clampf(0.9 / maxf(float(a.interval), 0.2), 1.0, 2.5))
+	if boss_visual != null:
+		boss_visual.strike()
 	var dmg := float(a.damage) * out_mult()
 	if bool(a.get("ranged", false)):
 		game.fx.tracer(position + Vector3(0, height() * 0.7, 0), target.position + Vector3(0, 1.0, 0), Color("c9a35a"))
@@ -669,6 +691,17 @@ func _make_teles() -> void:
 			t.position = position
 			t.aim(dir)
 			teles.append(t)
+		"arc", "cross", "box":
+			var shapes := {"arc":HdTelegraph.ARC, "cross":HdTelegraph.CROSS, "box":HdTelegraph.BOX}
+			var t := HdTelegraph.make(int(shapes[str(ab.kind)]))
+			t.radius = float(ab.get("radius", 5.0)) + float(ab.get("grow", 0.0)) * n
+			t.inner = float(ab.get("inner", 0.0)) + float(ab.get("grow", 0.0)) * n
+			t.angle = float(ab.get("angle", 120.0))
+			t.length = float(ab.get("length", 8.0))
+			t.width = float(ab.get("width", 1.5))
+			t.position = cast.point if str(ab.kind) in ["cross", "box"] else position
+			t.aim(dir)
+			teles.append(t)
 		"ring":
 			var g := float(ab.get("grow", 0.0)) * n
 			var t := HdTelegraph.ring(float(ab.inner) + g, float(ab.radius) + g)
@@ -764,10 +797,19 @@ func _step_cast(dt: float, now: float) -> void:
 
 func _fire(_now: float) -> void:
 	var ab: Dictionary = cast.ab
+	if (boss_visual != null or str(ab.kind) in ["arc", "cross", "box"]) and game.get("fx") != null:
+		var visual: Dictionary = def.get("visual", {})
+		var themes := {"sumpf":"rot", "knochen":"forge", "glut":"forge", "leere":"void"}
+		var accents := {"sumpf":"83a663", "knochen":"c9d4bb", "glut":"ed8b45", "leere":"b08deb"}
+		var faction := str(def.get("faction", "sumpf"))
+		var theme := str(visual.get("theme", themes.get(faction, "rot")))
+		for tele: HdTelegraph in cast.tele:
+			var extent := tele.length if tele.shape in [HdTelegraph.LINE, HdTelegraph.BOX] else tele.radius
+			game.fx.play("boss:%s:%s" % [theme,tele.shape],tele.position,tele.forward(),extent,Color(str(visual.get("accent", accents.get(faction, "83a663")))),Vector3(tele.inner,tele.width,tele.angle))
 	var dmg := float(ab.get("damage", 0.0)) * out_mult()
 	var kind := str(ab.kind)
 	match kind:
-		"circle", "echo", "cone", "ring", "line":
+		"circle", "echo", "cone", "ring", "line", "arc", "cross", "box":
 			for t in cast.tele:
 				game.tele_hit(self, t, dmg, 0.0)
 				if kind == "circle" and float(ab.get("pool", 0.0)) > 0.0:

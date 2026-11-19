@@ -1,5 +1,7 @@
 # GemTD-Kern: Spielablauf, Tower, Effekte, HUD, Roguelike, Spielstand, Profil
 
+- Kamerarand (2026-11-17): gemeinsames `CameraRig.VIEW_MARGIN` von 3 auf 8 Welteinheiten erweitert, auch für den Schwenk-Zielpunkt. Gilt für GemTD, eeveTD, Randgruppen, YouTD und via `MaulCamera` für Shopping Maul; Bildbegrenzung berücksichtigt weiter Zoom und Rotation. Bollwerk hat freie Kameraverschiebung, Survivors eine Arenakamera ohne diese Kartenrand-Klammer.
+
 Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz automatisch ein, sobald ein Thread passende Dateien anfasst.
 
 - `scripts/game/game.gd`: Spielablauf (Phasen BUILD → CHOOSE → WAVE, Wellen, Gold, Leben/Punkte, Kombinieren, Rezepte). Alle Spieleraktionen laufen als Befehle über `submit(cmd)` → `execute(cmd)`/`_execute` mit Spielernummer; im Koop rechnet nur der Host. Pro Spieler: `player_state.gd`. Wird von Game-Systeme laufend umgebaut, Änderungen klein halten und vorher pullen.

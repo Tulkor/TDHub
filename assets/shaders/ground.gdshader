@@ -2,6 +2,7 @@
 // Erde liegt dort, wo die Splat-Textur es sagt (Laufweg, Spawn, Ziel, Checkpoints, "_"-Felder),
 // die Ränder werden mit Rauschen ausgefranst. Die beiden Grasarten wechseln großflächig per Rauschen.
 shader_type spatial;
+#include "res://assets/shaders/terrain_variation.gdshaderinc"
 render_mode blend_mix, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
 uniform sampler2D grass_a : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -11,6 +12,11 @@ uniform sampler2D dirt : source_color, filter_linear_mipmap_anisotropic, repeat_
 uniform sampler2D grass_a_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D grass_b_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D dirt_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+// Lineare Materialdaten: keine source_color-Konvertierung.
+uniform sampler2D grass_a_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D grass_b_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D dirt_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool surface_pbr = false;
 uniform float normal_strength = 1.0;
 /// zweite, feinere Lage derselben Normalmaps (Whiteout-Blend), 0 = aus
 uniform float detail_normal = 0.6;
@@ -28,6 +34,10 @@ uniform float road_dark = 0.42;
 uniform float lawn = 0.0;
 uniform sampler2D lawn_grass : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D lawn_soil : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D lawn_grass_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D lawn_soil_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D lawn_grass_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D lawn_soil_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float lawn_tile = 2.6;
 /// Erde-Anteil je Rasterfeld (0..1) in R, gesperrte Felder in G, ein Pixel pro Feld.
 uniform sampler2D splat : filter_linear, repeat_disable;
@@ -101,27 +111,36 @@ vec3 blend_normals(vec3 a, vec3 b, float t) {
 // so fällt die Wiederholung der Kacheln nicht auf.
 const mat2 ROT = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
 
-vec3 sample_varied(sampler2D t, vec2 p, float n) {
-	vec3 a = texture(t, p, detail_blur).rgb;
+vec3 sample_varied(sampler2D t, vec2 p) {
 	if (vary <= 0.0) {
-		return a;
+		return texture(t,p,detail_blur).rgb;
 	}
-	vec3 b = texture(t, ROT * p * 0.71 + vec2(0.37, 0.13), detail_blur).rgb;
-	return mix(a, b, smoothstep(0.3, 0.7, n));
+	return tv_sample(t,p,detail_blur);
+}
+
+// Gedrehte Abtastungen benötigen rückgedrehte Normalen; Albedo-Rotation allein kippt Lichtrelief.
+vec3 unrotate_normal(vec3 encoded) {
+	vec3 normal = encoded * 2.0 - 1.0;
+	normal.xy = transpose(ROT) * normal.xy;
+	return normalize(normal) * 0.5 + 0.5;
+}
+
+vec3 sample_normal(sampler2D t, vec2 p) {
+	if (vary <= 0.0) { return texture(t,p,detail_blur).rgb; }
+	return tv_normal(t,p,detail_blur);
 }
 
 void fragment() {
 	vec2 p = world_xz;
-	float n_tile = fbm(p * 0.35);
 	vec2 uv_ga = p / grass_tile;
 	vec2 uv_gb = p / (grass_tile * 1.15) + vec2(0.5);
 	vec2 uv_dt = p / dirt_tile;
-	vec3 ga = sample_varied(grass_a, uv_ga, n_tile);
-	vec3 gb = sample_varied(grass_b, uv_gb, 1.0 - n_tile);
-	vec3 dt = sample_varied(dirt, uv_dt, n_tile);
-	vec3 na = sample_varied(grass_a_normal, uv_ga, n_tile);
-	vec3 nb = sample_varied(grass_b_normal, uv_gb, 1.0 - n_tile);
-	vec3 nd = sample_varied(dirt_normal, uv_dt, n_tile);
+	vec3 ga = sample_varied(grass_a, uv_ga);
+	vec3 gb = sample_varied(grass_b, uv_gb);
+	vec3 dt = sample_varied(dirt, uv_dt);
+	vec3 na = sample_normal(grass_a_normal, uv_ga);
+	vec3 nb = sample_normal(grass_b_normal, uv_gb);
+	vec3 nd = sample_normal(dirt_normal, uv_dt);
 
 	// Grasarten: kleine, unregelmäßige Flecken (keine großen einfarbigen Flächen)
 	float g_mix = smoothstep(0.3, 0.7, fbm(p * 0.45 + vec2(3.7, 1.2)));
@@ -133,6 +152,14 @@ void fragment() {
 		grass = mix(mean_g, grass, grass_contrast);
 	}
 	vec3 grass_n = blend_normals(na, nb, g_mix);
+	float grass_spec = 0.35;
+	float dirt_spec = 0.35;
+	if (surface_pbr) {
+		grass_spec = mix(sample_varied(grass_a_specular, uv_ga).r,
+			sample_varied(grass_b_specular, uv_gb).r, g_mix);
+		dirt_spec = sample_varied(dirt_specular, uv_dt).r;
+	}
+	float lawn_mask = 0.0;
 
 	// Erde: Splat-Wert plus ausfransender Rand
 	vec4 sp = texture(splat, p / map_size);
@@ -148,15 +175,23 @@ void fragment() {
 	if (lawn > 0.0) {
 		// Wiese: ruhiges Gras (gröbere Mipmap, wenig Kontrast) mit großen, weichen Erdflecken
 		vec2 lp = p / lawn_tile;
-		vec3 lg = texture(lawn_grass, lp, 1.5).rgb;
+		vec3 lg = tv_sample(lawn_grass, lp, 1.5);
 		vec3 lg_mean = textureLod(lawn_grass, vec2(0.5), 10.0).rgb;
 		lg = mix(lg_mean, lg, 0.55);
-		vec3 ls = texture(lawn_soil, lp * 0.8, 1.0).rgb;
+		vec3 ls = tv_sample(lawn_soil, lp * 0.8, 1.0);
 		float soil = smoothstep(0.5, 0.68, fbm(p * 0.22 + vec2(13.0, 3.0)));
 		vec3 lawn_col = mix(lg, ls, soil * 0.85);
 		float lm = smoothstep(0.45, 0.55, sp.g) * lawn;
+		lawn_mask = lm;
 		grass = mix(grass, lawn_col, lm);
-		grass_n = mix(grass_n, vec3(0.5, 0.5, 1.0), lm);
+		vec3 lawn_n = blend_normals(tv_normal(lawn_grass_normal, lp, 1.5),
+			tv_normal(lawn_soil_normal, lp * 0.8, 1.0), soil * 0.85);
+		grass_n = blend_normals(grass_n, lawn_n, lm);
+		if (surface_pbr) {
+			float lawn_spec = mix(tv_sample(lawn_grass_specular, lp, 1.5).r,
+				tv_sample(lawn_soil_specular, lp * 0.8, 1.0).r, soil * 0.85);
+			grass_spec = mix(grass_spec, lawn_spec, lm);
+		}
 	}
 	if (road > 0.0) {
 		// Straße: scharfe Kante ohne Ausfransen, Belag = abgedunkelte, entsättigte Erde-Textur
@@ -174,8 +209,8 @@ void fragment() {
 	if (detail_normal > 0.0) {
 		// feine Lage: Grashalme bzw. Kiesel im Kleinen, auch nah an der Kamera nicht glatt
 		vec2 pd = ROT * p * detail_scale;
-		vec3 dn = mix(texture(grass_a_normal, pd / grass_tile).rgb, texture(dirt_normal, pd / dirt_tile).rgb, blend);
-		nrm = whiteout(nrm, dn, detail_normal);
+		vec3 dn = unrotate_normal(mix(texture(grass_a_normal, pd / grass_tile).rgb, texture(dirt_normal, pd / dirt_tile).rgb, blend));
+		nrm = whiteout(nrm, dn, detail_normal * (1.0 - lawn_mask));
 	}
 	// Vertiefungen (dunkle Stellen im Foto) zusätzlich abdunkeln
 	float cavity = smoothstep(0.05, 0.45, dot(col, vec3(0.299, 0.587, 0.114)));
@@ -184,7 +219,7 @@ void fragment() {
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(vec3(lum), col, saturation) * brightness * tint;
 	// leichte großflächige Helligkeitsschwankung
-	col *= 1.0 - macro * 0.5 + macro * fbm(p * 0.12 + vec2(-8.0, 2.0));
+	col *= 1.0 + macro * (tv_noise(p*.075+vec2(-8.0,2.0))-.5);
 
 	float alpha = ground_alpha;
 	if (grid_strength > 0.0) {
@@ -199,6 +234,7 @@ void fragment() {
 	ALPHA = alpha;
 	NORMAL_MAP = nrm;
 	NORMAL_MAP_DEPTH = normal_strength;
-	ROUGHNESS = mix(0.85, 0.95, blend);
-	SPECULAR = 0.35;
+	float surface_spec = clamp(mix(grass_spec, dirt_spec, blend), 0.0, 1.0);
+	ROUGHNESS = surface_pbr ? clamp(0.98 - surface_spec * 0.30, 0.78, 0.98) : mix(0.85, 0.95, blend);
+	SPECULAR = surface_spec;
 }

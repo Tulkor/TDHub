@@ -113,6 +113,8 @@ func _wave_enemy(rank: String) -> String:
 
 ## Ort nach where: held, feld, ecke, hain, vorwerk.
 func place(where: String) -> Vector3:
+	if game.event_arena.active:
+		return game.event_arena.point(where)
 	var p := Vector3.ZERO
 	match where:
 		"held":
@@ -244,7 +246,7 @@ func _start_hunt(d: Dictionary) -> void:
 	task.revives = int(d.get("revive", 0))
 	task.wood_n = 0
 	if where == "strasse":
-		var r: HdRoad = game.roads[game.rng.randi() % game.roads.size()]
+		var r: HdRoad = game.event_arena.route() if game.event_arena.active else game.roads[game.rng.randi() % game.roads.size()]
 		for k in n:
 			var e: HdEnemy = game.spawn(did, null, 0.0, r)
 			e.event_tag = str(task.id)
@@ -586,6 +588,8 @@ func pick(d: Dictionary, i: int) -> void:
 
 ## {title, line, frac} der laufenden Aufgabe für die Seitenleiste ({} = nichts).
 func card() -> Dictionary:
+	if game.coop and not game.coop.host:
+		return game.coop.event_card
 	if task.is_empty():
 		return {}
 	var d: Dictionary = task.def

@@ -5,6 +5,11 @@ render_mode cull_disabled;
 
 uniform sampler2D dirt : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D grass : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D dirt_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D grass_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D dirt_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D grass_specular : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float normal_strength = 0.7;
 uniform float dirt_tile = 1.6;
 uniform float grass_tile = 1.2;
 uniform float brightness = 0.8;
@@ -14,6 +19,9 @@ varying vec2 world_xz;
 
 void vertex() {
 	world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	// Die Patch-Meshes sind zufällig gedreht, die Texturen bleiben in Weltkoordinaten.
+	TANGENT = normalize((inverse(MODEL_MATRIX) * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+	BINORMAL = normalize((inverse(MODEL_MATRIX) * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
 }
 
 float hash(vec2 p) {
@@ -52,5 +60,11 @@ void fragment() {
 	vec3 col = mix(d, g, gm) * brightness;
 	float l = dot(col, vec3(0.299, 0.587, 0.114));
 	ALBEDO = mix(vec3(l), col, saturation);
-	ROUGHNESS = 0.95;
+	vec3 dn = texture(dirt_normal, p / dirt_tile).rgb * 2.0 - 1.0;
+	vec3 gn = texture(grass_normal, p / grass_tile).rgb * 2.0 - 1.0;
+	NORMAL_MAP = normalize(mix(dn, gn, gm)) * 0.5 + 0.5;
+	NORMAL_MAP_DEPTH = normal_strength;
+	float specular = mix(texture(dirt_specular, p / dirt_tile).r, texture(grass_specular, p / grass_tile).r, gm);
+	SPECULAR = specular;
+	ROUGHNESS = clamp(0.98 - specular * 0.30, 0.78, 0.98);
 }

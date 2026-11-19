@@ -39,7 +39,7 @@ func setup_gadget(g, id: String, d: Dictionary, at: Vector3, owner_hero, dir: Ve
 func _build() -> void:
 	var metal := HdDev.metall(Color("8a7a5a"), 0.5)
 	var accent := HdDev.mat(Color("ffb040"), 0.5, 0.8)
-	add_child(HdDev.cyl(radius, radius * 1.1, 0.3, HdDev.mat(Color("5a5048"), 0.5), Vector3(0, 0.15, 0), 8))
+	add_child(HdDev.cyl(radius, radius * 1.1, 0.3, HdDev.surface("bruchstein", Color("5a5048"), 0.5), Vector3(0, 0.15, 0), 8))
 	_top = Node3D.new()
 	_top.position = Vector3(0, 0.3, 0)
 	add_child(_top)
@@ -81,7 +81,7 @@ func _build() -> void:
 		"magnetkoeder":
 			_top.add_child(HdDev.box(Vector3(0.9, 0.3, 0.3), HdDev.mat(Color("d04040"), 0.5, 0.4), Vector3(0, 0.6, 0)))
 			for k in [-0.35, 0.35]:
-				_top.add_child(HdDev.box(Vector3(0.22, 0.6, 0.3), HdDev.mat(Color("c8c8d0"), 0.5), Vector3(k, 0.3, 0)))
+				_top.add_child(HdDev.box(Vector3(0.22, 0.6, 0.3), HdDev.metall(Color("c8c8d0"), 0.5), Vector3(k, 0.3, 0)))
 
 
 func height() -> float:

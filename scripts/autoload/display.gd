@@ -50,6 +50,29 @@ func _ready() -> void:
 	_sharpen_fonts()
 	_apply()
 	apply_quality()
+	call_deferred("_test_window_guard")
+	if ProjectSettings.get_setting("tdhub/qa_window",false) and DisplayServer.get_name()!="headless":
+		print("QA_FENSTER bildschirm=%d von=%d fokuslos=%s" % [DisplayServer.window_get_current_screen()+1,DisplayServer.get_screen_count(),DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS)])
+
+
+## Lukas 2026-11-18: Test-, Proben- und Werkzeugszenen (res://tests/, res://tools/) laufen nicht im Vordergrund,
+## sondern fokuslos auf dem 2. Bildschirm, auch wenn sie direkt mit "godot --path . res://tests/..." gestartet werden.
+## Ganz ohne Fokuswechsel geht es nur über tools/render_windows.ps1 (no_focus gilt dort schon beim Fensteraufbau).
+func _test_window_guard() -> void:
+	if DisplayServer.get_name() == "headless" or ProjectSettings.get_setting("tdhub/qa_window",false):
+		return
+	var scene := get_tree().current_scene
+	if scene == null or not (scene.scene_file_path.begins_with("res://tests/") or scene.scene_file_path.begins_with("res://tools/")):
+		return
+	if DisplayServer.get_screen_count() < 2:
+		return
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS,true)
+	var target := 1 if DisplayServer.get_primary_screen() == 0 else 0   # irgendein Bildschirm außer dem Hauptbildschirm
+	var screen := DisplayServer.screen_get_usable_rect(target)
+	var size := DisplayServer.window_get_size()
+	DisplayServer.window_set_current_screen(target)
+	DisplayServer.window_set_position(screen.position + (screen.size - size) / 2)
+	print("TESTFENSTER auf Bildschirm 2 verschoben: ", scene.scene_file_path, " pos=", DisplayServer.window_get_position(), " ziel=", screen, " prim=", DisplayServer.get_primary_screen(), " anzahl=", DisplayServer.get_screen_count())
 
 
 func set_fullscreen(on: bool) -> void:
@@ -136,7 +159,11 @@ func _apply() -> void:
 	get_tree().root.content_scale_factor = ui_scale
 	if DisplayServer.get_name() == "headless":
 		return
-	if fullscreen:
+	var qa: bool=ProjectSettings.get_setting("tdhub/qa_window",false)
+	if qa:
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS,true)
+		DisplayServer.window_set_current_screen(mini(int(ProjectSettings.get_setting("tdhub/qa_screen",1)),DisplayServer.get_screen_count()-1))
+	if fullscreen and not qa:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
