@@ -1,5 +1,6 @@
 extends RefCounted
-## Einmalige Bodenmaske: RG=Erde/Gras, B=Gehweg, A=Verdichtung. Keine Renderknoten.
+## Einmalige Bodenmaske: RG=Erde/Gras, B=Trampelpfad, A=Verdichtung. Keine Renderknoten.
+const CityStreets := preload("res://scripts/heroes/hd_city_streets.gd")
 const RESOLUTION := 1024
 
 static func build(game, plants: Node3D) -> void:
@@ -19,7 +20,7 @@ static func build(game, plants: Node3D) -> void:
 	var image := Image.create(RESOLUTION,RESOLUTION,false,Image.FORMAT_RGBA8)
 	image.fill(Color(0,0,0,0))
 	for i in brushes.size():_paint(image,rect,brushes[i],i)
-	_paint_streets(image,rect,game.get_meta("settlement_street_paths",[]))
+	_paint_streets(game,image,rect,game.get_meta("settlement_street_paths",[]))
 	image.generate_mipmaps()
 	var texture := ImageTexture.create_from_image(image)
 	var use := _bake_use(game,rect)
@@ -69,7 +70,7 @@ static func _paint(image: Image, rect: Rect2, brush: Dictionary, index: int) -> 
 			var old := image.get_pixel(x,y)
 			image.set_pixel(x,y,Color(maxf(old.r,weight*soil),maxf(old.g,weight*grass),old.b,old.a))
 
-static func _paint_streets(image: Image, rect: Rect2, paths: Array) -> void:
+static func _paint_streets(game, image: Image, rect: Rect2, paths: Array) -> void:
 	var scale := RESOLUTION/rect.size.x
 	for path in paths:
 		# Pro Route nur einmal verdichten: mehr Abtastpunkte machen einen Weg nicht heller.
@@ -80,6 +81,8 @@ static func _paint_streets(image: Image, rect: Rect2, paths: Array) -> void:
 			var steps := maxi(1,ceili(a.distance_to(b)/.4))
 			for step in steps+1:
 				var at := a.lerp(b,float(step)/steps)
+				# In der Stadt liegt echtes Pflaster mit Bord; nur Trampelpfade außerhalb bleiben weiche Erde.
+				if CityStreets.covered(game,at,.6):continue
 				var door_distance := minf(at.distance_to(path[0]),at.distance_to(path[-1]))
 				var radius := 1.12+sin(at.x*.63+at.z*.41)*.13+sin(at.z*1.31-at.x*.27)*.09
 				radius+=.25*(1.0-smoothstep(0,3,door_distance))
@@ -102,7 +105,7 @@ static func _paint_streets(image: Image, rect: Rect2, paths: Array) -> void:
 
 
 ## Nutzungskarte für die Bodenmaterialien (Lukas 2026-11-19: Sediment nach Nutzung und Gefälle statt
-## Rauschflecken). R Siedlung/Trittfläche, G Nässe, B Hangschutt, A Platzpflaster. Nur Optik, einmal je Spiel.
+## Rauschflecken). R Siedlung/Trittfläche, G Nässe, B Hangschutt. Nur Optik, einmal je Spiel.
 const USE_RESOLUTION := 384
 
 static func _bake_use(game, rect: Rect2) -> ImageTexture:
@@ -135,27 +138,9 @@ static func _bake_use(game, rect: Rect2) -> ImageTexture:
 	var sites: Array=cathedral.get_meta("street_sites",[]) if cathedral else []
 	for site in sites:
 		_splat(settled,rect,cell,site.center,16.0,6.0,1.0)
-	var paved := PackedFloat32Array()
-	paved.resize(n*n)
 	var plazas: Array=cathedral.get_meta("settlement_plazas",[]) if cathedral else []
 	for plaza in plazas:
-		_splat(paved,rect,cell,plaza.pos,float(plaza.get("radius",11.0))*.82,float(plaza.get("radius",11.0))*.6,1.0,true)
 		_splat(settled,rect,cell,plaza.pos,float(plaza.get("radius",11.0))+6.0,6.0,1.0)
-	# Gepflasterte Gassen: Vorplätze benachbarter Häuser einer Zeile zu einer durchgehenden Gasse verbinden.
-	var streets := {}
-	for site in sites:
-		if not site.get("town",false):continue
-		# Gegenüberliegende Zeilen (2k, 2k+1) teilen sich eine Gasse.
-		var pair := int(site.get("row",-2))/2
-		if not streets.has(pair):streets[pair]=[]
-		streets[pair].append(site.approach)
-	for pair in streets:
-		var points: Array=streets[pair]
-		points.sort_custom(func(a,b):return a.x<b.x)
-		for i in points.size():
-			_splat(paved,rect,cell,points[i],3.2,1.6,.95)
-			if i>0 and (points[i] as Vector3).distance_to(points[i-1])<26.0:
-				_stroke(paved,rect,cell,points[i-1],points[i],2.6,1.4,.95)
 	var blurred := _blur(heights,n,4)
 	var slope := PackedFloat32Array()
 	slope.resize(n*n)
@@ -174,12 +159,12 @@ static func _bake_use(game, rect: Rect2) -> ImageTexture:
 			var hollow := clampf((blurred[i]-heights[i]-.25)*.6,0.0,1.0)
 			var scree := clampf(talus[i]*.8-slope[i]*.3,0.0,1.0)*(1.0-smoothstep(5.0,10.0,heights[i]))
 			var wet := clampf(maxf(gutter[i]*.75,hollow),0.0,1.0)
-			image.set_pixel(x,y,Color(clampf(settled[i],0,1),wet,scree,clampf(paved[i],0,1)))
+			image.set_pixel(x,y,Color(clampf(settled[i],0,1),wet,scree,0.0))
 	if OS.has_environment("GEMTD_BODEN_KARTE"):image.save_png(OS.get_environment("GEMTD_BODEN_KARTE"))
 	return ImageTexture.create_from_image(image)
 
 
-static func _splat(field: PackedFloat32Array, rect: Rect2, cell: float, at: Vector3, radius: float, soft: float, strength: float, ragged := false) -> void:
+static func _splat(field: PackedFloat32Array, rect: Rect2, cell: float, at: Vector3, radius: float, soft: float, strength: float) -> void:
 	var n := USE_RESOLUTION
 	var cx := (at.x-rect.position.x)/cell
 	var cy := (at.z-rect.position.y)/cell
@@ -187,21 +172,9 @@ static func _splat(field: PackedFloat32Array, rect: Rect2, cell: float, at: Vect
 	for y in range(maxi(0,floori(cy)-reach),mini(n,ceili(cy)+reach+1)):
 		for x in range(maxi(0,floori(cx)-reach),mini(n,ceili(cx)+reach+1)):
 			var d := Vector2(x+.5-cx,y+.5-cy).length()*cell
-			if ragged:
-				# Platzränder folgen den Hausfluchten, keine Zirkelkreise.
-				var angle := atan2(y+.5-cy,x+.5-cx)
-				d*=1.0+.13*sin(angle*3.0+at.x)+.08*sin(angle*5.0-at.z)
 			var weight := (1.0-smoothstep(radius-soft,radius,d))*strength
 			if weight<=0.0:continue
 			field[y*n+x]=maxf(field[y*n+x],weight)
-
-
-static func _stroke(field: PackedFloat32Array, rect: Rect2, cell: float, a: Vector3, b: Vector3, radius: float, soft: float, strength: float) -> void:
-	var steps := maxi(1,ceili(a.distance_to(b)/(cell*.7)))
-	for k in steps+1:
-		var at := a.lerp(b,float(k)/steps)
-		# Breite schwankt leicht, wie in gewachsenen Gassen.
-		_splat(field,rect,cell,at,radius*(1.0+.12*sin(at.x*.37+at.z*.23)),soft,strength)
 
 
 static func _blur(field: PackedFloat32Array, n: int, radius: int) -> PackedFloat32Array:

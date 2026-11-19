@@ -173,7 +173,7 @@ func _build(game, parent: Node3D) -> Node3D:
 		var normal := Vector3(-tangent.z, 0, tangent.x)
 		var site: Vector3 = p + normal * (game.arena_layout.width + 2.2)
 		if _available(site, 0.8) and _separated(site, 3.5):
-			_candles(site, 1.25, true)
+			_fire_bowl(site, 1.25, true)
 			_sites.append(site)
 	_lane_reliquaries()
 	_flush()
@@ -318,7 +318,7 @@ func _mesh(kind: String) -> Mesh:
 
 
 func _tower(at: Vector3, scale: float, yaw := 0.0) -> void:
-	HdTerrain.patch(_root, at, 3.0 * scale + 1.2)
+	# Kein runder Pflasterfleck mehr: der Turm steht auf seinem eigenen quadratischen Sockel.
 	var stone := wall_material()
 	var trim := _solid("trim", Color("747785"))
 	var roof := roof_material()
@@ -358,12 +358,13 @@ func _window(at: Vector3, yaw: float, width: float, height: float) -> void:
 
 func _chapel(at: Vector3, yaw: float, scale: float, landmark: bool, main := false) -> void:
 	_street_site(at,yaw,scale,"house")
-	var paving: MeshInstance3D
-	if main or landmark or scale>=.5:
-		paving=HdTerrain.patch(_root, at, 13.0 * scale + 2.2)
 	if main:
+		var paving := HdTerrain.patch(_root, at, 13.0 * scale + 2.2)
 		paving.name="FortressDarkPaving"
 		paving.position.y=at.y+.024
+	elif landmark or scale>=.5:
+		# Rechteckiger Kirchplatz nach dem Grundriss, vorn etwas weiter für den Eingang.
+		preload("res://scripts/heroes/hd_city_streets.gd").forecourt(_game,_root,at+Vector3(0,0,2.5*scale).rotated(Vector3.UP,yaw),yaw,Vector2(8.5,14.5)*scale)
 	var stone := wall_material()
 	var trim := _solid("trim", Color("747785"))
 	var roof := roof_material()
@@ -387,7 +388,7 @@ func _chapel(at: Vector3, yaw: float, scale: float, landmark: bool, main := fals
 		for z in [-6.0, 0.0, 6.0]:
 			_beam(at + Vector3(side * 5.7, 7.0, z).rotated(Vector3.UP, yaw) * scale, at + Vector3(side * 4.85, 10.3, z).rotated(Vector3.UP, yaw) * scale, 0.28 * scale, trim)
 	for side in [-1.0, 1.0]:
-		_candles(at + Vector3(side * 4.5, 0, 10.4).rotated(Vector3.UP, yaw) * scale, 1.0 * scale, landmark and scale > 1.0)
+		_fire_bowl(at + Vector3(side * 4.5, 0, 10.4).rotated(Vector3.UP, yaw) * scale, 1.0 * scale, landmark and scale > 1.0)
 	if landmark:
 		for side in [-1.0, 1.0]:
 			_tower(at + Vector3(side * 6.3, 0, 7.0).rotated(Vector3.UP, yaw) * scale, scale * (0.94 if side < 0 else 0.84), yaw)
@@ -412,7 +413,7 @@ func _graveyard(at: Vector3, yaw: float) -> void:
 	for side in [-1.0, 1.0]:
 		_rail(at + Vector3(side * 2.2, 0, 0).rotated(Vector3.UP, yaw), yaw + PI * 0.5, 5.6)
 	if _rng.randf() < 0.35:
-		_candles(at + Vector3(3.0, 0, 0), 0.65)
+		_fire_bowl(at + Vector3(3.0, 0, 0), 0.65)
 
 
 func _beam(from: Vector3, to: Vector3, thickness: float, material: Material) -> void:
@@ -579,20 +580,28 @@ func _ruin(at: Vector3, yaw: float) -> void:
 		_place("box", stone, Vector3(_rng.randf_range(0.5, 1.1), 0.25, _rng.randf_range(0.5, 1.2)), at + local.rotated(Vector3.UP, yaw), yaw + _rng.randf_range(-0.5, 0.5))
 
 
-func _candles(at: Vector3, scale: float, with_light := false) -> void:
-	var metal := _solid("candle_metal", Color("777363"), 0.0, 0.55)
-	var wax := _solid("wax", Color("bfb58d"))
+## Feuerschale auf Steinsockel: das Feuer brennt in der Schale (Lukas 2026-11-19), keine Kerzen auf einem Teller.
+func _fire_bowl(at: Vector3, scale: float, with_light := false) -> void:
+	var stone := wall_material()
+	var iron := _solid("candle_metal", Color("4a4740"), 0.0, 0.55)
+	var ember := _solid("embers", Color("b4461c"), 1.6)
 	var flame := _solid("fire", Color("f3bd6d"), 2.2)
 	var core := _solid("fire_core", Color("ffedba"), 3.0)
-	_place("cylinder", metal, Vector3(0.7, 0.25, 0.7) * scale, at + Vector3.UP * 0.13 * scale)
-	for offset in [Vector3.ZERO, Vector3(0.45, 0, 0.25), Vector3(-0.35, 0, 0.35)]:
-		var p: Vector3 = at + offset * scale
-		_place("cylinder", wax, Vector3(0.12, 0.75, 0.12) * scale, p + Vector3.UP * 0.55 * scale)
-		_place("spire", flame, Vector3(0.15, 0.5, 0.15) * scale, p + Vector3.UP * 1.1 * scale)
-		_place("spire", core, Vector3(0.075, 0.3, 0.075) * scale, p + Vector3.UP * 1.05 * scale)
+	_place("box", stone, Vector3(0.62, 0.16, 0.62) * scale, at + Vector3.UP * 0.08 * scale, 0.0)
+	_place("cylinder", stone, Vector3(0.15, 0.62, 0.15) * scale, at + Vector3.UP * 0.47 * scale)
+	# Schale: schmaler Fuß, breiter Rand, Glut knapp unter dem Rand.
+	_place("cylinder", iron, Vector3(0.28, 0.12, 0.28) * scale, at + Vector3.UP * 0.82 * scale)
+	_place("cylinder", iron, Vector3(0.52, 0.2, 0.52) * scale, at + Vector3.UP * 0.97 * scale)
+	_place("cylinder", ember, Vector3(0.45, 0.04, 0.45) * scale, at + Vector3.UP * 1.03 * scale)
+	for i in 5:
+		var angle := float(i) * TAU / 5.0 + at.x
+		var offset := Vector3(cos(angle), 0, sin(angle)) * (0.0 if i == 0 else 0.22) * scale
+		var height := (0.75 if i == 0 else 0.42 + 0.06 * float(i % 3)) * scale
+		_place("spire", flame, Vector3(0.14 * scale, height, 0.14 * scale), at + offset + Vector3.UP * (1.07 * scale + height * 0.5))
+		_place("spire", core, Vector3(0.07 * scale, height * 0.55, 0.07 * scale), at + offset + Vector3.UP * (1.07 * scale + height * 0.3))
 	if with_light and _lights.size() < (2 if Display.quality == Display.LOW else 8):
 		var light := OmniLight3D.new()
-		light.position = at + Vector3.UP * 2.0 * scale
+		light.position = at + Vector3.UP * 1.6 * scale
 		light.light_color = Color("ffca89")
 		light.light_energy = 1.1
 		light.omni_range = 11.0 * maxf(scale, 1.0)
@@ -606,7 +615,7 @@ func _flush() -> void:
 	for group in _groups.values():
 		var first := _root.get_child_count()
 		var shadow := GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		if group.material == _materials.get("windows") or group.material == _materials.get("fire") or group.material == _materials.get("fire_core"):
+		if group.material == _materials.get("windows") or group.material in [_materials.get("fire"),_materials.get("fire_core"),_materials.get("embers")]:
 			shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		preload("res://scripts/map/static_mesh_batch.gd").add(_root,group.mesh,group.transforms,48.0,shadow)
 		for instance: MultiMeshInstance3D in _root.get_children().slice(first):

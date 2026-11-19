@@ -14,6 +14,7 @@ var _lane_skips := 0
 func _ready() -> void:
 	game = get_parent()
 	preload("res://scripts/heroes/hd_settlement_streets.gd").build(game,self)
+	preload("res://scripts/heroes/hd_city_streets.gd").build(game,self)
 	var plants := preload("res://scripts/heroes/hd_undergrowth.gd").build(game,self)
 	preload("res://scripts/heroes/hd_fields.gd").build(game,self)
 	preload("res://scripts/heroes/hd_vegetation_ground.gd").build(game,plants)

@@ -114,6 +114,7 @@ static func _batches(root: Node3D, scatter: Dictionary, low: bool, tree: bool) -
 static func _available(game, at: Vector3, settlements: Array, buildings: Array) -> bool:
 	if at.distance_to(game.fortress_pos)<17:return false
 	if preload("res://scripts/heroes/hd_settlement_streets.gd").distance(game,at)<1.65:return false
+	if preload("res://scripts/heroes/hd_city_streets.gd").covered(game,at,1.0):return false
 	if Vector2(at.x+33,at.z+33).length()<20 or Vector2(at.x-33,at.z-33).length()<10:return false
 	if at.distance_to(game.arena_layout.nearest(at))<4.4:return false
 	if settlements.any(func(site):return Vector2(at.x-site.pos.x,at.z-site.pos.z).length()<6.5):return false

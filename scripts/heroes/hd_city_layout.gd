@@ -80,7 +80,13 @@ static func plan(game, layout: HdArena, points: Array, safe: Array, step: float)
 			result.append_array(_keep_doors_free_against(result,lots))
 			continue
 		chosen.append(center)
-		result.append({"pos":center,"plaza":true,"radius":11.0,"yaw":float(_hash(key.x*17+key.y,3)%360)*PI/180.0,"lots":lots.size()})
+		# Platz als Viereck längs der Gasse, so weit wie die freigelassenen Parzellen.
+		var street_yaw := _street_yaw(center,key.x*2)
+		var span := 0.0
+		for lot in lots:span=maxf(span,absf(((lot.pos as Vector3)-center).rotated(Vector3.UP,-street_yaw).x))
+		var half := Vector2(clampf(span+4.0,8.0,14.0),8.5)
+		var turn := float(_hash(key.x*17+key.y,3)%4)*PI*.5
+		result.append({"pos":center,"plaza":true,"radius":11.0,"yaw":street_yaw+turn,"street_yaw":street_yaw,"half":half,"lots":lots.size()})
 	return result
 
 

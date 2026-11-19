@@ -71,6 +71,9 @@ func _ready() -> void:
 		print("GEHWEGE pfade=%d laternen=%d baeume_entfernt=%d fokus=%s" % [paths.size(),atmosphere.get_meta("street_lantern_positions").size(),game.get_node("Atmosphere/SettlementWalkways").get_meta("cleared_trees"),focus])
 		print("STADT haeuser=%d zugaenge=%d plaetze=%d" % [game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).size(),game.get_meta("settlement_city_access",[]).size(),game.get_node("SchwarzeKathedrale").get_meta("settlement_plazas",[]).size()])
 		print("STADT_GRUNDRISS ",hash(game.get_node("SchwarzeKathedrale").get_meta("settlement_sites",[]).map(func(site):return [site.pos.x,site.pos.z,site.yaw,site.ruin])))
+		var paving: Node=game.get_node_or_null("Atmosphere/CityStreets")
+		if paving:print("STADT_PFLASTER gassen=%d quergassen=%d anschluesse=%d plaetze=%d borde=%d" % [paving.get_meta("streets"),paving.get_meta("alleys"),paving.get_meta("connectors"),paving.get_meta("plazas"),paving.get_meta("curbs")]," gesperrt=",paving.get_meta("blocked"))
+		print("STADT_TORTUERME ",game.find_children("*","HdBuilding",true,false).map(func(b):return Vector2i(roundi(b.position.x),roundi(b.position.z))))
 		print("WEGGRUEN inseln=%d bepflanzt=%d baeume=%d baumdreiecke=%d" % [game.get_meta("settlement_islands",[]).size(),game.get_node("Atmosphere/UndergrowthPatches").get_meta("courtyard_islands",[]).size(),game.get_node("Atmosphere/CourtyardTrees").get_meta("tree_positions",[]).size(),game.get_node("Atmosphere/CourtyardTrees").get_meta("triangle_budget",0)])
 		name=("bollwerk-stadt" if args.has("--stadt") else "bollwerk-gehwege")+("-insel" if args.has("--insel") else "")+("-nacht" if args.has("--nacht") else "-tag")+("-weit" if args.has("--weit") else "")+("-niedrig" if Display.quality==Display.LOW else "")
 	elif args.has("--natur"):

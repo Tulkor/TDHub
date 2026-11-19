@@ -125,7 +125,7 @@ func _build_zone(z: Dictionary) -> void:
 					tree.set_meta("vegetation_root",true)
 					_root.add_child(tree)
 		"schmiede":
-			HdTerrain.patch(_root, c + Vector3(0, 0.04, -2), 5.5)
+			preload("res://scripts/heroes/hd_city_streets.gd").forecourt(game,_root,c+Vector3(0,0,-2),0.0,Vector2(5.0,4.5))
 			var workshop := HdGothic.workshop()
 			workshop.position = c + Vector3(0,0,-2)
 			_root.add_child(workshop)

@@ -40,7 +40,7 @@ func setup(g, d: Dictionary, r = null) -> void:
 		var p: Array = d.pos
 		position = Vector3(float(p[0]), 0, float(p[1]))
 	var h := 3.2 if gate_kind == "vorwerk" else 4.2
-	HdTerrain.patch(self, Vector3.ZERO, radius + 2.8)
+	# Kein runder Pflasterfleck: er lag halb auf der Lane. Der Turm steht auf seinem eigenen Achteck-Sockel.
 	_meshes = HdGothic.gate_tower(radius, h, gate_kind != "vorwerk", UiTheme.CYAN if gate_kind == "vorwerk" else UiTheme.COIN)
 	_ruin = HdGothic.gate_ruin(radius)
 	_ruin.visible = false

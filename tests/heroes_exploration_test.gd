@@ -206,11 +206,20 @@ func _test_streets(game: HdGame) -> void:
 			var b: Vector3=path[i+1]
 			for step in ceili(a.distance_to(b))+1:
 				var at := a.move_toward(b,float(step))
+				# In der Stadt liegt dort echtes Pflaster mit Bord statt eingemalter Erde.
+				if preload("res://scripts/heroes/hd_city_streets.gd").covered(game,at,.6):continue
 				var uv := (Vector2(at.x,at.z)-rect.position)/rect.size
 				var pixel := mask.get_pixel(clampi(int(uv.x*mask.get_width()),0,mask.get_width()-1),clampi(int(uv.y*mask.get_height()),0,mask.get_height()-1))
 				samples+=1
 				if pixel.b>.65 and pixel.a>.2:covered+=1
 	check(covered>samples*.98,"Bodenmaske zeichnet zusammenhängende verdichtete Gehwege an allen Routen")
+	var paving: Node=game.get_node("Atmosphere/CityStreets")
+	check(int(paving.get_meta("streets"))>=15 and int(paving.get_meta("plazas"))>=2 and int(paving.get_meta("curbs"))>500,"Gassen und Plätze sind eigene Pflasterflächen mit Steinbord")
+	var touches_lane := 0
+	for piece in paving.get_meta("pieces"):
+		if preload("res://scripts/heroes/hd_city_streets.gd")._touch_lane(piece,game.arena_layout,float(game.cfg.arena.road_width)*.5+.45):touches_lane+=1
+	check(touches_lane>=8,"Mehrere Gassen münden an einer Monsterstraße")
+	check(game.find_children("Basaltvorplatz*","MeshInstance3D",true,false).is_empty(),"Keine runden Pflasterflecken mehr unter Türmen und Toren")
 
 func _test_city(game: HdGame) -> void:
 	var layout := game.arena_layout
