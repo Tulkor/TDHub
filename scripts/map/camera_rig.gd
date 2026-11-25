@@ -241,6 +241,14 @@ static func _sky() -> Sky:
 	return sky
 
 
+## SSAO und SSIL nur auf Grafikstufe Hoch (Leistung 2026-11-25: beide zusammen kosten in Randgruppen TD
+## auf einer RX 9070 XT 1,5 ms je Bild, einzeln abgeschaltet spart kaum etwas, weil sie Vorarbeit teilen).
+static func _ao_quality(env: Environment, look: Dictionary) -> void:
+	var high := Display.quality == Display.HIGH
+	env.ssao_enabled = high and float(look.get("ssao", 0.0)) > 0.0
+	env.ssil_enabled = high and float(look.get("ssil", 0.0)) > 0.0
+
+
 ## Licht und Himmel für eine 3D-Szene anlegen. Werte aus FieldStyle.env(), fehlende Schlüssel
 ## nehmen den Arcade-Stand (FieldStyle.ENV_DEFAULT). Gibt die Knoten zurück, damit ein Modus
 ## (z. B. eine Nachtversion) sie nachträglich ändern kann: {"env", "sun", "fill"}.
@@ -307,6 +315,7 @@ static func add_environment(parent: Node, look: Dictionary = {}, filter := true)
 		env.ssil_enabled = true
 		env.ssil_radius = 3.0
 		env.ssil_intensity = look.ssil
+	_ao_quality(env, look)
 	# Volumen-Nebel: Licht der Laternen und Treffer wird im Dunst sichtbar
 	if look.vol_fog > 0.0:
 		env.volumetric_fog_enabled = true
@@ -329,6 +338,10 @@ static func add_environment(parent: Node, look: Dictionary = {}, filter := true)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	parent.add_child(we)
+	# Grafikstufe zur Laufzeit gewechselt: Umgebungsverdeckung nachziehen, Verbindung endet mit der Szene
+	var on_quality := func(): _ao_quality(env, look)
+	Display.quality_changed.connect(on_quality)
+	we.tree_exiting.connect(func(): Display.quality_changed.disconnect(on_quality), CONNECT_ONE_SHOT)
 	parent.add_child(sun)
 	# Gegenlicht von der anderen Seite ohne Schatten: hellt Schattenseiten in einer kühlen Farbe auf,
 	# damit Tower und Gegner Form bekommen statt einer flachen dunklen Seite
