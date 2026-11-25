@@ -11,15 +11,7 @@ var main_els: Array = []
 
 func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	stufe = st
-	Session.game_kind = "youtd"
-	Session.map_path = "res://data/maps/youtd.json"
-	Session.map_override = null
-	Session.skip_setup = false
-	game = load("res://scenes/youtd_game.tscn").instantiate()
-	add_child(game)
-	await get_tree().process_frame
-	game.rng.seed = sd * 7919 + 13
-	game.submit({"type": "setup", "mode": 0, "length": int(args.get("laenge", 1)), "difficulty": 2, "seed": sd * 101 + 7})
+	await start(sd, args)
 	var els: Array = game.elements.keys()
 	els.shuffle()
 	main_els = els.slice(0, 2)
@@ -128,3 +120,18 @@ func _act() -> void:
 		if strongest != null:
 			var it = game.item_stash[0]
 			game.submit({"type": "item_put", "tower": game.tower_ref(strongest), "uid": it.get_uid()})
+
+
+## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
+func start(sd: int, args: Dictionary) -> void:
+	Session.game_kind = "youtd"
+	Session.map_path = "res://data/maps/youtd.json"
+	Session.map_override = null
+	Session.skip_setup = false
+	game = load("res://scenes/youtd_game.tscn").instantiate()
+	add_child(game)
+	await get_tree().process_frame
+	game.rng.seed = sd * 7919 + 13
+	game.submit({"type": "setup", "mode": 0, "length": int(args.get("laenge", 1)), "difficulty": diff_index("youtd"), "seed": sd * 101 + 7,
+			"ascension": aufstieg})
+	take_ascension()

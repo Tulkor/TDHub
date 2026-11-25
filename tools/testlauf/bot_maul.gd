@@ -1,5 +1,5 @@
 extends "res://tools/testlauf/bot_basis.gd"
-## Shopping-Maul-Bot (Normal, 150 Leben, Gruppenmodus, solo, zufällige Standard-Filiale je Lauf).
+## Shopping-Maul-Bot (Schwierigkeit aus testlauf.gd, Gruppenmodus, solo, zufällige Standard-Filiale je Lauf).
 ## Keine Items, Forschung, Teampunkte oder Einheiten.
 ## Stufe 1: kauft zufällige bezahlbare Tower und stellt sie zufällig ins eigene Gebiet.
 ## Stufe 2: kauft den Tower mit dem besten Schaden je Gold und stellt ihn an den Weg.
@@ -13,15 +13,7 @@ var zone_rect: Rect2i
 
 func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	stufe = st
-	Session.game_kind = "shoppingmaul"
-	Session.skip_setup = true
-	game = load("res://scenes/maul_game.tscn").instantiate()
-	add_child(game)
-	await get_tree().process_frame
-	var shops: Array = MaulData.shops().filter(func(s): return s.kind == "standard").map(func(s): return str(s.id))
-	shop_id = str(args.get("filiale", shops[sd % shops.size()]))
-	game.start_game(shop_id, 1, "group")
-	zone_rect = game.map.zones[game.players[0].zone].rect
+	await start(sd, args)
 	var lives_start: int = game.lives
 	Engine.time_scale = tempo
 	var frames := 0
@@ -255,3 +247,17 @@ func _maze_spot(id: String) -> Vector2i:
 			best = l - base
 			out = a
 	return out
+
+
+## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
+func start(sd: int, args: Dictionary) -> void:
+	Session.game_kind = "shoppingmaul"
+	Session.skip_setup = true
+	game = load("res://scenes/maul_game.tscn").instantiate()
+	add_child(game)
+	await get_tree().process_frame
+	var shops: Array = MaulData.shops().filter(func(s): return s.kind == "standard").map(func(s): return str(s.id))
+	shop_id = str(args.get("filiale", shops[sd % shops.size()]))
+	game.start_game(shop_id, diff_index("maul"), "group")
+	take_ascension()
+	zone_rect = game.map.zones[game.players[0].zone].rect
