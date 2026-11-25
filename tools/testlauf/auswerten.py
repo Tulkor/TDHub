@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wertet die Testläufe aus (tools/testlauf.sh): je Modus, Schwierigkeit (+Aufstieg) und Bot-Stufe Siege, erreichte
+"""Wertet die Testläufe aus (tools/testlauf.sh): je Modus, Schwierigkeit (+Aufstieg) und Bot-Stufe/Skill Siege, erreichte
 Welle, wo Leben verloren gehen und wie knapp es vorher war (messung.gd: Weg-Anteil des vordersten Gegners je Welle).
 Aufruf: python3 tools/testlauf/auswerten.py [ergebnisse.jsonl] [--md=datei.md] [--gruppe=rasse|filiale] [--knapp=0.9]
 Spalte „Erste knappe Welle“: erste Welle, in der ein Gegner mindestens --knapp des Wegs schaffte (Median der Läufe);
@@ -25,7 +25,20 @@ def erste_knappe(r, grenze):
         if float(k) >= grenze:
             return i + 1
     return None
-NAMEN = {"gemtd": "GemTD", "eevetd": "eeveTD", "shoppingmaul": "Shopping Maul", "randgruppen": "Randgruppen TD", "youtd": "YouTD"}
+NAMEN = {"gemtd": "GemTD", "eevetd": "eeveTD", "shoppingmaul": "Shopping Maul", "randgruppen": "Randgruppen TD", "youtd": "YouTD",
+         "survivors": "Tower Survivors", "bollwerk": "Bollwerk"}
+
+
+def bot_name(r):
+    """Spalte Bot: feste Stufe, Spielstärke (--skill) und ggf. Checkpoint."""
+    t = f"Skill {r['skill']:g}" if "skill" in r else f"{r['stufe']} {STUFEN.get(r['stufe'], '')}"
+    if r.get("checkpoint"):
+        t += f" ab W{r['checkpoint']}"
+    return t
+
+
+def bot_key(r):
+    return (1 if "skill" in r else 0, float(r.get("skill", r.get("stufe", 0))), int(r.get("checkpoint", 0)))
 
 
 def main():
@@ -47,7 +60,7 @@ def main():
     out = []
     by = defaultdict(list)
     for r in runs:
-        key = (r["modus"], diff_key(r), r["stufe"], r.get(gruppe, "") if gruppe else "")
+        key = (r["modus"], diff_key(r), bot_key(r), r.get(gruppe, "") if gruppe else "")
         by[key].append(r)
     for modus in NAMEN:
         keys = sorted(k for k in by if k[0] == modus)
@@ -76,7 +89,7 @@ def main():
             ek_txt = f"{statistics.median(ek):g}" if ek else "–"
             puffer = [r["welle"] - e for r, e in ((r, erste_knappe(r, grenze)) for r in rs) if e is not None]
             pf_txt = f"{statistics.median(puffer):g}" if puffer else "–"
-            out.append(f"| {schwierigkeit(rs[0])} | {k[2]} {STUFEN.get(k[2], '')} | {k[3]} | {len(rs)} | "
+            out.append(f"| {schwierigkeit(rs[0])} | {bot_name(rs[0])} | {k[3]} | {len(rs)} | "
                        f"{sum(1 for r in rs if r['sieg'])} | "
                        f"{statistics.median(wellen):g} ({min(wellen)}–{max(wellen)}) von {rs[0]['wellen']} | {ek_txt} | {pf_txt} | "
                        f"{statistics.mean(float(r['leben']) for r in rs):.0f} von {rs[0]['leben_start']} | {tt} |")

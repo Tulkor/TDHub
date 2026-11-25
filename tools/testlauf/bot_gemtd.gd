@@ -6,8 +6,8 @@ extends "res://tools/testlauf/bot_basis.gd"
 ## Stufe 3 „Gut“: jeder Gem dorthin, wo der Weg am längsten wird, plant Rezepte über mehrere Runden (behält Zutaten),
 ##   kombiniert im Feld während der Welle, behält bevorzugt Tower mit viel Weg in Reichweite und achtet auf genug Luftabwehr.
 ## Stufe 4 „Sehr gut“: wie 3, baut auf ein vorab berechnetes Labyrinth hin (classic_plan.txt = Maze 1 „Weglänge“
-##   aus tools/maze, 200 Steine) und kauft
-##   mit übrigem Gold die Extra Chance.
+##   aus tools/maze, 200 Steine), solange ein Planfeld den Weg fast so gut verlängert wie der beste freie Platz,
+##   und kauft ab Welle 9 mit übrigem Gold die Extra Chance.
 
 const PLAN := "res://tools/testlauf/classic_plan.txt"
 
@@ -68,7 +68,9 @@ func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 # --- Bauen -----------------------------------------------------------------------------------------
 
 func _place_one() -> void:
-	if stufe >= 4 and game.can_buy_extra_chance() and game.gold >= 275:
+	wurf()
+	# Extra Chance erst ab Welle 9: vorher fehlt das Gold für die Aufwertungen (Stufe 4 war sonst auf Schwer schwächer als 3)
+	if stufe >= 4 and game.wave_index >= 8 and game.can_buy_extra_chance() and game.gold >= 275:
 		var best_id := ""
 		var best_v := -INF
 		for id in Database.gem_ids():
@@ -88,7 +90,15 @@ func _place_one() -> void:
 			# die ersten zwei Gems der Runde an Stellen mit viel Weg und Flugbahn in Reichweite
 			a = best_spot(300, ok, 6.0, air_weight)
 		if a == Vector2i(-1, -1) and stufe >= 4:
-			a = best_block(400, ok, 0, 0, plan.duplicate())
+			# Plan nur, wenn sein Platz den Weg fast so gut verlängert wie der beste freie Platz (früh im Spiel
+			# bringen die Planfelder oft nichts, dann lieber gierig)
+			var ap := best_block(400, ok, 0, 0, plan.duplicate())
+			var ag := best_block(400, ok)
+			if ap != Vector2i(-1, -1):
+				var base := _path_len()
+				a = ap if ag == Vector2i(-1, -1) or _gain(ap, base) >= 0.7 * _gain(ag, base) else ag
+			else:
+				a = ag
 		if a == Vector2i(-1, -1):
 			a = best_block(20 if stufe == 2 else 400, ok)
 		plan.erase(a)
@@ -117,6 +127,7 @@ func _load_plan() -> void:
 # --- Auswählen -------------------------------------------------------------------------------------
 
 func _choose() -> void:
+	wurf()
 	var base := [0.0, 0.0]
 	var need := [1.0, 1.0]
 	if stufe >= 3:
@@ -221,6 +232,7 @@ func _ing_tier(ing: Dictionary) -> int:
 # --- Während der Welle -----------------------------------------------------------------------------
 
 func _wave_actions() -> void:
+	wurf()
 	for t in game.own_towers():
 		if not is_instance_valid(t) or t.is_new:
 			continue
@@ -253,6 +265,7 @@ func start(sd: int, args: Dictionary) -> void:
 	Session.map_override = null
 	Session.skip_setup = true
 	Session.difficulty = diff_index("gemtd")
+	cp_vormerken()
 	game = load(Session.GAME).instantiate()
 	add_child(game)
 	await get_tree().process_frame

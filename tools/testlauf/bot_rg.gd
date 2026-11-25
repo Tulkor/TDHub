@@ -47,6 +47,7 @@ func _cost(id: String) -> int:
 
 ## Ein Kauf; false, wenn nichts mehr geht.
 func _act() -> bool:
+	wurf()
 	if not game.setup_done or game.phase >= game.Phase.GAME_OVER:
 		return false
 	var all: Array = game.race_towers()
@@ -105,7 +106,8 @@ func _act() -> bool:
 					# sparen, wenn ein deutlich besserer Tower bald bezahlbar ist
 					for x in all:
 						if _cost(x) > _cost(id) and _cost(x) <= game.gold * 2 and Wert.value(x, 0) / _cost(x) >= Wert.value(id, 0) / _cost(id) and not x in ult:
-							if game.phase == game.Phase.BUILD:
+							# nur, wenn die nächste Welle auch so schon zu schaffen ist (sonst stand vor Welle 1 nichts)
+							if game.phase == game.Phase.BUILD and strong_now():
 								return false
 				if id == "":
 					return false
@@ -115,12 +117,22 @@ func _act() -> bool:
 		a = best_block(0, ok, -4, 3)
 	elif stufe == 2:
 		a = best_block(20, ok)
-	else:
-		# jeder Tower ist Teil des Labyrinths: dorthin, wo der Weg am längsten wird (Tower stehen dann am Weg)
+	elif maze:
+		# billiger Füller: nur Labyrinth, dorthin, wo der Weg am längsten wird
 		a = best_block(400, ok)
+	else:
+		# jeder Tower ist Teil des Labyrinths: dorthin, wo danach am meisten Schaden auf dem Weg liegt
+		a = best_maze_spot(150, ok, id, 0, game.own_towers(), func(t): return Wert.value(t.tower_id, 0))
 	if a == Vector2i(-1, -1):
 		return false
 	return game.submit({"type": "build", "id": id, "cell": a})
+
+
+## Steht schon doppelt so viel Schaden, wie die nächste Welle Leben hat?
+func strong_now() -> bool:
+	var pw := _field_power(game.own_towers())
+	var need := _next_hp(game.wave_index)
+	return pw[0] / need[0] > 2.0 and pw[1] / need[1] > 1.0
 
 
 ## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
@@ -128,11 +140,15 @@ func start(sd: int, args: Dictionary) -> void:
 	Session.game_kind = "randgruppen"
 	Session.map_override = null
 	Session.skip_setup = false
+	cp_vormerken()
 	game = load(Session.RG_GAME if "RG_GAME" in Session else "res://scenes/rg_game.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
 	game.rng.seed = sd * 7919 + 13
 	var races: Array = game.rules.get("races", []).map(func(r): return str(r.id))
 	race_id = str(args.get("rasse", races[sd % races.size()]))
-	game.submit({"type": "setup", "race": race_id, "difficulty": diff_index("randgruppen"), "ascension": aufstieg})
+	if geladen:
+		race_id = str(game.rp().race)
+	else:
+		game.submit({"type": "setup", "race": race_id, "difficulty": diff_index("randgruppen"), "ascension": aufstieg})
 	take_ascension()

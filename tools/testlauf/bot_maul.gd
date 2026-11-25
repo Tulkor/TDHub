@@ -132,6 +132,7 @@ func _need() -> Array:
 
 ## Ein Kauf oder Ausbau; false, wenn nichts mehr geht.
 func _act() -> bool:
+	wurf()
 	if game.phase == MaulGame.Phase.SETUP or game.phase >= MaulGame.Phase.GAME_OVER:
 		return false
 	var gold: int = game.players[0].gold
@@ -253,11 +254,13 @@ func _maze_spot(id: String) -> Vector2i:
 func start(sd: int, args: Dictionary) -> void:
 	Session.game_kind = "shoppingmaul"
 	Session.skip_setup = true
+	cp_vormerken()
 	game = load("res://scenes/maul_game.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
 	var shops: Array = MaulData.shops().filter(func(s): return s.kind == "standard").map(func(s): return str(s.id))
 	shop_id = str(args.get("filiale", shops[sd % shops.size()]))
-	game.start_game(shop_id, diff_index("maul"), "group")
+	if not geladen:
+		game.start_game(shop_id, diff_index("maul"), "group")
 	take_ascension()
 	zone_rect = game.map.zones[game.players[0].zone].rect

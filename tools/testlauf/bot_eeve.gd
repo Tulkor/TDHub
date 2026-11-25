@@ -4,7 +4,8 @@ extends "res://tools/testlauf/bot_basis.gd"
 ## Stufe 1: Barrikaden zufällig am Weg, wertet zufällige Barrikaden zu zufälligen Towern auf, Punkte zufällig.
 ## Stufe 2: Weg grob länger (bester von 20 Plätzen), Punkte in zwei Elemente, Aufwertung mit bestem Wert je Gold.
 ## Stufe 3: Weg so lang wie möglich, Tower dort, wo viel Weg in Reichweite ist, Dual-Tower, wenn möglich.
-## Stufe 4: wie 3 und spart Gold für die Zinsen (wertet erst auf, wenn ein Level sonst Leben kosten würde).
+## Stufe 4: wie 3, baut aber ganze Mauern (Reihen von Barrikaden), die den Weg im offenen Feld wirklich umleiten,
+##   und spart ab Level 9 Gold für die Zinsen.
 
 
 var main_els: Array = []
@@ -16,6 +17,10 @@ func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	var els: Array = game.ELEMENT_IDS.duplicate()
 	els.shuffle()
 	main_els = els.slice(0, 2)
+	if geladen:
+		# aus dem Checkpoint: mit den Elementen weitermachen, in die schon investiert ist
+		els.sort_custom(func(a, b): return int(game.elements.get(a, 0)) > int(game.elements.get(b, 0)))
+		main_els = els.slice(0, 2)
 	var lives_start: int = game.lives
 	Engine.time_scale = tempo
 	var frames := 0
@@ -46,6 +51,7 @@ func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 
 
 func _act() -> bool:
+	wurf()
 	if not game.setup_done or game.phase >= game.Phase.GAME_OVER:
 		return false
 	var before: int = game.gold
@@ -55,6 +61,20 @@ func _act() -> bool:
 	# nicht alles Food auf einmal: höchstens 8 + 2 je Level unbebaute Barrikaden, der Rest des Golds geht in Tower
 	var plain: int = game.own_towers().filter(func(t): return t.tower_id == game.BARRICADE).size()
 	var cap: int = 8 + 2 * game.wave_index
+	while stufe >= 4 and game.food_used() < game.food_cap and game.gold >= game.barricade_cost() and built < 6 and plain + built < cap:
+		# Stufe 4 baut Mauern (Reihen von Barrikaden), die den Weg im offenen Feld wirklich umleiten
+		var line := best_wall(60, func(c): return game.can_build(c), 6)
+		if line.is_empty():
+			break
+		var any := false
+		for a in line:
+			if game.food_used() >= game.food_cap or game.gold < game.barricade_cost():
+				break
+			if game.submit({"type": "build", "cell": a}):
+				built += 1
+				any = true
+		if not any:
+			break
 	while game.food_used() < game.food_cap and game.gold >= game.barricade_cost() and built < 6 and plain + built < cap:
 		var n: int = [0, 0, 20, 400, 400][stufe]
 		var a := best_block(n, func(c): return game.can_build(c), -4 if stufe == 1 else -2, 3 if stufe == 1 else 1)
@@ -151,9 +171,11 @@ func start(sd: int, args: Dictionary) -> void:
 	Session.map_path = "res://data/maps/eeve.json"
 	Session.map_override = null
 	Session.skip_setup = false
+	cp_vormerken()
 	game = load(Session.EEVE_GAME).instantiate()
 	add_child(game)
 	await get_tree().process_frame
 	game.rng.seed = sd * 7919 + 13
-	game.submit({"type": "setup", "difficulty": diff_index("eeve"), "field": 0, "ascension": aufstieg})
+	if not geladen:
+		game.submit({"type": "setup", "difficulty": diff_index("eeve"), "field": 0, "ascension": aufstieg})
 	take_ascension()

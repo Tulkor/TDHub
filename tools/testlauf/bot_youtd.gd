@@ -3,7 +3,8 @@ extends "res://tools/testlauf/bot_basis.gd"
 ## Weisheit, Spieler-Level 0). Items legt er nicht ein, Zauber nutzt er nicht (Autocasts laufen von selbst).
 ## Stufe 1: erforscht zufällige Elemente, baut zufällige Tower aus dem Lager an zufällige Plätze am Weg.
 ## Stufe 2: zwei Elemente, baut den stärksten Tower je Gold an den Weg, wertet nicht auf.
-## Stufe 3: zwei Elemente, Plätze mit viel Weg in Reichweite, wertet Tower auf, wenn das je Gold mehr bringt.
+## Stufe 3: wie 2, wertet aber Tower auf (ab Welle 10 möglich) und spart dafür, wenn eine Aufwertung je Gold mehr
+##   bringt als ein neuer Tower.
 ## Stufe 4: wie 3, legt Items aus dem Lager in die stärksten Tower.
 
 var main_els: Array = []
@@ -15,6 +16,10 @@ func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	var els: Array = game.elements.keys()
 	els.shuffle()
 	main_els = els.slice(0, 2)
+	if geladen:
+		# aus dem Checkpoint: mit den Elementen weitermachen, in die schon investiert ist
+		els.sort_custom(func(a, b): return int(game.elements.get(a, 0)) > int(game.elements.get(b, 0)))
+		main_els = els.slice(0, 2)
 	var lives_start := float(game.portal)
 	Engine.time_scale = tempo
 	var frames := 0
@@ -57,6 +62,7 @@ func _val(id: String) -> float:
 
 
 func _act() -> void:
+	wurf()
 	if not game.setup_done or game.phase >= game.Phase.GAME_OVER:
 		return
 	# Elemente erforschen
@@ -75,8 +81,15 @@ func _act() -> void:
 			break
 	if game.stash.is_empty() and game.own_towers().is_empty():
 		game.submit({"type": "roll"})
+	# Stufe 3+: lohnt eine Aufwertung (je Gold) mehr als ein neuer Tower, wird dafür gespart statt gebaut
+	# (sonst geht jedes Gold sofort in neue Tower, und Stufe 3 spielte wie Stufe 2)
+	var save_up := false
+	if stufe >= 3 and game.own_towers().size() >= 4:
+		var up := _best_upgrade()
+		if not up.is_empty() and up.s >= _best_build_ratio() * 0.9:
+			save_up = true
 	# bauen
-	for _i in 3:
+	for _i in (0 if save_up else 3):
 		var can: Array = game.buildable().filter(func(id): return game.build_reason(id) == "")
 		if can.is_empty():
 			break
@@ -94,24 +107,9 @@ func _act() -> void:
 			break
 	# aufwerten
 	if stufe >= 3:
-		var best_s := 0.0
-		var best_t = null
-		var best_i := -1
-		var best_o := {}
-		for t in game.own_towers():
-			var opts: Array = game.tower_options(t)
-			for i in opts.size():
-				var o: Dictionary = opts[i]
-				if o.action != "upgrade" or o.reason != "":
-					continue
-				var s := (_val(o.id) - _val(t.yid)) / maxf(float(o.cost), 1.0)
-				if s > best_s:
-					best_s = s
-					best_t = t
-					best_i = i
-					best_o = o
-		if best_t != null:
-			game.submit({"type": "option", "tower": game.tower_ref(best_t), "index": best_i, "action": best_o.action, "id": best_o.id})
+		var up := _best_upgrade()
+		if not up.is_empty() and int(up.o.cost) <= game.gold:
+			game.submit({"type": "option", "tower": game.tower_ref(up.t), "index": up.i, "action": up.o.action, "id": up.o.id})
 	if stufe >= 4 and not game.item_stash.is_empty():
 		var strongest = null
 		for t in game.own_towers():
@@ -122,16 +120,41 @@ func _act() -> void:
 			game.submit({"type": "item_put", "tower": game.tower_ref(strongest), "uid": it.get_uid()})
 
 
+## Beste Aufwertung im Feld, die nur am Gold scheitert: {t, i, o, s} mit s = Stärkegewinn je Gold, leer wenn keine.
+func _best_upgrade() -> Dictionary:
+	var best := {}
+	for t in game.own_towers():
+		var opts: Array = game.tower_options(t)
+		for i in opts.size():
+			var o: Dictionary = opts[i]
+			if o.action != "upgrade" or (o.reason != "" and o.reason != tr("zu wenig Gold")):
+				continue
+			var sc := (_val(o.id) - _val(t.yid)) / maxf(float(o.cost), 1.0)
+			if sc > 0.0 and (best.is_empty() or sc > best.s):
+				best = {"t": t, "i": i, "o": o, "s": sc}
+	return best
+
+
+## Stärke je Gold des besten Towers, der gerade gebaut werden könnte (ohne aufs Gold zu schauen).
+func _best_build_ratio() -> float:
+	var r := 0.0
+	for id in game.buildable():
+		r = maxf(r, _val(id) / maxf(float(YoutdData.tower(id).cost), 1.0))
+	return r
+
+
 ## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
 func start(sd: int, args: Dictionary) -> void:
 	Session.game_kind = "youtd"
 	Session.map_path = "res://data/maps/youtd.json"
 	Session.map_override = null
 	Session.skip_setup = false
+	cp_vormerken()
 	game = load("res://scenes/youtd_game.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
 	game.rng.seed = sd * 7919 + 13
-	game.submit({"type": "setup", "mode": 0, "length": int(args.get("laenge", 1)), "difficulty": diff_index("youtd"), "seed": sd * 101 + 7,
-			"ascension": aufstieg})
+	if not geladen:
+		game.submit({"type": "setup", "mode": 0, "length": int(args.get("laenge", 1)), "difficulty": diff_index("youtd"), "seed": sd * 101 + 7,
+				"ascension": aufstieg})
 	take_ascension()

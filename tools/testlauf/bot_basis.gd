@@ -12,6 +12,42 @@ var air_factor := 3.0
 var diff := 1
 ## Aufstiegsstufe +N (nur auf Schwer, wie im Startfenster).
 var aufstieg := 0
+## Stufenlose Spielstärke 0–100 (--skill=N, -1 = aus, dann gilt die feste Stufe). Der Bot spielt mit der besten
+## Stufe (basis_stufe), macht aber Fehler: jede Entscheidung ist mit Wahrscheinlichkeit 1 − skill/100 die eines
+## Gelegenheitsspielers (Stufe 1), und er probiert nur einen Teil der Plätze (breite()). 0 = nur Stufe 1, 100 = beste
+## Stufe ohne Fehler; dazwischen wird er mit jedem Punkt im Mittel besser, das braucht die Bisektion (mindest_skill.sh).
+var skill := -1.0
+var basis_stufe := 3
+
+
+## Checkpoint, aus dem das Spiel startet (--checkpoint=datei, checkpoint.gd); geladen = Stand wurde übernommen.
+var cp_pfad := ""
+var geladen := false
+
+
+## In start() direkt vor dem Anlegen des Spiels: Stand aus dem Checkpoint vormerken (Session.load_state). Danach
+## kein Setup-Befehl und kein take_ascension mehr (beides steckt im Stand).
+func cp_vormerken() -> void:
+	if cp_pfad == "":
+		return
+	var data := preload("res://tools/testlauf/checkpoint.gd").laden(cp_pfad)
+	geladen = not data.is_empty()
+	if not geladen:
+		push_error("Checkpoint %s nicht lesbar" % cp_pfad)
+
+
+## Vor jeder Entscheidung aufrufen: würfelt mit skill, ob diese Entscheidung ein Fehler (Stufe 1) wird.
+func wurf() -> void:
+	if skill < 0.0:
+		return
+	stufe = 1 if randf() * 100.0 >= skill else basis_stufe
+
+
+## Suchbreite n (probierte Plätze) nach Spielstärke: mit skill 100 alle n, mit 0 nur 5 %.
+func breite(n: int) -> int:
+	if skill < 0.0 or n <= 0:
+		return n
+	return maxi(1, roundi(n * (0.05 + 0.95 * skill / 100.0)))
 
 
 ## Index der gewählten Schwierigkeit in der Liste des Modus (key: Profil-Schlüssel wie in ascension.json).
@@ -22,7 +58,7 @@ func diff_index(key: String) -> int:
 
 ## Aufstiegsstufe ins laufende Spiel übernehmen (nach dem Setup, vor der ersten Welle).
 func take_ascension() -> void:
-	if aufstieg > 0:
+	if aufstieg > 0 and not geladen:
 		game.systems.difficulty.take_ascension(aufstieg)
 
 
@@ -93,6 +129,7 @@ func _free(a: Vector2i) -> bool:
 ## Bester Platz für ein Hindernis: probiert n zufällige Plätze am Weg und nimmt den mit dem längsten Weg.
 ## ok: Prüfung je Platz (z. B. can_build im Modus). n <= 0: zufälliger Platz, ohne zu rechnen.
 func best_block(n: int, ok: Callable, reach_lo := -2, reach_hi := 1, cand: Array = []) -> Vector2i:
+	n = breite(n)
 	if cand.is_empty():
 		cand = _near_path(reach_lo, reach_hi)
 	cand.shuffle()
@@ -218,6 +255,7 @@ func _field_power(towers: Array) -> Array:
 ## Guter Platz für einen Tower: viel Bodenweg und Flugbahn im Umkreis r (Felder). air: Gewicht der Flugbahn.
 ## Probiert n zufällige freie Plätze am Weg (ok prüft sie).
 func best_spot(n: int, ok: Callable, r := 6.0, air := 1.0) -> Vector2i:
+	n = breite(n)
 	var cand := _near_path(-3, 2)
 	cand.shuffle()
 	var path := _path_cells()
@@ -245,3 +283,107 @@ func best_spot(n: int, ok: Callable, r := 6.0, air := 1.0) -> Vector2i:
 		if tried >= n:
 			break
 	return a
+
+
+## Wie stark die vorhandenen Tower jedes Feld beschießen: Feld → Summe der Werte aller Tower, die es erreichen.
+## towers: Liste der Tower (Knoten mit cell, tower_id, tier); value_of(t) liefert den Wert eines Towers.
+func _influence(towers: Array, value_of: Callable) -> Dictionary:
+	var infl := {}
+	for t in towers:
+		if not is_instance_valid(t):
+			continue
+		var v: float = value_of.call(t)
+		if v <= 0.0:
+			continue
+		var r := float(Wert.tier_stats(t.tower_id, t.tier).get("range", 5.0))
+		var c := Vector2(t.cell) + Vector2(1, 1)
+		var ri := ceili(r)
+		for dy in range(-ri - 1, ri + 1):
+			for dx in range(-ri - 1, ri + 1):
+				var p: Vector2i = t.cell + Vector2i(dx + 1, dy + 1)
+				if (Vector2(p) + Vector2(0.5, 0.5)).distance_to(c) <= r:
+					infl[p] = float(infl.get(p, 0.0)) + v
+	return infl
+
+
+## Platz für einen neuen Tower, der zugleich Labyrinth ist: nach dem Bauen soll möglichst viel Schaden auf dem
+## Weg liegen (Summe über alle Wegfelder: wie stark sie beschossen werden, der neue Tower mitgerechnet). Verlängert
+## der Tower den Weg durch vorhandene Reichweiten, zählt das automatisch mit. n: so viele Plätze werden probiert.
+func best_maze_spot(n: int, ok: Callable, id: String, tier: int, towers: Array, value_of: Callable) -> Vector2i:
+	n = breite(n)
+	var infl := _influence(towers, value_of)
+	var r := float(Wert.tier_stats(id, tier).get("range", 5.0))
+	var v := maxf(Wert.value(id, tier), 0.01)
+	var cand := _near_path(-3, 2)
+	cand.shuffle()
+	var best := -INF
+	var a := Vector2i(-1, -1)
+	var tried := 0
+	for c in cand:
+		if not ok.call(c):
+			continue
+		var cells: Array[Vector2i] = Board3D.footprint(c)
+		game.pathfinder.set_solid_cells(cells, true)
+		var s := 0.0
+		var center := Vector2(c) + Vector2(1, 1)
+		var blocked := false
+		for i in _lanes():
+			var path: Array = game.pathfinder.compute_path(i)
+			if path.is_empty():
+				blocked = true
+				break
+			for p in path:
+				s += float(infl.get(p, 0.0))
+				if (Vector2(p) + Vector2(0.5, 0.5)).distance_to(center) <= r:
+					s += v
+		game.pathfinder.set_solid_cells(cells, false)
+		tried += 1
+		if not blocked:
+			s += randf() * 0.01
+			if s > best:
+				best = s
+				a = c
+		if tried >= n:
+			break
+	return a
+
+
+## Mauer statt Einzelblock (offenes Feld, wo ein einzelner Block den Weg kaum verlängert): probiert von n Plätzen
+## am Weg aus waagrechte und senkrechte Reihen von 2 bis max_len Blöcken und nimmt die Reihe mit dem meisten
+## Weggewinn je Block. Liefert die Anker der Reihe (leer, wenn nichts den Weg verlängert).
+func best_wall(n: int, ok: Callable, max_len := 6) -> Array:
+	n = breite(n)
+	var cand := _near_path(-2, 1)
+	cand.shuffle()
+	var base := _path_len()
+	var best := 0.0
+	var out := []
+	var tried := 0
+	for c in cand:
+		if not ok.call(c):
+			continue
+		tried += 1
+		for dir in [Vector2i(2, 0), Vector2i(0, 2)]:
+			var line: Array = []
+			var cells: Array[Vector2i] = []
+			for k in max_len:
+				var a: Vector2i = c + dir * k
+				if k > 0 and not (_free(a) and ok.call(a)):
+					break
+				var fp: Array[Vector2i] = Board3D.footprint(a)
+				game.pathfinder.set_solid_cells(fp, true)
+				cells.append_array(fp)
+				line.append(a)
+				if line.size() < 2:
+					continue
+				var l := _path_len()
+				if l < 0:
+					break
+				var g := (l - base) / line.size() + randf() * 0.001
+				if g > best:
+					best = g
+					out = line.duplicate()
+			game.pathfinder.set_solid_cells(cells, false)
+		if tried >= n:
+			break
+	return out
