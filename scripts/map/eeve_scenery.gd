@@ -118,19 +118,21 @@ func _ready() -> void:
 	var macro = gm.get_shader_parameter("macro")
 	_ground_day = [tint if tint is Vector3 else Vector3.ONE, float(bright) if bright != null else 0.72,
 		float(contrast) if contrast != null else 1.0, float(macro) if macro != null else 0.12]
-	_add_forest_floor()
-	_add_corner_mountain()
+	# Teile benannt (Szenerie_<teil>_N), damit Leistungsmessungen sie einzeln abschalten können
+	# (tools/screenshot.gd --ohne=Szenerie_nebel)
+	var parts := [["boden", _add_forest_floor], ["berg", _add_corner_mountain]]
 	if map.district == BezirkUeberwuchert.ID:
-		_add_district()
-	_add_forest()
+		parts.append(["bezirk", _add_district])
+	parts.append(["wald", _add_forest])
 	if bezirk == null:
-		_add_graveyard()
-	_add_mine()
-	_add_earth_walks()
-	_add_mist()
-	_add_lanterns()
-	_add_fires()
-	_add_fireflies()
+		parts.append(["friedhof", _add_graveyard])
+	parts.append_array([["mine", _add_mine], ["erdwege", _add_earth_walks], ["nebel", _add_mist],
+		["laternen", _add_lanterns], ["feuer", _add_fires], ["gluehwuermchen", _add_fireflies]])
+	for part in parts:
+		var from := get_child_count()
+		part[1].call()
+		for i in range(from, get_child_count()):
+			get_child(i).name = "Szenerie_%s_%d" % [part[0], i - from]
 	# Laternen beleuchten Tower und Gegner, den Boden nur über ihren Lichtfleck (Ebene 2 ausgenommen)
 	board._ground.layers = 2
 	_apply(FieldStyle.night)
