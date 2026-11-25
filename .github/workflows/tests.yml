@@ -38,6 +38,13 @@ jobs:
       - name: Godot
         run: tools/setup_godot.sh --ohne-vorlage
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Python-Pakete für Materialprüfungen
+        run: python3 -m pip install --disable-pip-version-check numpy Pillow
+
       - name: Welche Tests?
         env:
           BASIS: ${{ github.base_ref && format('origin/{0}', github.base_ref) || 'origin/main' }}

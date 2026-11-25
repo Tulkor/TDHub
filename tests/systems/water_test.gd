@@ -251,6 +251,9 @@ func _banks() -> void:
 			high = maxf(high, p.y)
 	check(high - low > 0.08, "Naturufer enthält niedrigere Stellen und kleine Erdhügel")
 	check(bank.get_node_or_null("BankStones") != null, "Naturufer erhält gebündelt gezeichnete Steine")
+	check(bank.material_override is ShaderMaterial and bank.material_override.shader.resource_path.ends_with("natural_bank.gdshader"), "Naturufer verwendet berechnetes Relief und Feuchtigkeits-Reflexion")
+	var stone_material: Material = bank.get_node("BankStones").multimesh.mesh.material
+	check(stone_material is ShaderMaterial and stone_material.get_shader_parameter("vertex_colors") == false, "Ufersteine verwenden eigene berechnete Steinoberfläche")
 	water.set_regions([entry])
 	check(water.bodies[0].bank_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] == before, "Uferunregelmäßigkeiten bleiben bei Neuaufbau deterministisch")
 	var saved_skin := UiTheme.skin
@@ -261,6 +264,7 @@ func _banks() -> void:
 	check(bank.get_meta("bank_style") == "city" and bank.material_override is ShaderMaterial, "Stadt-Tileset wählt automatisch Pflastergehwege")
 	check(bank.get_node_or_null("BankStones") == null, "Stadtgehwege enthalten keine zufälligen Ufersteine")
 	check(bank.material_override.get_shader_parameter("cobble_tex") != null, "Pflastergehweg verwendet vorhandene Pflastersteintextur")
+	check(bank.material_override.get_shader_parameter("cobble_normal") != null and bank.material_override.get_shader_parameter("cobble_specular") != null, "Pflastergehweg bindet echte Normal- und Specular-Maps")
 	water._mode_rules.banks = {"style": "natural"}
 	check(water.bank_options(entry).style == "natural", "explizite Modus-Regel gewinnt gegen automatische Tileset-Wahl")
 	UiTheme.use_skin(saved_skin)
