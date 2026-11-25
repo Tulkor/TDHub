@@ -597,8 +597,12 @@ func _update_visual() -> void:
 		bar_shown = true
 		_bar_bg.visible = true
 		_bar_fg.visible = true
-	_bar_fg.scale.x = maxf(clampf(hp / max_hp, 0.0, 1.0), 0.001)
-	_body_mat.albedo_color = color
+	var fill := maxf(clampf(hp / max_hp, 0.0, 1.0), 0.001)
+	if _bar_fg.scale.x != fill:
+		_bar_fg.scale.x = fill
+	# Nur bei Änderung setzen: jede Zuweisung schickt das Material neu an den Grafikserver (je Gegner je Bild)
+	if _body_mat.albedo_color != color:
+		_body_mat.albedo_color = color
 	_update_status()
 	if _anim != null:
 		_animate()

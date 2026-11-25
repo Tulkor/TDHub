@@ -41,7 +41,7 @@ if (-not (Test-Path -LiteralPath $qaConfig) -or [IO.File]::ReadAllText($qaConfig
 $before = $env:APPDATA
 try {
     $env:APPDATA = Join-Path (Split-Path $repo -Parent) '.tdhub-test-profile'
-    $options = @(ConvertFrom-Json $OptionsJson)
+    $options = @((ConvertFrom-Json $OptionsJson) | ForEach-Object { $_ })
     $arguments = @('--audio-driver', 'Dummy', '--path', ('"' + $qaProject + '"'), '--screen', '1', '--windowed', '--resolution', '1600x1000', $Scene)
     if (-not @($options | Where-Object { [string]$_ -like '--messen=*' }).Count) { $arguments += @('--max-fps','30') }
     if ($EngineVerbose) { $arguments = @('--verbose') + $arguments }

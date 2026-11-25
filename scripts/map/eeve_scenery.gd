@@ -4,6 +4,8 @@ extends Node3D
 ## Spawn, Wegpunkten und Ziel und die Nachtvariante (Mondlicht, leuchtende Laternen, Glühwürmchen).
 ## Rein optisch: läuft bei jedem Spieler gleich (fester Zufallsstartwert), nichts davon geht über das Netz.
 
+const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
+static var tree_cell := 8.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
 const TREES := [
@@ -648,20 +650,16 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool) -> void:
 	var m := ModelLoader.mesh_with_transform(path, 1.0)
 	if m.is_empty():
 		return
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = _muted(m[0])
-	mm.instance_count = xfs.size()
-	for i in xfs.size():
-		mm.set_instance_transform(i, xfs[i] * m[1])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	# Schwenkende Kronen können etwas über die statische Mesh-AABB hinausragen.
-	mmi.extra_cull_margin = 0.5
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var placed := []
+	for xf in xfs:
+		placed.append(xf * m[1])
+	# In Kacheln, damit Godot außerhalb des Bildes weglässt und weiter weg LOD nimmt (Leistung, 2026-11-25).
+	# Schwenkende Kronen können etwas über die statische Mesh-AABB hinausragen (cull_margin).
+	var nodes := StaticMeshBatch.add_nodes(self, _muted(m[0]), placed, tree_cell,
+			GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
+			1, GeometryInstance3D.GI_MODE_DISABLED, 0.5)
 	if shadows:
-		_shadow_mmis.append(mmi)
-	add_child(mmi)
+		_shadow_mmis.append_array(nodes)
 
 
 ## Kopie des Meshes mit abgedunkelten Materialien: die Modelle sind satter als der Boden (Druidenhain
