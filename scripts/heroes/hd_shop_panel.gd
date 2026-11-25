@@ -124,8 +124,14 @@ func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 	var tip := shop.tooltip(entry.id, entry)
 	if int(entry.get("up", 0)) > 0:
 		s.set_count("+%d" % int(entry.up))
-	if where == "hero" and s.consumable:
-		tip += "\n" + tr("Klick: benutzen")
+	if where == "hero" and shop.usable(entry.id):
+		tip += "\n" + tr("F%d oder Klick: benutzen") % (i + 1)
+		if shop.item(entry.id).has("active"):
+			var remaining: float = game.hero.ITEM_EFFECTS.active_left(game.hero, shop.item(entry.id))
+			s.dimmed = remaining > 0
+			if remaining > 0:
+				s.set_count(str(ceili(remaining)))
+				tip += "\n" + tr("Item-Abklingzeit: %d s") % ceili(remaining)
 	s.tooltip_text = tip
 
 
@@ -133,7 +139,7 @@ func _slot_clicked(where: String, i: int, btn: int) -> void:
 	var x = shop.at(where, i)
 	if x == null:
 		return
-	if btn == MOUSE_BUTTON_LEFT and where == "hero" and shop.consumable(x.id):
+	if btn == MOUSE_BUTTON_LEFT and where == "hero" and shop.usable(x.id):
 		_say(shop.act({"kind": "use", "i": i}))
 	elif btn == MOUSE_BUTTON_LEFT and shop.item(x.id).size() > 0:
 		picked = x.id
@@ -380,6 +386,15 @@ func _item_row(id: String) -> void:
 	_label(tr(str(it.name)), v, 14, shop.tier_color(id), true)
 	var info := _label(shop.stat_text(it.get("stats", {})) if it.has("stats") else tr(str(it.get("desc", ""))), v, 11, UiTheme.DIM)
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var effect := str(it.get("effect_desc", ""))
+	if it.has("active"):
+		effect = tr("Aktiv: %s · %d s Abklingzeit") % [tr(str(it.active.desc)), int(it.active.cooldown)]
+	elif bool(it.get("scepter", false)):
+		effect = tr("Szepter: %s") % tr(str(game.hero.def.get("scepter", {}).get("desc", "")))
+	elif effect == "" and float(it.get("stats", {}).get("mastery", 0)) > 0:
+		effect = str(game.hero.def.get("mastery", {}).get("name", ""))
+	if effect != "":
+		_label(tr(effect), v, 13, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if it.has("recipe"):
 		var parts: Array = []
 		var miss := shop.missing(id)

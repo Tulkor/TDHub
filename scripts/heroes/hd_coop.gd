@@ -27,7 +27,7 @@ var status_time := 0.0
 var reliable_time := 0.0
 var chunks := {}
 const CONTEXT_FIELDS := ["_tp_cd", "tp_hold", "tp_stone"]
-const HERO_FIELDS := ["hp", "max_hp", "combat_until", "mana", "max_mana", "level", "xp", "dead", "respawn_t", "shield", "shield_until", "attack_cd", "dodge_cd", "dodge_t", "dodge_iframe_until", "dodge_dir", "facing", "cd", "buffs", "kills", "damage_done", "healing_done", "armor", "speed", "bonus", "deaths", "dodges", "damage_taken"]
+const HERO_FIELDS := ["hp", "max_hp", "combat_until", "mana", "max_mana", "level", "xp", "dead", "respawn_t", "shield", "shield_until", "attack_cd", "dodge_cd", "dodge_t", "dodge_iframe_until", "dodge_dir", "facing", "cd", "buffs", "kills", "damage_done", "healing_done", "armor", "speed", "bonus", "deaths", "dodges", "damage_taken", "item_ready", "mastery_ready"]
 const KIT_FIELDS := ["form_t", "empowered", "nova_discount", "gust_ready", "ammo", "reload_t", "robe_until", "over_t", "stance", "stance_until", "critical", "flow", "flow_until", "charge", "cast_serial"]
 const SHOP_FIELDS := ["gold", "wood", "gold_earned", "wood_earned", "inv", "stash", "wood_bought", "crafted", "trophies", "marks", "merchant"]
 

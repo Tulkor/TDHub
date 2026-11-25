@@ -29,6 +29,12 @@ func _ready() -> void:
 	if "--gpu-profil" in OS.get_cmdline_user_args():
 		Profile.dir += "_gpu"
 	Profile.reset_cache()
+	if "--nur=unterbrechen" in OS.get_cmdline_user_args():
+		Sfx.audible = false
+		await _interrupt()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures else 0)
+		return
 	if "--nur=ki" in OS.get_cmdline_user_args():
 		await _ai()
 		print("FERTIG, Fehler: %d" % failures)
@@ -258,28 +264,32 @@ func _ai() -> void:
 func _interrupt() -> void:
 	var g := await _new_game()
 	var e := g.spawn("schlammwerfer")
-	e.ab_ready["moerser"] = 0.0
+	var aid := str(e.abilities()[0])
+	e.ab_ready[aid] = 0.0
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	var k := 0
 	while not e.casting() and k < 120:
 		g.step(DT)
 		k += 1
-	check(e.casting() and str(e.cast.id) == "moerser", "Schlammwerfer setzt Mörser an")
+	check(e.casting() and str(e.cast.id) == aid, "Schlammwerfer setzt sein Mörsermuster an")
 	var teles: Array = e.cast.tele.duplicate()
-	check(teles.size() == 1 and teles[0].shape == HdTelegraph.CIRCLE, "Mörser zeigt eine Kreis-Warnfläche")
+	check(teles.size() == int(g.ability_defs[aid].get("count", 1)), "Mörser kündigt jeden Einschlag an")
+	for tele in teles:
+		check(tele.shape == HdTelegraph.CIRCLE, "Mörser zeigt Kreis-Warnflächen")
 	g.step(DT * 10)
 	var p: float = teles[0].progress
 	check(p > 0.1 and p < 0.9, "Füllung wächst mit der Aufladung (%.2f)" % p)
 	g.stun(e, 1.0)
 	g.step(DT)
 	check(not e.casting(), "Betäubung beim Aufladen bricht die Fähigkeit ab")
-	check(float(e.ab_ready.moerser) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
+	check(float(e.ab_ready[aid]) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
 	await get_tree().process_frame
-	check(not is_instance_valid(teles[0]) or teles[0].is_queued_for_deletion(), "Warnfläche verschwindet")
+	for tele in teles:
+		check(not is_instance_valid(tele) or tele.is_queued_for_deletion(), "Jede unterbrochene Warnfläche verschwindet")
 	_run(g, 3.0)
 	check(e.casts_started == 1, "kein neuer Mörser während des Cooldowns")
 	# Treffer: Held bleibt stehen → Schaden; ausweichen → kein Schaden
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	var hp0 := g.hero.hp
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	k = 0
@@ -296,7 +306,7 @@ func _interrupt() -> void:
 	check(g.hero.hp < hp0 - 50.0, "Mörser trifft den Helden (%d → %d)" % [hp0, g.hero.hp])
 	# Ausweichen während des Auslösens
 	g.hero.hp = g.hero.max_hp
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	e.gap_until = 0.0
 	k = 0
 	while not e.casting() and k < 200:

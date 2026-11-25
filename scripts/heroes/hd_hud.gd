@@ -381,6 +381,9 @@ func refresh() -> void:
 		_imprint_showing = false
 		_close_overlay()
 	_name.text = tr("%s · Stufe %d") % [tr(str(h.def.name)), h.level]
+	_name.tooltip_text = h.ITEM_EFFECTS.mastery_text(h)
+	if h.ITEM_EFFECTS.has_scepter(h):
+		_name.tooltip_text += "\n" + tr("Szepter: %s") % tr(str(h.def.get("scepter", {}).get("desc", "")))
 	_hp_bar.max_value = h.max_hp
 	_hp_bar.value = h.hp
 	_hp_label.text = "%d / %d" % [roundi(h.hp), roundi(h.max_hp)]
@@ -411,6 +414,7 @@ func refresh() -> void:
 	_boss_panel.visible = boss != null and game.state == "play"
 	if boss:
 		_boss_name.text = tr(str(boss.def.name))
+		_boss_name.tooltip_text = "%s\n%s" % [tr(str(boss.def.get("role", ""))), tr(str(boss.def.get("hint", "")))]
 		var phs: Array = boss.def.get("phases", [])
 		if not phs.is_empty():
 			_boss_name.text += "  " + tr("Phase %d / %d") % [boss.phase + 1, phs.size() + 1]
@@ -782,6 +786,48 @@ func _warn_options(v: VBoxContainer) -> void:
 		game.save_settings())
 
 
+func show_bestiary(faction := "") -> void:
+	var width := minf(760.0, root.size.x - 40.0)
+	var v := _open_overlay(width)
+	_label(tr("Gegnerkunde"), v, 24, UiTheme.GOLD, true)
+	var filters := OptionButton.new()
+	var groups := ["", "sumpf", "knochen", "glut", "leere", "zone"]
+	var names := ["Alle Gegner", "Sumpfvolk", "Knochenheer", "Glutbrut", "Leere", "Sondergebiete"]
+	for name in names:
+		filters.add_item(tr(name))
+	filters.select(maxi(0, groups.find(faction)))
+	filters.item_selected.connect(func(i): show_bestiary(str(groups[i])))
+	v.add_child(filters)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, minf(460.0, root.size.y * .52))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	var entries := VBoxContainer.new()
+	entries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	entries.add_theme_constant_override("separation", 12)
+	scroll.add_child(entries)
+	for id in game.enemy_defs:
+		var enemy: Dictionary = game.enemy_defs[id]
+		if faction != "" and str(enemy.get("faction", "zone")) != faction:
+			continue
+		var card := _panel(entries, 10)
+		var text := VBoxContainer.new()
+		card.add_child(text)
+		var title := _label("%s · %s" % [tr(str(enemy.name)), tr(str(enemy.get("role", "")))], text, 15, UiTheme.GOLD, true)
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var hint := _label(tr(str(enemy.get("hint", ""))), text, 13, UiTheme.TEXT)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var attacks: Array = []
+		for aid in enemy.get("abilities", []):
+			attacks.append(tr(str(game.ability_defs[aid].name)))
+		if not attacks.is_empty():
+			var moves := _label(" · ".join(attacks), text, 12, UiTheme.MUTED)
+			moves.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiUtil.button("Zurück", v, func():
+		_close_overlay()
+		toggle_menu())
+
+
 func toggle_menu() -> void:
 	if game.state != "play":
 		return
@@ -800,6 +846,7 @@ func toggle_menu() -> void:
 		_close_overlay()
 		game.set_paused(false))
 	UiTheme.accent_button(go, UiTheme.GOLD, UiTheme.GOLD_DARK)
+	UiUtil.button("Gegnerkunde", v, func(): show_bestiary())
 	UiTheme.caption("Steuerung", v)
 	_choice_row(v, [tr("WASD + Maus"), tr("Maus (wie WC3)")], 0 if game.control == "wasd" else 1, func(k):
 		game.control = "wasd" if k == 0 else "maus"
