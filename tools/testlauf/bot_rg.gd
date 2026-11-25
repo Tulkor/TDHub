@@ -1,5 +1,5 @@
 extends "res://tools/testlauf/bot_basis.gd"
-## Randgruppen-TD-Bot (Schwierigkeit „Normal“, 25 Leben, eine zufällige Rasse je Lauf, solo).
+## Randgruppen-TD-Bot (Schwierigkeit aus testlauf.gd, Standard Mittel mit 25 Leben, eine zufällige Rasse je Lauf, solo).
 ## Stufe 1: kauft zufällige bezahlbare Tower und stellt sie irgendwo an den Weg.
 ## Stufe 2: Weg grob länger (bester von 20 Plätzen), kauft den Tower mit dem besten Schaden je Gold.
 ## Stufe 3: jeder Tower wird Teil des Labyrinths (Weg so lang wie möglich), billige Tower als Füller, wenn genug
@@ -11,16 +11,7 @@ var race_id := ""
 
 func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	stufe = st
-	Session.game_kind = "randgruppen"
-	Session.map_override = null
-	Session.skip_setup = false
-	game = load(Session.RG_GAME if "RG_GAME" in Session else "res://scenes/rg_game.tscn").instantiate()
-	add_child(game)
-	await get_tree().process_frame
-	game.rng.seed = sd * 7919 + 13
-	var races: Array = game.rules.get("races", []).map(func(r): return str(r.id))
-	race_id = str(args.get("rasse", races[sd % races.size()]))
-	game.submit({"type": "setup", "race": race_id, "difficulty": 2})
+	await start(sd, args)
 	var lives_start: int = game.lives
 	Engine.time_scale = tempo
 	var frames := 0
@@ -130,3 +121,18 @@ func _act() -> bool:
 	if a == Vector2i(-1, -1):
 		return false
 	return game.submit({"type": "build", "id": id, "cell": a})
+
+
+## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
+func start(sd: int, args: Dictionary) -> void:
+	Session.game_kind = "randgruppen"
+	Session.map_override = null
+	Session.skip_setup = false
+	game = load(Session.RG_GAME if "RG_GAME" in Session else "res://scenes/rg_game.tscn").instantiate()
+	add_child(game)
+	await get_tree().process_frame
+	game.rng.seed = sd * 7919 + 13
+	var races: Array = game.rules.get("races", []).map(func(r): return str(r.id))
+	race_id = str(args.get("rasse", races[sd % races.size()]))
+	game.submit({"type": "setup", "race": race_id, "difficulty": diff_index("randgruppen"), "ascension": aufstieg})
+	take_ascension()

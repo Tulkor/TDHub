@@ -8,6 +8,22 @@ var stufe := 3
 ## Luftwellen brauchen in der Praxis deutlich mehr Abwehr, als Strecke mal Schaden sagt (Flieger laufen kein
 ## Labyrinth, kommen gebündelt, Rüstung): so viel mehr verlangt der Bot für die Luft (aus Testläufen geschätzt).
 var air_factor := 3.0
+## Schwierigkeit des Laufs: 0 Einfach, 1 Mittel, 2 Schwer (die drei Einträge im Startfenster des Modus).
+var diff := 1
+## Aufstiegsstufe +N (nur auf Schwer, wie im Startfenster).
+var aufstieg := 0
+
+
+## Index der gewählten Schwierigkeit in der Liste des Modus (key: Profil-Schlüssel wie in ascension.json).
+func diff_index(key: String) -> int:
+	var ch := Ascension.choices(key, Ascension.difficulty_count(key))
+	return int(ch[clampi(diff, 0, ch.size() - 1)])
+
+
+## Aufstiegsstufe ins laufende Spiel übernehmen (nach dem Setup, vor der ersten Welle).
+func take_ascension() -> void:
+	if aufstieg > 0:
+		game.systems.difficulty.take_ascension(aufstieg)
 
 
 func _lanes() -> Array:

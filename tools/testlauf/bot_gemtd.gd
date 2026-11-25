@@ -1,5 +1,5 @@
 extends "res://tools/testlauf/bot_basis.gd"
-## GemTD-Bot für Testläufe (klassische Map, Normal, Leben-Wertung).
+## GemTD-Bot für Testläufe (klassische Map, Schwierigkeit aus testlauf.gd, Leben-Wertung).
 ## Stufe 1 „Gelegenheit“: Gems irgendwo nahe am Weg, kein Labyrinth, behält den stärksten Gem, kombiniert nichts.
 ## Stufe 2 „Solide“: baut den Weg grob länger (bester von 20 zufälligen Plätzen), behält das Beste inkl. 2/4 gleiche
 ##   und angebotener Rezepte, wertet Spezial-Tower mit Gold auf, plant aber keine Rezepte über mehrere Runden.
@@ -18,14 +18,7 @@ var log_waves: Array = []
 
 func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	stufe = st
-	Session.game_kind = "gemtd"
-	Session.map_path = str(args.get("map", "res://data/maps/classic.json"))
-	Session.map_override = null
-	Session.skip_setup = true
-	game = load(Session.GAME).instantiate()
-	add_child(game)
-	await get_tree().process_frame
-	game.rng.seed = sd * 7919 + 13
+	await start(sd, args)
 	if stufe >= 4:
 		_load_plan()
 	var lives_start: int = game.lives
@@ -251,3 +244,17 @@ func _wave_actions() -> void:
 				continue
 			game.submit({"type": "option", "tower": game.tower_ref(t), "index": i, "action": o.action, "id": o.id, "tier": o.tier})
 			return
+
+
+## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
+func start(sd: int, args: Dictionary) -> void:
+	Session.game_kind = "gemtd"
+	Session.map_path = str(args.get("map", "res://data/maps/classic.json"))
+	Session.map_override = null
+	Session.skip_setup = true
+	Session.difficulty = diff_index("gemtd")
+	game = load(Session.GAME).instantiate()
+	add_child(game)
+	await get_tree().process_frame
+	game.rng.seed = sd * 7919 + 13
+	take_ascension()

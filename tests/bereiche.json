@@ -20,6 +20,8 @@
     ["tools/balance_editor/*", ["balanceeditor"]],
     ["tools/balance_anwenden.py", ["balanceeditor"]],
     ["tools/html_editor/*", ["htmleditor"]],
+    ["tools/testlauf/*", ["schwierigkeit"]],
+    ["tools/druckkurve.sh", ["schwierigkeit"]],
     ["tools/*", []],
     ["docs/*", []],
     ["*.md", []],

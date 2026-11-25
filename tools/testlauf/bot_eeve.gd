@@ -6,22 +6,13 @@ extends "res://tools/testlauf/bot_basis.gd"
 ## Stufe 3: Weg so lang wie möglich, Tower dort, wo viel Weg in Reichweite ist, Dual-Tower, wenn möglich.
 ## Stufe 4: wie 3 und spart Gold für die Zinsen (wertet erst auf, wenn ein Level sonst Leben kosten würde).
 
-const DIFF := 2  # „Mittel“
 
 var main_els: Array = []
 
 
-func play(st: int, sd: int, tempo: float, _args: Dictionary) -> Dictionary:
+func play(st: int, sd: int, tempo: float, args: Dictionary) -> Dictionary:
 	stufe = st
-	Session.game_kind = "eevetd"
-	Session.map_path = "res://data/maps/eeve.json"
-	Session.map_override = null
-	Session.skip_setup = false
-	game = load(Session.EEVE_GAME).instantiate()
-	add_child(game)
-	await get_tree().process_frame
-	game.rng.seed = sd * 7919 + 13
-	game.submit({"type": "setup", "difficulty": DIFF, "field": 0})
+	await start(sd, args)
 	var els: Array = game.ELEMENT_IDS.duplicate()
 	els.shuffle()
 	main_els = els.slice(0, 2)
@@ -152,3 +143,17 @@ func _upgrade() -> void:
 			return
 		if not game.submit({"type": "option", "tower": game.tower_ref(best_t), "index": best_i, "action": best_o.action, "id": best_o.id}):
 			return
+
+
+## Spiel anlegen und einstellen (Schwierigkeit diff, Aufstieg), ohne zu spielen; auch für druck.gd.
+func start(sd: int, args: Dictionary) -> void:
+	Session.game_kind = "eevetd"
+	Session.map_path = "res://data/maps/eeve.json"
+	Session.map_override = null
+	Session.skip_setup = false
+	game = load(Session.EEVE_GAME).instantiate()
+	add_child(game)
+	await get_tree().process_frame
+	game.rng.seed = sd * 7919 + 13
+	game.submit({"type": "setup", "difficulty": diff_index("eeve"), "field": 0, "ascension": aufstieg})
+	take_ascension()
