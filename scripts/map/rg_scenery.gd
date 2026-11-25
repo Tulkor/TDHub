@@ -8,8 +8,7 @@ extends Node3D
 ## weitesten Zoom am Rand nicht ins Leere schaut (wie der Wald in eeveTD).
 
 const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
-const GROUND_OPAQUE := preload("res://assets/shaders/ground_opaque.gdshader")
-static var tree_cell := 8.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
+static var tree_cell := 16.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 const C := "res://assets/models/city/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
@@ -273,8 +272,6 @@ func _add_floor() -> void:
 	none.fill(Color(0, 1, 0))  # außerhalb: Wiese (G = gesperrt), kein Weg
 	mat.set_shader_parameter("splat", ImageTexture.create_from_image(none))
 	mat.set_shader_parameter("ground_alpha", 1.0)
-	# deckend: Bäume und Häuser verdecken den teuren Bodenshader dann per Tiefen-Vorpass (Leistung 2026-11-25)
-	mat.shader = GROUND_OPAQUE
 	floor.material_override = mat
 	floor.position = Vector3(size.x / 2.0, -0.02, size.y / 2.0)
 	floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

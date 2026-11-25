@@ -5,8 +5,7 @@ extends Node3D
 ## Rein optisch: läuft bei jedem Spieler gleich (fester Zufallsstartwert), nichts davon geht über das Netz.
 
 const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
-const GROUND_OPAQUE := preload("res://assets/shaders/ground_opaque.gdshader")
-static var tree_cell := 8.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
+static var tree_cell := 16.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
 const TREES := [
@@ -125,8 +124,8 @@ func _ready() -> void:
 	if map.district == BezirkUeberwuchert.ID:
 		parts.append(["bezirk", _add_district])
 	parts.append(["wald", _add_forest])
-	if bezirk == null:
-		parts.append(["friedhof", _add_graveyard])
+	# erst beim Aufruf prüfen: der Bezirk entsteht in derselben Liste weiter oben
+	parts.append(["friedhof", func(): if bezirk == null: _add_graveyard()])
 	parts.append_array([["mine", _add_mine], ["erdwege", _add_earth_walks], ["nebel", _add_mist],
 		["laternen", _add_lanterns], ["feuer", _add_fires], ["gluehwuermchen", _add_fireflies]])
 	for part in parts:
@@ -336,8 +335,6 @@ func _add_forest_floor() -> void:
 	# Bodenshader liefen dort doppelt (Leistung 2026-11-25: der Waldboden kostete 5,7 von 12,8 ms je Bild).
 	floor.mesh = frame_mesh(size, FLOOR_MARGIN)
 	var mat: ShaderMaterial = board._ground_mat.duplicate()
-	# deckend: Bäume verdecken den Boden per Tiefen-Vorpass, verdeckte Pixel werden nicht schattiert
-	mat.shader = GROUND_OPAQUE
 	var none := Image.create(1, 1, false, Image.FORMAT_RGBA8)
 	none.fill(Color.BLACK)
 	mat.set_shader_parameter("splat", ImageTexture.create_from_image(none))
