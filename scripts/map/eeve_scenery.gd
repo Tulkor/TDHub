@@ -5,6 +5,7 @@ extends Node3D
 ## Rein optisch: läuft bei jedem Spieler gleich (fester Zufallsstartwert), nichts davon geht über das Netz.
 
 const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
+const GROUND_OPAQUE := preload("res://assets/shaders/ground_opaque.gdshader")
 static var tree_cell := 8.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
@@ -331,13 +332,12 @@ func _add_earth_walks() -> void:
 func _add_forest_floor() -> void:
 	var size := _size()
 	var floor := MeshInstance3D.new()
-	if board.path_depth > 0.0:
-		floor.mesh = frame_mesh(size, FLOOR_MARGIN)
-	else:
-		var plane := PlaneMesh.new()
-		plane.size = size + Vector2.ONE * FLOOR_MARGIN * 2.0
-		floor.mesh = plane
+	# Nur als Rahmen um die Karte: eine ganze Fläche läge unter dem Spielfeldboden, und beide teuren
+	# Bodenshader liefen dort doppelt (Leistung 2026-11-25: der Waldboden kostete 5,7 von 12,8 ms je Bild).
+	floor.mesh = frame_mesh(size, FLOOR_MARGIN)
 	var mat: ShaderMaterial = board._ground_mat.duplicate()
+	# deckend: Bäume verdecken den Boden per Tiefen-Vorpass, verdeckte Pixel werden nicht schattiert
+	mat.shader = GROUND_OPAQUE
 	var none := Image.create(1, 1, false, Image.FORMAT_RGBA8)
 	none.fill(Color.BLACK)
 	mat.set_shader_parameter("splat", ImageTexture.create_from_image(none))
