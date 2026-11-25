@@ -83,6 +83,10 @@ extends Node
 ##                           (tools/skriptprofil.gd), Ausgabe Zeilen SKRIPTPROFIL, --top=N Anzahl
 ##   --baumkachel=N          Baum-MultiMeshes (eeveTD/YouTD/Randgruppen) in Kacheln von N Weltmaß, 0 = eine je Art
 ##   --lod=P                 LOD-Schwelle in Pixeln statt der Grafikstufe (Leistungsvergleich)
+##   --keinwald, --baumschatten=aus, --wind=0, --sonnenschatten=aus, --skalierung=0.5, --msaa=0
+##                           Leistungsvergleich: Wald ausblenden, Bäume ohne Schatten, ohne Wind, Sonne ohne Schatten,
+##                           3D-Auflösung skalieren (zeigt, ob die Pixel begrenzen), Kantenglättung
+##   --ohne=a,b              Knoten, deren Name oder Skriptdatei mit a bzw. b beginnt, anhalten und ausblenden
 ##   --grafik=0|1|2          Grafikqualität Niedrig/Mittel/Hoch (Standard Hoch; Xvfb würde sonst als Software-Grafik Niedrig wählen)
 ##   --ep=N                  (mit --auswahl) der gewählte Tower hat N EP (Level-System, leveling.gd);
 ##                           --level_demo: Beispiel-Freischaltungen (Reichweite ab 3, Krit ab 5), --leveltip: Level-Tooltip offen
@@ -272,6 +276,7 @@ func _ready() -> void:
 			node.hud.open_leave_confirm()
 		if str(opts.spielmenue) == "einstellungen":
 			node.hud.settings_panel.open()
+	_perf_variants()
 	if opts.has("skriptprofil"):
 		var sp: Node = load("res://tools/skriptprofil.gd").new()
 		add_child(sp)
@@ -335,6 +340,52 @@ func _fake_lobby(menu: Node) -> void:
 		lobby.fields[uids[i]] = int(list[i])
 	Net.players_changed.emit()
 	await _frames(5)
+
+
+## Schalter für Leistungsvergleiche (nur mit --messen sinnvoll): was kostet der Wald, was die Schatten,
+## ist die Szene durch die Pixel begrenzt (--skalierung)?
+func _perf_variants() -> void:
+	var root := get_tree().root
+	var trees: Array = []
+	for n in _all_nodes(root):
+		if n is MultiMeshInstance3D and n.multimesh and n.multimesh.mesh and (n.get_parent() is RgScenery or n.get_parent() is EeveScenery):
+			var m: Mesh = n.multimesh.mesh
+			if m.get_surface_count() > 0 and m.surface_get_material(0) is ShaderMaterial \
+					and (m.surface_get_material(0) as ShaderMaterial).shader == VisualFx.WIND:
+				trees.append(n)
+	if opts.has("keinwald"):
+		for n in trees:
+			n.visible = false
+	if str(opts.get("baumschatten", "")) == "aus":
+		for n in trees:
+			n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if opts.has("wind"):
+		for n in trees:
+			for i in n.multimesh.mesh.get_surface_count():
+				(n.multimesh.mesh.surface_get_material(i) as ShaderMaterial).set_shader_parameter("wind_strength", float(opts.wind))
+	if str(opts.get("sonnenschatten", "")) == "aus":
+		for n in _all_nodes(root):
+			if n is DirectionalLight3D:
+				n.shadow_enabled = false
+	if opts.has("skalierung"):
+		root.scaling_3d_scale = float(opts.skalierung)
+	if opts.has("msaa"):
+		root.msaa_3d = int(opts.msaa) as Viewport.MSAA
+	# --ohne=Teil,Teil: Knoten, deren Name oder Skriptdatei so beginnt, vor dem Messen abschalten (Ursachen eingrenzen)
+	if opts.has("ohne"):
+		var parts := String(opts.ohne).split(",")
+		for n in _all_nodes(root):
+			var label: String = n.name
+			if n.get_script() != null:
+				label += " " + n.get_script().resource_path.get_file()
+			for p in parts:
+				if label.begins_with(p) or label.contains(" " + p):
+					print("MESSUNG ohne %s" % label)
+					n.process_mode = Node.PROCESS_MODE_DISABLED
+					if n is Node3D or n is CanvasItem:
+						n.visible = false
+	if not trees.is_empty() or opts.has("keinwald"):
+		print("MESSUNG wald_knoten %d" % trees.size())
 
 
 ## --messen: S Sekunden lang je Bild die Leistungswerte sammeln, dann Mittel, 95-%-Wert und Höchstwert ausgeben.
