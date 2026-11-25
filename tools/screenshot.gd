@@ -86,6 +86,7 @@ extends Node
 ##   --keinwald, --baumschatten=aus, --wind=0, --sonnenschatten=aus, --skalierung=0.5, --msaa=0
 ##                           Leistungsvergleich: Wald ausblenden, Bäume ohne Schatten, ohne Wind, Sonne ohne Schatten,
 ##                           3D-Auflösung skalieren (zeigt, ob die Pixel begrenzen), Kantenglättung
+##   --ssao=aus, --ssil=aus, --volnebel=aus, --glow=aus, --nebel=aus  Bildschirmeffekte der Umgebung einzeln aus
 ##   --ohne=a,b              Knoten, deren Name oder Skriptdatei mit a bzw. b beginnt, anhalten und ausblenden
 ##   --grafik=0|1|2          Grafikqualität Niedrig/Mittel/Hoch (Standard Hoch; Xvfb würde sonst als Software-Grafik Niedrig wählen)
 ##   --ep=N                  (mit --auswahl) der gewählte Tower hat N EP (Level-System, leveling.gd);
@@ -367,6 +368,24 @@ func _perf_variants() -> void:
 		for n in _all_nodes(root):
 			if n is DirectionalLight3D:
 				n.shadow_enabled = false
+	# Bildschirmeffekte der Umgebung einzeln aus: --ssao=aus --ssil=aus --volnebel=aus --glow=aus --nebel=aus
+	for we in root.find_children("*", "WorldEnvironment", true, false):
+		var env: Environment = we.environment
+		if env == null:
+			continue
+		if str(opts.get("ssao", "")) == "aus":
+			env.ssao_enabled = false
+		if str(opts.get("ssil", "")) == "aus":
+			env.ssil_enabled = false
+		if str(opts.get("volnebel", "")) == "aus":
+			env.volumetric_fog_enabled = false
+		if str(opts.get("glow", "")) == "aus":
+			env.glow_enabled = false
+		if str(opts.get("nebel", "")) == "aus":
+			env.fog_enabled = false
+		if opts.has("messen"):
+			print("MESSUNG umgebung ssao=%s ssil=%s volnebel=%s glow=%s nebel=%s" % [env.ssao_enabled, env.ssil_enabled,
+					env.volumetric_fog_enabled, env.glow_enabled, env.fog_enabled])
 	if opts.has("skalierung"):
 		root.scaling_3d_scale = float(opts.skalierung)
 	if opts.has("msaa"):
