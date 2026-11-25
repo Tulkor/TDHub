@@ -642,6 +642,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	if paused:
 		return
+	if key >= KEY_F1 and key <= KEY_F6:
+		var why := shop.act({"kind":"use", "i":key - KEY_F1})
+		if why != "" and why != "?":
+			message.emit(why)
+		return
 	if key == KEY_SPACE:
 		var dir := hero.move_dir if control == "wasd" else mouse_ground() - hero.position
 		hero.dodge(dir)

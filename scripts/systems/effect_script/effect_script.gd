@@ -102,6 +102,7 @@ static func trigger(source, target, event: String, dt := 0.0, scripts: Array = [
 		_step_queue(context)
 	for index in scripts.size():
 		var text := str(scripts[index])
+		context.effect_source = str(source.effect_script_source_key(text)) if source.has_method("effect_script_source_key") else ""
 		var result := compile(text)
 		if not result.ok:
 			errors.append(result.error)
@@ -207,7 +208,7 @@ static func _queue(args: Array, offset: int, seconds: float, c: Dictionary) -> v
 		if not c.errors.has("Zu viele verzögerte Effekte (max. 256)"):
 			c.errors.append("Zu viele verzögerte Effekte (max. 256)")
 		return
-	c.state.queue.append({"at": float(c.state.clock) + seconds, "nodes": args.slice(offset), "target": weakref(c.target) if is_instance_valid(c.target) else null, "center": _position(c.target) if is_instance_valid(c.target) else c.get("center", _position(c.source)), "element": c.element})
+	c.state.queue.append({"at": float(c.state.clock) + seconds, "nodes": args.slice(offset), "target": weakref(c.target) if is_instance_valid(c.target) else null, "center": _position(c.target) if is_instance_valid(c.target) else c.get("center", _position(c.source)), "element": c.element, "effect_source":c.get("effect_source", "")})
 
 
 static func _step_queue(c: Dictionary) -> void:
@@ -233,6 +234,7 @@ static func _step_queue(c: Dictionary) -> void:
 		child.target = task.target.get_ref() if task.target != null else null
 		child.center = task.center
 		child.element = task.element
+		child.effect_source = task.get("effect_source", "")
 		_children(task.nodes, 0, child)
 
 
@@ -353,7 +355,8 @@ static func _run(node: Dictionary, c: Dictionary) -> void:
 				if t.has_method("supports_script_buff") and not t.supports_script_buff(str(a[0])):
 					c.errors.append("Buff: unbekannter Bonusname: " + str(a[0]))
 				else:
-					t.add_buff("script_" + str(s.get_instance_id()) + "_" + str(a[0]), {str(a[0]): float(a[1])}, float(a[2]))
+					var scope := "_" + str(c.effect_source) if str(c.get("effect_source", "")) != "" else ""
+					t.add_buff("script_" + str(s.get_instance_id()) + scope + "_" + str(a[0]), {str(a[0]): float(a[1])}, float(a[2]))
 			else:
 				_bridge(name, a, c)
 		"Invoke": _bridge(str(a[0]), [JSON.parse_string(a[1])], c)
@@ -391,6 +394,8 @@ static func _control(name: String, args: Array, c: Dictionary) -> void:
 	elif "cc" in t and t.cc != null:
 		var now := float(c.game.play_time) if c.game != null and "play_time" in c.game else float(c.state.clock)
 		var id := "script_" + str(c.source.get_instance_id())
+		if str(c.get("effect_source", "")) != "":
+			id += "_" + str(c.effect_source)
 		match name:
 			"Slow": t.cc.slow(id, float(args[0]), float(args[1]), now)
 			"ArmorReduce": t.cc.reduce_armor(id, float(args[0]), float(args[1]), now)

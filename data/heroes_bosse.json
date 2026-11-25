@@ -465,6 +465,8 @@
 	"bosses": [
 		{
 			"id": "varkhun",
+			"role": "Kettenrichter",
+			"hint": "Sichere Lücken zwischen Ketten suchen und das Urteil abwarten.",
 			"weaknesses": {"verschl_hagel": "richter_ofen"},
 			"name": "Varkhun, der Kettenrichter",
 			"title": "Kettenschmiede",
@@ -500,6 +502,8 @@
 		},
 		{
 			"id": "nerathis",
+			"role": "Gezeitenherrin",
+			"hint": "Zwischen Wellenzügen wechseln und Geysir-Markierungen verlassen.",
 			"weaknesses": {"verschl_hagel": "flut_geysire"},
 			"name": "Nerathis, Königin der Gezeiten",
 			"title": "Sturmflut",
@@ -535,6 +539,8 @@
 		},
 		{
 			"id": "morvath",
+			"role": "Dornenherr",
+			"hint": "Lücken im Dornenfächer suchen und Sporenflächen freihalten.",
 			"weaknesses": {"verschl_hagel": "dorn_sporen"},
 			"name": "Morvath, der Dornenchor",
 			"title": "Dornenfäulnis",
@@ -570,6 +576,8 @@
 		},
 		{
 			"id": "astrael",
+			"role": "Zeithüter",
+			"hint": "Vergangene Standorte meiden; Echos treffen zeitversetzt.",
 			"weaknesses": {"verschl_hagel": "zeit_echo"},
 			"name": "Astrael, Hüter der gebrochenen Stunde",
 			"title": "Gebrochene Zeit",
@@ -605,6 +613,8 @@
 		},
 		{
 			"id": "zharok",
+			"role": "Schlundjäger",
+			"hint": "Zwischen Kreuzarmen bleiben und beim Jagdangriff weiterziehen.",
 			"weaknesses": {"verschl_hagel": "schlund_jagd"},
 			"name": "Zharok, Herz der Finsternis",
 			"title": "Kosmischer Schlund",
@@ -642,16 +652,22 @@
 	"adds": [
 		{
 			"id": "richter_diener",
+			"role": "Ketteninfanterie",
+			"hint": "Gebundene Diener einzeln aus dem Bosskampf entfernen.",
 			"name": "Kettendiener",
 			"color": "755948"
 		},
 		{
 			"id": "sporenwicht",
+			"role": "Sporenschwarm",
+			"hint": "Kleine Beschwörungen mit Flächenschaden beseitigen.",
 			"name": "Sporenwicht",
 			"color": "729446"
 		},
 		{
 			"id": "schlundling",
+			"role": "Schlundschwarm",
+			"hint": "Nachschub früh abfangen, bevor er den Bewegungsraum nimmt.",
 			"name": "Schlundling",
 			"color": "813b65"
 		}

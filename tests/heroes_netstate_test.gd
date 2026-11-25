@@ -56,6 +56,8 @@ func _ready() -> void:
 		server.hero.skills.points = 2
 		server.hero.skills.upgrade(0)
 		server.hero.cc.slow("test", 0.4, 10, server.play_time))
+	server.coop.slots[1].hero.item_ready = {"mobility":server.play_time + 18.0}
+	server.coop.slots[1].hero.mastery_ready = server.play_time + 3.0
 	server.coop.with_player(3, func():
 		server.hero.mana = 9999
 		server.hero.cast(0, server.hero.position + Vector3.RIGHT * 3))
@@ -68,6 +70,7 @@ func _ready() -> void:
 	var packet := server.coop.snapshot()
 	client.coop.apply_state(bytes_to_var(var_to_bytes(packet)))
 	check(client.coop.slots.size() == 8, "Acht unabhängige Helden repliziert")
+	check(client.hero.item_ready == server.coop.slots[1].hero.item_ready and client.hero.mastery_ready == server.coop.slots[1].hero.mastery_ready, "Item- und Meisterschaftssperren werden autoritativ repliziert")
 	check(client.hero.dodge_invulnerable() and is_equal_approx(client.hero.dodge_iframe_until, server.coop.slots[1].hero.dodge_iframe_until), "Dodge-Iframes werden autoritativ repliziert")
 	check(client.health_orbs.snapshot() == server.health_orbs.snapshot(), "Orb-Positionen, IDs und Lebensdauer repliziert")
 	var orb_actor: HdHero = server.coop.slots[1].hero

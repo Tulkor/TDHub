@@ -68,7 +68,7 @@ func refresh_constructs() -> void:
 
 
 func resolve(source: Dictionary, slot: int, extra_rank := 0) -> Dictionary:
-	var signature := hash([ranks, modifiers, hero.game.imprints, hero.game.zix_kit])
+	var signature := hash([ranks, modifiers, hero.game.imprints, hero.game.zix_kit, hero.ITEM_EFFECTS.has_scepter(hero)])
 	if signature != _cache_key:
 		_cache.clear()
 		_cache_key = signature
@@ -99,6 +99,7 @@ func resolve(source: Dictionary, slot: int, extra_rank := 0) -> Dictionary:
 					target = target[path[k]]
 				var field := str(path[-1])
 				target[field] = float(target.get(field, 0)) + float(change.add)
+	hero.ITEM_EFFECTS.upgrade_skill(hero, out, slot)
 	_cache[key] = out
 	return out
 
@@ -174,6 +175,11 @@ func tooltip(slot: int, upgrade_preview := false) -> String:
 	var a := hero.ability(slot)
 	var lines: Array[String] = [tr(str(a.name)) + " · " + tr("Rang %d") % ranks[slot], tag_text(a), tr(str(a.get("summary", a.get("desc", ""))))]
 	var current := metrics(a)
+	var scepter: Dictionary = hero.def.get("scepter", {})
+	if not scepter.is_empty() and int(scepter.slot) == slot:
+		lines.append(tr("Szepter: %s") % tr(str(scepter.desc)))
+		if hero.ITEM_EFFECTS.has_scepter(hero):
+			lines.append(tr("Szepter-Aufwertung aktiv"))
 	var next := metrics(hero.ability_at_rank(slot, 1)) if upgrade_preview else {}
 	var labels := {"damage":"Schaden", "dps":"Schaden/s", "burn":"Brandschaden/s", "bite":"Bissschaden/s", "heal":"Heilung", "end_heal":"Abschlussheilung", "shield":"Schild", "dmg_out":"Zusatzschaden", "dmg_in":"Schadensreduktion", "slow":"Verlangsamung", "reflect":"Reflexionschance", "range":"Reichweite", "radius":"Radius", "reach":"Gebäudereichweite", "cooldown":"Abklingzeit", "duration":"Dauer", "time":"Dauer", "stun":"Kontrolldauer", "burn_time":"Branddauer", "slow_time":"Verlangsamungsdauer", "shield_time":"Schilddauer", "plague_time":"Seuchendauer", "mana":"Mana", "interval":"Angriffsintervall", "hp":"Gebäudeleben"}
 	labels.gadget_heal = "Heilung/s"

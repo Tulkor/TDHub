@@ -1,5 +1,7 @@
 # Gemeinsame Spielsysteme (scripts/systems/)
 
+- Effektsprache (Bollwerk-Items, 2026-11-25): Optionaler Haken `effect_script_source_key(text)` trennt Buff-/CC-Quellen inklusive verzögerter Effekte. Bollwerk nutzt stabile Mastery- und Itemquellen; ohne Haken bleibt das bisherige Verhalten. API in `scripts/systems/effect_script/README.md`, Tests `effectscript heroesscript heroesitemeffects`.
+
 Umbau ab 2026-11-08 (Lukas: „Spielsysteme unabhängig von den Modi, Modi modular aus den Systemen bauen, so viel wie möglich mit Skripten“). Plan in 7 Etappen: 1 Werkzeuge, 2 run_record + difficulty, 3 targeting, 4 economy + save, 5 waves, 6 coop + inventory, 7 build + controls + Aufräumen. Übersicht wer was nutzt: `docs/systeme.md` (erzeugt).
 
 - Ein System = `scripts/systems/<name>/<name>.gd` (`extends GameSystem`, Knoten am Spiel) + Basiswerte `<name>.json`. Reine Bibliotheken mit `static func` (Leveling) liegen auch dort, werden aber nicht als Knoten angelegt.
