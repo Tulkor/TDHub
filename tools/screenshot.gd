@@ -352,7 +352,7 @@ func _perf_variants() -> void:
 		if n is MultiMeshInstance3D and n.multimesh and n.multimesh.mesh and (n.get_parent() is RgScenery or n.get_parent() is EeveScenery):
 			var m: Mesh = n.multimesh.mesh
 			if m.get_surface_count() > 0 and m.surface_get_material(0) is ShaderMaterial \
-					and (m.surface_get_material(0) as ShaderMaterial).shader == VisualFx.WIND:
+					and (m.surface_get_material(0) as ShaderMaterial).shader in [VisualFx.WIND, VisualFx.WIND_SOLID]:
 				trees.append(n)
 	if opts.has("keinwald"):
 		for n in trees:
