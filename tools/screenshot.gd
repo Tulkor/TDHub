@@ -79,6 +79,10 @@ extends Node
 ##                           --angebot=flask:ruby,execute,ability:silver diese Boni (Bonus-ID[:Tower]) als Karten
 ##   --messen=S              statt eines Bildes S Sekunden Leistung messen (Bildzeit, Skriptzeit, Draw Calls,
 ##                           Objekte, Lichter, Knoten), Ausgabe Zeilen MESSUNG; tools/leistung.sh fasst mehrere zusammen
+##   --skriptprofil=S        statt eines Bildes S Sekunden lang _process/_physics_process je Skript messen
+##                           (tools/skriptprofil.gd), Ausgabe Zeilen SKRIPTPROFIL, --top=N Anzahl
+##   --baumkachel=N          Baum-MultiMeshes (eeveTD/YouTD/Randgruppen) in Kacheln von N Weltmaß, 0 = eine je Art
+##   --lod=P                 LOD-Schwelle in Pixeln statt der Grafikstufe (Leistungsvergleich)
 ##   --grafik=0|1|2          Grafikqualität Niedrig/Mittel/Hoch (Standard Hoch; Xvfb würde sonst als Software-Grafik Niedrig wählen)
 ##   --ep=N                  (mit --auswahl) der gewählte Tower hat N EP (Level-System, leveling.gd);
 ##                           --level_demo: Beispiel-Freischaltungen (Reichweite ab 3, Krit ab 5), --leveltip: Level-Tooltip offen
@@ -150,6 +154,12 @@ func _ready() -> void:
 		_ascension(int(opts.aufstieg))
 	Display.quality = int(opts.get("grafik", Display.HIGH))
 	Display.apply_quality()
+	# Leistungsvergleich: Kachelgröße der Baum-MultiMeshes (0 = eine je Baumart) und LOD-Schwelle in Pixeln
+	if opts.has("baumkachel"):
+		RgScenery.tree_cell = float(opts.baumkachel)
+		EeveScenery.tree_cell = float(opts.baumkachel)
+	if opts.has("lod"):
+		get_tree().root.mesh_lod_threshold = float(opts.lod)
 	FieldStyle.night = opts.has("nacht")
 	# Stil-Filter (StyleFilter) aus bzw. an, ohne die Einstellung zu speichern
 	if opts.has("filter"):
@@ -262,6 +272,17 @@ func _ready() -> void:
 			node.hud.open_leave_confirm()
 		if str(opts.spielmenue) == "einstellungen":
 			node.hud.settings_panel.open()
+	if opts.has("skriptprofil"):
+		var sp: Node = load("res://tools/skriptprofil.gd").new()
+		add_child(sp)
+		await _frames(30)
+		sp.start()
+		var until := Time.get_ticks_msec() + int(float(opts.skriptprofil) * 1000.0)
+		while Time.get_ticks_msec() < until:
+			await get_tree().process_frame
+		sp.report(int(opts.get("top", "20")))
+		get_tree().quit()
+		return
 	if opts.has("messen"):
 		if scene == "spiel":
 			_camera(node, angles[0])
