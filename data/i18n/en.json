@@ -3602,5 +3602,7 @@
 	"Endboss erwacht in %d:%02d": "Final boss awakens in %d:%02d",
 	"Löst Challenges, um den Endboss zu schwächen, oder geht direkt durch das Tor. Jeder Tod kostet %d Feste-Leben.": "Complete challenges to weaken the final boss, or go straight through the gate. Each death costs %d fortress lives.",
 	"Tor des Endbosses": "Final Boss Gate",
-	"Endboss verliert eine Flächenfähigkeit": "The final boss loses an area attack"
+	"Endboss verliert eine Flächenfähigkeit": "The final boss loses an area attack",
+	"Nova": "Nova",
+	"Schaden pro Welle": "Damage per wave"
 }

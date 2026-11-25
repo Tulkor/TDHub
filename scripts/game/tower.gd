@@ -97,6 +97,8 @@ var level_abilities: Array = []  ## mit dem Level freigeschaltete Fähigkeiten (
 var _lv: Dictionary = {}         ## Level-Profil dieses Towers in diesem Modus ({} = keine Level)
 var moves_left := 0  ## wie oft eine Falle noch verschoben werden darf
 var total_damage := 0.0
+var _script_native_text := ""
+var _script_native: Array = []
 
 var _visual: Node3D
 var _gem: Node3D
@@ -116,6 +118,8 @@ func setup(g, c: Vector2i, id: String, t: int) -> void:
 	game = g
 	cell = c
 	set_tower(id, t)
+	if game != null and not game.mirror:
+		_script_event("spawn")
 
 
 func set_tower(id: String, t: int) -> void:
@@ -162,9 +166,42 @@ func range_mult() -> float:
 
 
 func abilities() -> Array:
+	var native := _effect_passives()
 	if rogue_abilities.is_empty() and level_abilities.is_empty():
-		return stats.get("abilities", [])
-	return _all_abilities
+		return stats.get("abilities", []) + native
+	return _all_abilities + native
+
+
+## Items/modi may override this getter to add further expression scripts.
+func effect_scripts() -> Array:
+	var scripts: Array = []
+	for data in [def, stats]:
+		var text := str(data.get("effect_script", ""))
+		if not text.is_empty() and not scripts.has(text):
+			scripts.append(text)
+	return scripts
+
+
+func _effect_passives() -> Array:
+	var texts := effect_scripts()
+	var signature := JSON.stringify(texts)
+	if signature != _script_native_text:
+		_script_native_text = signature
+		_script_native = []
+		for text in texts:
+			_script_native.append_array(EffectScript.native_abilities(self, str(text)).abilities)
+	return _script_native
+
+
+## Subclasses may opt into an existing native runtime without changing the language.
+func effect_script_native_scopes() -> Array:
+	return ["tower"]
+
+
+func _script_event(event: String, target = null, dt := 0.0) -> void:
+	var errors := EffectScript.trigger(self, target, event, dt)
+	if not errors.is_empty():
+		EffectScript.report_errors(self, errors)
 
 
 func _refresh_abilities() -> void:
@@ -256,6 +293,7 @@ func set_ep(value: float) -> void:
 ## Ein Gegner zählt als Kill dieses Towers: Kill und EP.
 func credit_kill(e) -> void:
 	kills += 1
+	_script_event("kill", e)
 	if not _lv.is_empty():
 		gain_ep(Leveling.kill_ep(_lv, e))
 
@@ -322,6 +360,7 @@ func _process(delta: float) -> void:
 	# Koop-Mitspieler: geschossen wird nur beim Host
 	if game == null or game.mirror or not game.is_wave_running():
 		return
+	_script_event("tick", null, delta)
 	_apply_enemy_auras(delta)
 	if rooted_time > 0.0:
 		rooted_time -= delta
@@ -387,6 +426,9 @@ func _roll_damage() -> float:
 
 
 func _attack(e) -> void:
+	_script_event("attack", e)
+	if not is_instance_valid(e) or e.dead:
+		return
 	var dmg := _roll_damage()
 	var crit := ability("crit")
 	var crit_chance := float(crit.get("chance", 0.0)) + float(e.crit_mark)
@@ -465,6 +507,7 @@ func _hit(e, dmg: float) -> void:
 		_killed(e)
 	if not rogue_fx.is_empty() and game.rogue != null:
 		game.rogue.on_hit(self, e)
+	_script_event("hit", e)
 
 
 ## Ein Gegner ist durch diesen Tower gestorben (Modi hängen hier Kill-Effekte an).
