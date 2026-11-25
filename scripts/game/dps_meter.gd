@@ -56,7 +56,7 @@ func _ready() -> void:
 	select = OptionButton.new()
 	select.focus_mode = Control.FOCUS_NONE
 	select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	select.add_theme_font_size_override("font_size", 12)
+	select.add_theme_font_size_override("font_size", 14)
 	for item in VIEWS:
 		select.add_item(item[1])
 	select.item_selected.connect(func(i):
@@ -75,7 +75,7 @@ func _ready() -> void:
 	body = VBoxContainer.new()
 	body.add_theme_constant_override("separation", 6)
 	v.add_child(body)
-	info = UiUtil.label("", body, 12)
+	info = UiUtil.label("", body, 14)
 	info.add_theme_color_override("font_color", UiTheme.MUTED)
 	for i in TOP:
 		rows.append(_row())
@@ -93,11 +93,11 @@ func _row() -> Dictionary:
 	swatch.custom_minimum_size = Vector2(10, 10)
 	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(swatch)
-	var name_l := UiUtil.label("", h, 13)
+	var name_l := UiUtil.label("", h, 14)
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var value := UiUtil.label("", h, 13)
+	var value := UiUtil.label("", h, 14)
 	value.add_theme_color_override("font_color", UiTheme.COIN)
 	var track := HBoxContainer.new()
 	track.add_theme_constant_override("separation", 0)

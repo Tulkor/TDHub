@@ -25,7 +25,7 @@ func _ready() -> void:
 	_race = UiUtil.label("", head, 15)
 	UiTheme.heading(_race)
 	_race.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiUtil.label("Holz", head, 12).add_theme_color_override("font_color", UiTheme.MUTED)
+	UiUtil.label("Holz", head, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	_lumber = UiUtil.label("", head, 16)
 	_lumber.add_theme_color_override("font_color", UiTheme.HAVE)
 	_lumber.tooltip_text = tr("Holz gibt es einmal vor Level 25. Der Endtower kostet 1 Holz.")
@@ -41,7 +41,7 @@ func _ready() -> void:
 	_next.tooltip_text = tr("Pause überspringen (Taste N)")
 	UiTheme.accent_button(_next, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	_log = UiUtil.wrap_label("", v, 256)
-	_log.add_theme_font_size_override("font_size", 12)
+	_log.add_theme_font_size_override("font_size", 14)
 	_log.add_theme_color_override("font_color", UiTheme.MUTED)
 	refresh()
 
@@ -92,7 +92,7 @@ func _refresh_towers() -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # lange Namen (englisch) umbrechen statt abschneiden
 		b.custom_minimum_size = Vector2(256, 30)
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", 14)
 		b.disabled = reasons[i] != "" and game.placing != id
 		var tier: Dictionary = Database.tower_tier(id, 0)
 		var dmg: Array = tier.get("damage", [0, 0])

@@ -41,7 +41,7 @@ func _init(m: Dictionary, card_size := Vector2(330, 190)) -> void:
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_name.custom_minimum_size.x = card_size.x - 32
 	# Hinweis („Kommt noch“, erlaubte Spielerzahl) unter dem Namen, damit lange Namen Platz haben
-	_tag = _label("", v, 13)
+	_tag = _label("", v, 14)
 	_tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_hint = _label(tr(str(m.get("hint", ""))), v, 15)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

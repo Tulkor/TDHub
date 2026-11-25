@@ -150,5 +150,5 @@ static func accent_button(b: Button, bg: Color, fg: Color) -> void:
 ## Kleiner Abschnittstitel: Share Tech Mono, gesperrt, Cyan.
 static func caption(l: Label) -> void:
 	l.add_theme_font_override("font", mono())
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", LINE)

@@ -181,7 +181,7 @@
 			"min_players": 1,
 			"max_players": 1,
 			"scene": "res://scenes/heroes_game.tscn",
-			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 10 Wellen, noch mit Dev-Texturen.",
+			"hint": "Hero Defense: ein Held hält die Straße zur Feste. Gegner mit angekündigten Fähigkeiten, ausweichen schlägt Rüstung. 40 Wellen mit Kriegsherren und Endboss.",
 			"needs_map": false,
 			"systems": ["run_record", "difficulty", "targeting", "economy", "waves", "inventory", "visuals", "water", "timed_events", "challenges"],
 			"system_cfg": {
@@ -213,7 +213,7 @@
 			"min_players": 1,
 			"max_players": 1,
 			"scene": "res://scenes/survivors_game.tscn",
-			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben. Noch mit Dev-Texturen.",
+			"hint": "Ein Turm als Waffenplattform mitten in der Arena: Waffen kaufen und aufrüsten, Upgrades wählen, 30 Wellen von allen Seiten überleben.",
 			"needs_map": false,
 			"systems": ["run_record", "targeting", "economy", "waves", "visuals", "water"],
 			"system_cfg": {

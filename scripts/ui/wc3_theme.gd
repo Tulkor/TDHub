@@ -22,6 +22,9 @@ const MUTED := Color("a69676")
 ## Flächen der Knöpfe über der Textur: rot = Hauptknopf, dunkel = kleiner Knopf.
 const RED := Color(0.42, 0.086, 0.055, 0.8)
 const RED_HOVER := Color(0.63, 0.157, 0.07, 0.8)
+## Nebenknöpfe im Menü: dunkles Braunrot, Hauptknöpfe (Spielen, Beenden) bleiben RED (Lukas 2026-11-25)
+const MINOR := Color(0.23, 0.075, 0.05, 0.8)
+const MINOR_HOVER := Color(0.36, 0.115, 0.065, 0.8)
 const DARK := Color(0.133, 0.118, 0.102, 0.72)
 const DARK_HOVER := Color(0.25, 0.2, 0.16, 0.72)
 ## Map-Karte (Einzelspieler) über der Steintextur und Grund der Map-Vorschau.

@@ -56,10 +56,10 @@ func _build_tab(tabs: TabContainer) -> void:
 		_put("dir", [snappedf(cos(a), 0.001), snappedf(sin(a), 0.001)])))
 	length_spin = _field(tab, "Länge (0 = bis Rand, Mulde oder Sackgasse)", _spin(0.0, 0.0, 500.0, 1.0, func(v): _put("length", v)))
 	var help := UiUtil.wrap_label("Werkzeug Wasserlauf (Taste 7): erster Klick setzt die Quelle, weitere Klicks Wegpunkte, Umschalt+Klick die Mündung. Rechtsklick nimmt den letzten Punkt zurück. Den Rest des Weges sucht sich das Wasser selbst: es weicht Felsen, Sperrzonen und dem Gegnerweg aus, auf Gelände fließt es bergab.", tab, 290)
-	help.add_theme_font_size_override("font_size", 12)
+	help.add_theme_font_size_override("font_size", 14)
 	help.add_theme_color_override("font_color", UiTheme.MUTED)
 	info = UiUtil.wrap_label("", tab, 290)
-	info.add_theme_font_size_override("font_size", 12)
+	info.add_theme_font_size_override("font_size", 14)
 
 
 func _field(parent: Node, text: String, control: Control) -> Control:
@@ -67,7 +67,7 @@ func _field(parent: Node, text: String, control: Control) -> Control:
 	v.add_theme_constant_override("separation", 4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(v)
-	var l := UiUtil.label(text, v, 13)
+	var l := UiUtil.label(text, v, 14)
 	l.add_theme_color_override("font_color", UiTheme.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(control)

@@ -21,6 +21,7 @@ var map_title: Label
 var mode_hint: Label
 var map_scroll: ScrollContainer
 var no_map_hint: Label
+var map_hint: Label  ## „Doppelklick auf eine Map …“, nur bei Modi mit Kartenwahl
 var single_page: Control
 var profile: ProfilePanel
 var profile_page: Control
@@ -176,7 +177,8 @@ func _build_hub() -> void:
 	pillar.separator()
 	hub_buttons.append(pillar.button("Einstellungen", false, "Anzeige, Grafik und Sprache einstellen.", _open_settings))
 	hub_buttons.append(pillar.button("Mitwirkende", false, "Wer am Spiel mitgewirkt hat, mit allen Lizenzen.", func(): show_page("credits")))
-	hub_buttons.append(pillar.button("Daten neu laden", false, "JSON-Dateien unter data/ neu einlesen", _reload))
+	if Display.dev_tools:
+		hub_buttons.append(pillar.button("Daten neu laden", false, "JSON-Dateien unter data/ neu einlesen", _reload))
 	hub_buttons.append(pillar.button("Beenden", true, "Das Spiel beenden.", func(): get_tree().quit()))
 	_assign_hotkeys()
 
@@ -358,8 +360,8 @@ func _build_single() -> void:
 	map_info = _body_label("", right.box, 17, Wc3Theme.CREAM)
 	map_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	right.separator()
-	var hint := _body_label("Doppelklick auf eine Map startet sie direkt. Schwierigkeit und Wertung wählst du im Spiel vor Runde 1.", right.box, 16, Wc3Theme.MUTED)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	map_hint = _body_label("Doppelklick auf eine Map startet sie direkt. Schwierigkeit und Wertung wählst du im Spiel vor Runde 1.", right.box, 16, Wc3Theme.MUTED)
+	map_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var fill := Control.new()
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.box.add_child(fill)
@@ -547,6 +549,15 @@ func _update_selection() -> void:
 	var needs_map := _needs_map()
 	map_scroll.visible = needs_map
 	no_map_hint.visible = not needs_map
+	map_hint.visible = needs_map
+	if not needs_map:
+		# Statt einer leeren Spalte: Modus, Beschreibung, Spielerzahl (UI-Prüfung 2026-11-25)
+		var m: Dictionary = Database.mode(Session.game_kind)
+		var lo := int(m.get("min_players", 1))
+		var hi := int(m.get("max_players", 1))
+		var players := tr("1 Spieler") if hi <= 1 else tr("%d–%d Spieler") % [lo, hi]
+		no_map_hint.text = "%s\n\n%s\n\n%s\n%s" % [tr(str(m.get("name", Session.game_kind))).to_upper(), tr(str(m.get("hint", ""))), players,
+			tr("Die Karte legt der Modus selbst fest, Schwierigkeit wählst du vor dem Start.")]
 	var ok := (not needs_map or not shown_maps.is_empty()) and Database.mode_allows(Session.game_kind, 1)
 	play_button.disabled = not ok
 	play_button.queue_redraw()

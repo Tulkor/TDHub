@@ -93,6 +93,12 @@ func _ready() -> void:
 	look.select(0 if Display.style_filter else 1)
 	look.tooltip_text = tr("Bildfilter passend zum Modus: Retro-Synthwave in GemTD, Messing-Glanz in Shopping Maul, Nebelwald in eeveTD und YouTD, warme Töne in Randgruppen TD.")
 	look.item_selected.connect(func(i): Display.set_style_filter(i == 0))
+	var dev := _option(tr("Entwickler-Werkzeuge"), grid)
+	dev.add_item(tr("An"))
+	dev.add_item(tr("Aus"))
+	dev.select(0 if Display.dev_tools else 1)
+	dev.tooltip_text = tr("Zeigt den Debug-Knopf im Spiel und „Daten neu laden“ im Hauptmenü.")
+	dev.item_selected.connect(func(i): Display.set_dev_tools(i == 0))
 	VolumeRows.add(grid, DecoTheme.font(true) if deco else UiTheme.font(true), DecoTheme.BRASS_LIGHT if deco else UiTheme.CYAN)
 	var text := "Änderungen gelten sofort und bleiben gespeichert."
 	if in_game:
@@ -114,7 +120,7 @@ func _ready() -> void:
 		done.add_theme_font_size_override("font_size", 18)
 		UiTheme.accent_button(done, UiTheme.GOLD, UiTheme.GOLD_DARK, Color(UiTheme.GOLD, 0.35))
 	if in_game:
-		var esc := UiUtil.label("Esc: zurück", v, 13)
+		var esc := UiUtil.label("Esc: zurück", v, 14)
 		esc.add_theme_color_override("font_color", UiTheme.MUTED)
 		esc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hide()
@@ -135,11 +141,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## UI-Größe 50–100 %: die Zahl folgt dem Regler sofort, umgestellt wird beim Loslassen,
+## UI-Größe 50–125 %: die Zahl folgt dem Regler sofort, umgestellt wird beim Loslassen,
 ## sonst springt der Regler beim Ziehen unter der Maus weg.
 func _ui_scale_row(grid: GridContainer) -> HSlider:
 	return _percent_row(grid, tr("UI-Größe"), Display.UI_SCALE_MIN, Display.UI_SCALE_MAX, Display.ui_scale,
-		tr("Verkleinert Menüs und Spieloberfläche, die Spielansicht bleibt gleich."), Display.set_ui_scale, false)
+		tr("Verkleinert oder vergrößert Menüs und Spieloberfläche, die Spielansicht bleibt gleich."), Display.set_ui_scale, false)
 
 
 ## Regler in Prozent; live = schon beim Ziehen umstellen (geht, wenn sich der Regler selbst nicht verschiebt).

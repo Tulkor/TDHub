@@ -107,6 +107,9 @@ static func title(l: Label, size := 0) -> Label:
 ## auf Papier unlesbar, dann bleibt es schwarz.
 static func heading(l: Label, color := Color.TRANSPARENT) -> Label:
 	title(l)
+	# Plakatschrift erst ab Titelgröße, kleine Überschriften in fetter Schreibmaschine (UI-Prüfung 2026-11-25)
+	if l.get_theme_font_size("font_size") < 20:
+		l.add_theme_font_override("font", font(true))
 	if color.a > 0.0 and color.get_luminance() < 0.5:
 		l.add_theme_color_override("font_color", color)
 	l.add_theme_constant_override("shadow_offset_x", 1)

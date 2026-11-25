@@ -35,7 +35,7 @@ func _ready() -> void:
 		b.button_group = group
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", 14)
 		b.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2, 4))
 		b.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 		b.set_pressed_no_signal(t[0] == tab)

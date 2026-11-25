@@ -49,7 +49,7 @@ func _ready() -> void:
 	v.add_child(head)
 	title = UiUtil.label("Gegner", head, 16)
 	UiTheme.heading(title, UiTheme.CYAN)
-	summary = UiUtil.label("", head, 12)
+	summary = UiUtil.label("", head, 14)
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	summary.add_theme_color_override("font_color", UiTheme.MUTED)
@@ -63,7 +63,7 @@ func _ready() -> void:
 	body = VBoxContainer.new()
 	body.add_theme_constant_override("separation", 4)
 	v.add_child(body)
-	kind_label = UiUtil.label("", body, 12)
+	kind_label = UiUtil.label("", body, 14)
 	kind_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	UiTheme.caption("Wellen-Leben abgezogen", body)
 	var big := HBoxContainer.new()
@@ -73,7 +73,7 @@ func _ready() -> void:
 	var pct_sign := UiUtil.label("%", big, 15)
 	pct_sign.size_flags_vertical = Control.SIZE_SHRINK_END
 	pct_sign.add_theme_color_override("font_color", UiTheme.GOLD)
-	hp_label = UiUtil.label("", big, 12)
+	hp_label = UiUtil.label("", big, 14)
 	hp_label.size_flags_vertical = Control.SIZE_SHRINK_END
 	hp_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	bar = ProgressBar.new()
@@ -95,10 +95,10 @@ func _ready() -> void:
 		grid.add_child(p)
 		var h := HBoxContainer.new()
 		p.add_child(h)
-		var c := UiUtil.label(item[1], h, 11)
+		var c := UiUtil.label(item[1], h, 13)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		c.add_theme_color_override("font_color", UiTheme.MUTED)
-		var n := UiUtil.label("0", h, 13)
+		var n := UiUtil.label("0", h, 14)
 		n.add_theme_color_override("font_color", item[2])
 		chips[item[0]] = n
 	UiTheme.caption("Vorderster Gegner", body)
@@ -107,7 +107,7 @@ func _ready() -> void:
 	front_label = UiUtil.label("", fr, 14)
 	front_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	front_label.add_theme_color_override("font_color", UiTheme.COIN)
-	next_label = UiUtil.label("", fr, 12)
+	next_label = UiUtil.label("", fr, 14)
 	next_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	track = Control.new()
 	track.custom_minimum_size.y = 26

@@ -90,7 +90,7 @@ func _ready() -> void:
 	row.add_child(_level)
 	_button("Starten", row, func(): game.debug_jump_to_level(int(_level.value)))
 	var hint := UiUtil.wrap_label("Läuft gerade ein Level, verschwinden seine Gegner und das gewählte startet sofort. Im Countdown kommt es als nächstes.", v, 300)
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", UiTheme.MUTED)
 
 
