@@ -16,6 +16,9 @@ Neues Wissen zu einem Bereich in dessen Notiz eintragen, nicht hier; neue Notiz 
 ## Threads: ein Feature, ein Thread (feste Regel von Lukas)
 Jeder Schritt schleppt den ganzen Verlauf mit. Größere Features bekommen einen frischen Thread, Kategorie-Threads (Game-Systeme, UI und UX, Balance, Grafik) nur für Kleines. Fertig + gemergt = Thread schließen; was später gebraucht wird, steht im Repo oder unter /mnt/project-files/.
 
+## Zusammenarbeit mit Codex
+Codex arbeitet im selben Repo mit `AGENTS.md` (verweist auf diese Datei). Absprachen (eigene Branches `codex/…`/`claude/…`, nur PRs, Übergabe im PR-Text, gegenseitige Reviews ohne fremde Branches anzufassen) stehen dort im Abschnitt „Zusammenarbeit mit Claude“ und gelten für Claude genauso.
+
 ## Werkzeuge: erst diese, statt Abläufe neu zu schreiben
 Godot installiert der Session-Start-Hook, `godot` liegt in `~/.local/bin`. Grundsatz: Wiederkehrendes läuft über Skripte, Claude startet sie und liest nur deren Kurzausgabe. Fehlt eines für etwas, das öfter vorkommt, eines dazuschreiben.
 - Thread-Start: `tools/lage.sh`. Vor PR/Merge: `tools/vor_pr.sh [--alle]` (zieht main nach, passende Tests, Stil, endet mit `BEREIT`/`NICHT BEREIT`). Main nachziehen: `tools/main_nachziehen.sh [--tests]`.

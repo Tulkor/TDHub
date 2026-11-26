@@ -26,3 +26,13 @@
 - Gemeinsame Mechanik im gemeinsamen System implementieren und vorhandene Modus-Hooks/Konfiguration nutzen; keine Kopien derselben Mechanik je Modus anlegen.
 - Vor Änderungen `docs/claude/systeme.md` und die passende Modus-Notiz lesen. Vorhandene Werkzeuge und Tests: `tools/systeme.py`, `tests/systems/`, insbesondere `systeme_test.gd` für die Kaskade.
 - Änderungen an gemeinsamen Systemen für die betroffenen Modi prüfen; Modus-Ausnahmen gezielt im jeweiligen Modus halten.
+
+## Zusammenarbeit mit Claude (Lukas, 2026-11-25)
+Claude (Claude Code) und Codex arbeiten im selben Repo. Fachregeln stehen nur einmal, in `CLAUDE.md` und `docs/claude/`; hier nur die Absprachen.
+- Eigene Branches: Codex `codex/<thema>`, Claude `claude/<thema>`. Nie auf den Branch der anderen KI pushen, force-pushen oder rebasen. Aufbauen geht über einen eigenen Branch ab deren Stand.
+- Auf `main` nur per PR, gemergt wird nur auf Lukas' Wort. Vorher `tools/vor_pr.sh`; offene PRs und Überschneidungen zeigt `tools/prs.sh offen`.
+- PR-Text endet mit einer kurzen Übergabe: `Übergabe: Was – Warum – Geprüft (Tests/Screenshot) – Offen`. Die andere KI liest sie, bevor sie auf dem PR aufbaut.
+- Gegenseitige Reviews: Wer einen PR der anderen KI prüft, kommentiert im PR (Befund mit Datei:Zeile) und ändert nichts auf deren Branch. Lukas entscheidet bei Uneinigkeit.
+- Gleiche Dateien nicht parallel bearbeiten: Vor dem Start `tools/prs.sh offen` prüfen; überschneidet sich ein offener PR, darauf aufbauen oder Lukas fragen.
+- Lokaler Klon auf Lukas' PC: Nicht gleichzeitig mit Claude im selben Arbeitsordner arbeiten; Arbeit committen, bevor die andere KI übernimmt, statt unkommittete Stände liegen zu lassen.
+- Dauerhaftes Wissen kommt in `docs/claude/<bereich>.md` (gilt für beide), nicht in private Notizen.
