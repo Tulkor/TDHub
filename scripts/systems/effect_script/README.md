@@ -103,6 +103,13 @@ eigenen Ereignishooks. Rückgabefehler anzeigen; Tower speichern sie zusätzlich
 `effect_script_errors` und warnen je Meldung einmal. Proccs durch Skriptschaden
 können keine weiteren Skriptproccs auslösen (Rekursionsschutz je Quelle).
 
+Optional liefert die Quelle `effect_script_source_key(text) -> String`: Buffs und
+CC erhalten dann zusätzlich diesen Schlüssel, auch nach `Delay`/Geschossen.
+Bollwerk trennt damit aktive Items, passive Programme und die stabile
+Heldenmeisterschaft. Unterschiedliche Effekte überschreiben sich nicht;
+identische Programme bzw. Meisterschaft bei geänderter Wertung erneuern dieselbe
+Quelle. Ohne diesen Haken bleibt die bisherige Quellenzuordnung erhalten.
+
 Grenzen: 16384 Zeichen, 256 AST-Werte, Tiefe 24, 1024 ausgeführte Knoten je
 Ereignis, 256 laufende Verzögerungen/DoTs je Quelle, maximal 32 periodische
 Nachholungen je Tick. Chance nutzt `game.rng`, falls vorhanden. Test:

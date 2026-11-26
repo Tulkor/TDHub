@@ -122,7 +122,7 @@ func _ready() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size = Vector2(228, 34)
 		b.clip_text = true
-		b.add_theme_font_size_override("font_size", 13)
+		b.add_theme_font_size_override("font_size", 14)
 		b.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 		b.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
 		b.tooltip_text = str(w.name) + "\n" + tr(str(w.get("text", "")))
@@ -147,7 +147,7 @@ func _ready() -> void:
 			_update_text())
 		bb.custom_minimum_size = Vector2(228, 34)
 		bb.clip_text = true
-		bb.add_theme_font_size_override("font_size", 13)
+		bb.add_theme_font_size_override("font_size", 14)
 		bb.disabled = not bool(b.open)
 		bb.tooltip_text = str(b.name) + "\n" + builder_text(id) + ("" if b.open else "\n" + tr("Ab Spielerlevel %d") % int(b.level))
 	_builder_text = UiUtil.wrap_label("", v, 700)

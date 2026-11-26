@@ -12,8 +12,13 @@ const RESOLUTIONS: Array[Vector2i] = [
 var fullscreen := false
 var resolution := Vector2i(1400, 900)
 const UI_SCALE_MIN := 0.5
-const UI_SCALE_MAX := 1.0
-var ui_scale := 1.0  ## Größe der ganzen Oberfläche, 0,5 bis 1,0 (3D-Ansicht bleibt gleich)
+## Bis 125 %: auf 1400×900 entspricht das 1120×720, die kleinste Größe, die tools/ui_pruefung.sh prüft (UI-Prüfung 2026-11-25)
+const UI_SCALE_MAX := 1.25
+var ui_scale := 1.0  ## Größe der ganzen Oberfläche, 0,5 bis 1,25 (3D-Ansicht bleibt gleich)
+## Entwickler-Werkzeuge (Debug-Knopf im Spiel, „Daten neu laden“ im Hauptmenü). Aus im fertigen Spiel,
+## an beim Start aus dem Editor oder einem Debug-Export; in den Einstellungen umschaltbar.
+var dev_tools := OS.is_debug_build()
+signal dev_tools_changed(on: bool)
 var path_lights := false  ## Lichtpfad: Lichter fliegen den Gegnerweg entlang (PathLights, Knopf im HUD)
 var style_filter := true  ## Stil-Filter je Modus über dem 3D-Bild (StyleFilter), in den Einstellungen abschaltbar
 signal style_filter_changed(on: bool)
@@ -46,6 +51,7 @@ func _ready() -> void:
 		path_lights = bool(cfg.get_value("display", "path_lights", false))
 		style_filter = bool(cfg.get_value("display", "style_filter", true))
 		hud_width = clampf(float(cfg.get_value("display", "hud_width", 1.0)), HUD_WIDTH_MIN, 1.0)
+		dev_tools = bool(cfg.get_value("display", "dev_tools", dev_tools))
 	quality = clampi(int(cfg.get_value("display", "quality", _default_quality())), LOW, HIGH)
 	_sharpen_fonts()
 	_apply()
@@ -107,6 +113,12 @@ func hud_span(view: Vector2) -> float:
 func set_path_lights(on: bool) -> void:
 	path_lights = on
 	_save()
+
+
+func set_dev_tools(on: bool) -> void:
+	dev_tools = on
+	_save()
+	dev_tools_changed.emit(on)
 
 
 func set_style_filter(on: bool) -> void:
@@ -198,5 +210,6 @@ func _save() -> void:
 	cfg.set_value("display", "path_lights", path_lights)
 	cfg.set_value("display", "style_filter", style_filter)
 	cfg.set_value("display", "hud_width", hud_width)
+	cfg.set_value("display", "dev_tools", dev_tools)
 	cfg.set_value("display", "quality", quality)
 	cfg.save(SETTINGS)

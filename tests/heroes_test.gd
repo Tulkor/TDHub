@@ -29,6 +29,12 @@ func _ready() -> void:
 	if "--gpu-profil" in OS.get_cmdline_user_args():
 		Profile.dir += "_gpu"
 	Profile.reset_cache()
+	if "--nur=unterbrechen" in OS.get_cmdline_user_args():
+		Sfx.audible = false
+		await _interrupt()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures else 0)
+		return
 	if "--nur=ki" in OS.get_cmdline_user_args():
 		await _ai()
 		print("FERTIG, Fehler: %d" % failures)
@@ -123,6 +129,20 @@ func _cc() -> void:
 	check(_same(bt, [1.0, 0.6, 0.3, 0.0]), "Boss: 100/60/30 %%, dann immun: %s" % [bt])
 	check(b.immune(10.0) and not b.immune(3.0 + 0.3 + float(cfg.boss.immune) + 0.1), "Boss: Immunität endet nach %s s" % cfg.boss.immune)
 	check(is_equal_approx(b.hard(1.0, 20.0), 1.0), "Boss: nach der Immunität wieder volle Dauer")
+	# Anzeige (Bossleiste): gelber Aufbau, der sich langsam leert; immun = rot und ablaufend, CC ändert dann nichts
+	var g := HdCc.new(cfg, "boss")
+	g.hard(1.0, 0.0)
+	var built: Dictionary = g.gauge(1.0)
+	check(not built.immune and is_equal_approx(float(built.value), 1.0 / 3.0), "CC-Balken: eine CC füllt ein Drittel")
+	check(float(g.gauge(6.0).value) < float(built.value) and float(g.gauge(6.0).value) > 0.0, "CC-Balken leert sich langsam bis zum Zurücksetzen")
+	g.hard(1.0, 2.0)
+	g.hard(1.0, 3.0)
+	var full: Dictionary = g.gauge(3.4)
+	check(full.immune and float(full.value) > 0.95, "CC-Balken: immun ist voll und rot")
+	var mid: float = float(g.gauge(8.0).value)
+	g.hard(1.0, 8.0)
+	check(g.gauge(8.0).immune and is_equal_approx(float(g.gauge(8.0).value), mid), "CC während der Immunität setzt den Balken nicht zurück")
+	check(float(g.gauge(10.0).value) < mid, "Immunitätsbalken läuft ab")
 	# Verlangsamung und Rüstungssenkung: immer, auf Bossen halb
 	var s1 := HdCc.new(cfg, "normal")
 	s1.slow("x", 0.4, 2.0, 0.0)
@@ -258,28 +278,32 @@ func _ai() -> void:
 func _interrupt() -> void:
 	var g := await _new_game()
 	var e := g.spawn("schlammwerfer")
-	e.ab_ready["moerser"] = 0.0
+	var aid := str(e.abilities()[0])
+	e.ab_ready[aid] = 0.0
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	var k := 0
 	while not e.casting() and k < 120:
 		g.step(DT)
 		k += 1
-	check(e.casting() and str(e.cast.id) == "moerser", "Schlammwerfer setzt Mörser an")
+	check(e.casting() and str(e.cast.id) == aid, "Schlammwerfer setzt sein Mörsermuster an")
 	var teles: Array = e.cast.tele.duplicate()
-	check(teles.size() == 1 and teles[0].shape == HdTelegraph.CIRCLE, "Mörser zeigt eine Kreis-Warnfläche")
+	check(teles.size() == int(g.ability_defs[aid].get("count", 1)), "Mörser kündigt jeden Einschlag an")
+	for tele in teles:
+		check(tele.shape == HdTelegraph.CIRCLE, "Mörser zeigt Kreis-Warnflächen")
 	g.step(DT * 10)
 	var p: float = teles[0].progress
 	check(p > 0.1 and p < 0.9, "Füllung wächst mit der Aufladung (%.2f)" % p)
 	g.stun(e, 1.0)
 	g.step(DT)
 	check(not e.casting(), "Betäubung beim Aufladen bricht die Fähigkeit ab")
-	check(float(e.ab_ready.moerser) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
+	check(float(e.ab_ready[aid]) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
 	await get_tree().process_frame
-	check(not is_instance_valid(teles[0]) or teles[0].is_queued_for_deletion(), "Warnfläche verschwindet")
+	for tele in teles:
+		check(not is_instance_valid(tele) or tele.is_queued_for_deletion(), "Jede unterbrochene Warnfläche verschwindet")
 	_run(g, 3.0)
 	check(e.casts_started == 1, "kein neuer Mörser während des Cooldowns")
 	# Treffer: Held bleibt stehen → Schaden; ausweichen → kein Schaden
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	var hp0 := g.hero.hp
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	k = 0
@@ -296,7 +320,7 @@ func _interrupt() -> void:
 	check(g.hero.hp < hp0 - 50.0, "Mörser trifft den Helden (%d → %d)" % [hp0, g.hero.hp])
 	# Ausweichen während des Auslösens
 	g.hero.hp = g.hero.max_hp
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	e.gap_until = 0.0
 	k = 0
 	while not e.casting() and k < 200:

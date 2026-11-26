@@ -16,6 +16,7 @@ var stun_until := 0.0
 var _last_end := -1000.0      ## Ende der letzten harten CC
 var _max_since := -1.0        ## seit wann am Maximum (-1 = nicht)
 var immune_until := -1.0
+var immune_since := -1.0      ## Beginn der Immunität (für die abfallende Anzeige)
 var _slows: Dictionary = {}   ## Quelle → [Anteil, bis]
 var _armor: Dictionary = {}   ## Quelle → [Menge, bis]
 
@@ -27,6 +28,7 @@ func shift_time(seconds: float) -> void:
 		_max_since += seconds
 	if immune_until >= 0:
 		immune_until += seconds
+		immune_since += seconds
 	for effects in [_slows, _armor]:
 		for key in effects:
 			effects[key][1] += seconds
@@ -88,6 +90,7 @@ func hard(duration: float, now: float) -> float:
 	var imm := float(cfg.get(rank, {}).get("immune", 0.0))
 	if imm > 0.0 and count >= st.size():
 		immune_until = stun_until + imm
+		immune_since = now
 	elif count >= st.size() - 1 and _max_since < 0.0:
 		_max_since = now
 	return eff
@@ -95,6 +98,22 @@ func hard(duration: float, now: float) -> float:
 
 func stunned(now: float) -> bool:
 	return now < stun_until
+
+
+## Anzeige als Balken (Bossleiste, Lukas 2026-11-25): value 0..1 und immune.
+## Aufbau: Anteil der Kette, der sich nach der letzten CC bis zum Zurücksetzen langsam leert.
+## Immun: voller roter Balken, der über die Immunität abläuft; CC in dieser Zeit wirkt nicht und ändert nichts.
+func gauge(now: float) -> Dictionary:
+	if immune(now):
+		var span := maxf(immune_until - immune_since, 0.01)
+		return {"value": clampf((immune_until - now) / span, 0.0, 1.0), "immune": true}
+	if count <= 0:
+		return {"value": 0.0, "immune": false}
+	var fill := float(count) / float(steps().size())
+	var since := now - _last_end
+	if since > 0.0:
+		fill *= clampf(1.0 - since / _reset_time(), 0.0, 1.0)
+	return {"value": fill, "immune": false}
 
 
 ## Stufe in der Kette für die Anzeige: 0 = volle Wirkung, steps.size()-1 = Maximum.

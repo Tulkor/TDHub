@@ -50,7 +50,7 @@ func _ready() -> void:
 	var fill := Control.new()
 	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	th.add_child(fill)
-	status_label = UiUtil.label("", th, 13)
+	status_label = UiUtil.label("", th, 14)
 	status_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	UiUtil.button("Speichern und testen", th, _test).tooltip_text = "Speichern und als nächsten Gem im Spiel setzen"
 	var save := UiUtil.button("Speichern", th, _save)

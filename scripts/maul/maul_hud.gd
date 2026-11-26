@@ -183,6 +183,8 @@ func _build_top_bar() -> void:
 		_debug_button.tooltip_text = "Debug-Menü"
 		_debug_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 		_debug_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+		_debug_button.visible = Display.dev_tools
+		Display.dev_tools_changed.connect(func(on): _debug_button.visible = on)
 	Hud.key_badge(UiUtil.button("Menü", row, toggle_menu), "Esc")
 	_build_menu()
 
@@ -331,9 +333,9 @@ func _build_shop() -> void:
 	_shop_page.add_child(_shop_list)
 	_reveal_button = UiUtil.button("Aufdecken", _shop_page, func(): game.submit({"type": "reveal"}))
 	_reveal_button.tooltip_text = "Macht 30 s lang alle Unsichtbaren angreifbar, danach 60 s Pause."
-	var hint := UiUtil.wrap_label("Grau = zu wenig Gold. Klick oder Taste wählt, dann ins eigene Gebiet setzen. Umschalt hält die Wahl, Rechtsklick bricht ab.", _shop_page, SHOP_WIDTH - 24)
+	var hint := UiUtil.wrap_label("Rot steht, wie viel Gold noch fehlt. Klick oder Taste wählt, dann ins eigene Gebiet setzen. Umschalt hält die Wahl, Rechtsklick bricht ab.", _shop_page, SHOP_WIDTH - 24)
 	hint.add_theme_color_override("font_color", UiTheme.MUTED)
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 14)
 	_xpert_list = VBoxContainer.new()
 	_xpert_list.add_theme_constant_override("separation", 3)
 	box.add_child(_xpert_list)
@@ -365,7 +367,7 @@ func _build_xpert() -> void:
 	t.add_theme_color_override("font_color", Color.from_string(str(MaulData.xpert().get("color", "#ffe14f")), UiTheme.COIN))
 	var info := UiUtil.wrap_label("Jede Filiale darf einen XP-Tower und einen Ultimate-Tower bauen. Was gesperrt ist, zeigt der Grund.", _xpert_list, SHOP_WIDTH - 24)
 	info.add_theme_color_override("font_color", UiTheme.MUTED)
-	info.add_theme_font_size_override("font_size", 12)
+	info.add_theme_font_size_override("font_size", 14)
 	for d in MaulData.buyable("xpert"):
 		var b := Button.new()
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -380,7 +382,7 @@ func _build_xpert() -> void:
 		row.offset_right = -6
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(row)
-		var name := UiUtil.label(str(d.name), row, 13)
+		var name := UiUtil.label(str(d.name), row, 14)
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name.clip_text = true
 		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -413,10 +415,10 @@ func _build_bank(me: MaulGame.Player) -> void:
 	var width := SHOP_WIDTH - 24
 	if me.shop == MaulBank.OWNER:
 		var l := UiUtil.wrap_label(tr("Kein eigenes Konto. Am Levelende 5 %% aller Konten: jetzt %s Gold (alle Konten %s Gold).") % [MaulHud.big(MaulBank.owner_income(game)), MaulHud.big(MaulBank.total(game))], _main_box, width)
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 14)
 	else:
 		var info := UiUtil.wrap_label(tr("Kontostand %s Gold, %d %% Zinsen am Levelende (höchstens auf %s Gold).") % [MaulHud.big(me.account), roundi(MaulBank.rate(me) * 100.0), MaulHud.big(int(MaulBank.cfg().get("cap", 5000)))], _main_box, width)
-		info.add_theme_font_size_override("font_size", 13)
+		info.add_theme_font_size_override("font_size", 14)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		_main_box.add_child(row)
@@ -441,7 +443,7 @@ func _build_bank(me: MaulGame.Player) -> void:
 		var e := MaulBank.emma_cfg()
 		var text := tr("Bringt %d Gold alle %d s aus dem Laden, noch %s von %s Gold.") % [int(e.get("gold_per_trip", 10)), roundi(float(e.get("trip", 10.0))), MaulHud.big(int(e.get("mine", 15000)) - me.emma_mined), MaulHud.big(int(e.get("mine", 15000)))] if MaulBank.has_customer(game, game.local_player) else tr("Ein Altenheim wirbt eine Stammkundin an, die laufend Gold aus dem Laden holt.")
 		var l := UiUtil.wrap_label(text, _main_box, width)
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 14)
 		l.add_theme_color_override("font_color", UiTheme.COIN)
 
 
@@ -455,7 +457,7 @@ func _build_team(me: MaulGame.Player) -> void:
 	if game.winter_until > game.game_time:
 		active.append(tr("Winter %d s") % ceili(game.winter_until - game.game_time))
 	if not active.is_empty():
-		var l := UiUtil.label(", ".join(active), _main_box, 13)
+		var l := UiUtil.label(", ".join(active), _main_box, 14)
 		l.add_theme_color_override("font_color", UiTheme.CYAN)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -488,7 +490,7 @@ func _build_main() -> void:
 		var step := float(cfg.rebate_step if kind == "rebate" else cfg.damage_step)
 		UiTheme.caption("Rabatt" if kind == "rebate" else "Bonus-Upgrade", _main_box)
 		var now := UiUtil.wrap_label((tr("Stufe %d/%d: %d %% Rabatt auf alle Käufe") if kind == "rebate" else tr("Stufe %d/%d: +%d %% Schaden für alle Tower")) % [me.bonus, levels, roundi(me.bonus * step * 100)], _main_box, SHOP_WIDTH - 24)
-		now.add_theme_font_size_override("font_size", 13)
+		now.add_theme_font_size_override("font_size", 14)
 		if me.bonus < levels:
 			var cost := MaulData.bonus_cost(me.bonus + 1, kind == "rebate", game.players.size())
 			var b := UiUtil.button(tr("Stufe %d kaufen: %s Gold") % [me.bonus + 1, MaulHud.big(cost)], _main_box, func(): game.submit({"type": "bonus"}))
@@ -515,7 +517,7 @@ func _build_main() -> void:
 	UiTheme.caption("Erfahrung", _main_box)
 	var xp_text := tr("%s XP, Sandbox: es gibt keine neuen XP") % MaulXp.text(me.xp) if game.sandbox else tr("%s XP. Nach jedem Level gibt es neue, das nächste Zehntel wird immer teurer.") % MaulXp.text(me.xp)
 	var xl := UiUtil.wrap_label(xp_text, _main_box, SHOP_WIDTH - 24)
-	xl.add_theme_font_size_override("font_size", 13)
+	xl.add_theme_font_size_override("font_size", 14)
 	xl.add_theme_color_override("font_color", UiTheme.PURPLE_LIGHT)
 
 
@@ -543,7 +545,7 @@ func build_shop() -> void:
 		row.offset_right = -6
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(row)
-		var key := UiUtil.label(key_label(i), row, 13)
+		var key := UiUtil.label(key_label(i), row, 14)
 		key.custom_minimum_size.x = 18
 		key.add_theme_font_override("font", UiTheme.font(true))
 		key.add_theme_color_override("font_color", UiTheme.CYAN)
@@ -584,6 +586,8 @@ func refresh_shop() -> void:
 		var poor: bool = entry[1] > gold
 		b.modulate = Color(1, 1, 1, 0.45) if poor else Color.WHITE
 		(entry[3] as Label).add_theme_color_override("font_color", UiTheme.MISSING if poor else UiTheme.COIN)
+		# Fehlbetrag statt nur Farbe (UI-Prüfung 2026-11-25): „fehlen 250“
+		(entry[3] as Label).text = tr("fehlen %s") % MaulHud.big(entry[1] - gold) if poor else MaulHud.big(entry[1])
 	if _tab == "xpert" and _shop_panel.visible:
 		_refresh_xpert()
 	if _reveal_button.visible:
@@ -599,14 +603,16 @@ func refresh_shop() -> void:
 			_reveal_button.text = tr("Aufdecken")
 
 
-# --- Auswahl unten links ------------------------------------------------------------
+# --- Auswahl unten mittig (wie in den anderen TD-Modi, UI-Prüfung 2026-11-25) ------------
 
 func _build_selection() -> void:
 	_sel_panel = PanelContainer.new()
 	_sel_panel.add_theme_stylebox_override("panel", UiTheme.panel(12))
 	_sel_panel.anchor_top = 1.0
 	_sel_panel.anchor_bottom = 1.0
-	_sel_panel.offset_left = 16
+	_sel_panel.anchor_left = 0.5
+	_sel_panel.anchor_right = 0.5
+	_sel_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_sel_panel.offset_bottom = -16
 	_sel_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_sel_panel.custom_minimum_size.x = 340
@@ -666,7 +672,8 @@ func refresh_selection() -> void:
 	row.add_theme_constant_override("v_separation", 6)
 	row.custom_minimum_size.x = 316
 	_sel_box.add_child(row)
-	var sell := UiUtil.button(tr("Verkaufen +%s") % MaulHud.big(game.sell_value(t)), row, func(): game.submit({"type": "sell", "cell": t.cell}))
+	var sell := UiUtil.button(tr("Verkaufen +%s") % MaulHud.big(game.sell_value(t)), row, func(): pass)
+	UiUtil.confirm_press(sell, func(): game.submit({"type": "sell", "cell": t.cell}))
 	sell.tooltip_text = "75 % des Towerwerts zurück (Taste Entf)"
 	var gold: int = game.players[game.local_player].gold
 	for up in d.get("upgrades_to", []):
@@ -699,7 +706,7 @@ func _ability_box(lines: Array) -> void:
 		lines = [tr("Keine besonderen Fähigkeiten")]
 	for line in lines:
 		var l := UiUtil.wrap_label(line, box, 0)
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 14)
 		if lines.size() == 1 and line == tr("Keine besonderen Fähigkeiten"):
 			l.add_theme_color_override("font_color", UiTheme.MUTED)
 
@@ -729,7 +736,7 @@ func _pro_info(t: MaulTower, mine: bool) -> void:
 		lines.append(tr("Slots: %d / %d") % [t.items.size(), t.slots()])
 	for line in lines:
 		var l := UiUtil.wrap_label(line, _sel_box, 316)
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 14)
 		l.add_theme_color_override("font_color", UiTheme.CYAN)
 	# Eingelegte Items als Inventarfelder wie in WC3: ziehen auf andere Slots oder Tower (auch in der Welt) tauscht
 	# bzw. verschiebt, Rechtsklick verkauft; Slots, die der Tower nicht hat, ausgegraut
@@ -805,7 +812,7 @@ func _item_grid(ids: Array, gold: int, buy: Callable, full: bool, caption: Strin
 	UiTheme.caption(caption, _sel_box)
 	if ids.is_empty():
 		var l := UiUtil.wrap_label(empty_text, _sel_box, 316)
-		l.add_theme_font_size_override("font_size", 12)
+		l.add_theme_font_size_override("font_size", 14)
 		l.add_theme_color_override("font_color", UiTheme.MUTED)
 		return
 	var grid := GridContainer.new()
@@ -819,7 +826,7 @@ func _item_grid(ids: Array, gold: int, buy: Callable, full: bool, caption: Strin
 		var b := UiUtil.button("%s %s" % [MaulData.item_name(iid), MaulHud.big(int(it.cost))], grid, func(): buy.call(iid))
 		b.custom_minimum_size = Vector2(156, 26)
 		b.clip_text = true
-		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_font_size_override("font_size", 13)
 		b.tooltip_text = item_text(it)
 		b.disabled = full or int(it.cost) > gold
 
@@ -865,7 +872,7 @@ func _copy_picker(t: MaulTower, gold: int) -> void:
 func _unit_panel(u: MaulUnit) -> void:
 	UiTheme.title(UiUtil.label(u.label(), _sel_box), 18)
 	var mine := u.owner_player == game.local_player
-	var sub := UiUtil.label(tr("Drohne") if u.drone else tr("Zombie"), _sel_box, 13)
+	var sub := UiUtil.label(tr("Drohne") if u.drone else tr("Zombie"), _sel_box, 14)
 	sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	if not mine:
 		sub.text += " · " + game.players[u.owner_player].name
@@ -882,7 +889,7 @@ func _unit_panel(u: MaulUnit) -> void:
 		var v := UiUtil.label("", box, 15)
 		v.add_theme_font_override("font", UiTheme.font(true))
 		vals[cap] = v
-	var stats := UiUtil.label("", _sel_box, 13)
+	var stats := UiUtil.label("", _sel_box, 14)
 	stats.add_theme_color_override("font_color", UiTheme.MUTED)
 	_live.append([null, func():
 		if not is_instance_valid(u):
@@ -896,12 +903,12 @@ func _unit_panel(u: MaulUnit) -> void:
 		vals["Reichweite"].text = TowerStats.num(u.range_cells())
 		stats.text = tr("%s Schaden · %d Kills") % [MaulHud.big(roundi(u.total_damage)), u.kills]])
 	var desc := UiUtil.wrap_label(tr("Verliert Leben mit der Zeit, Kultstätten heilen ihn.") if not u.drone else tr("Verbraucht im Level Energie und lädt am Drone Charger auf."), _sel_box, 316)
-	desc.add_theme_font_size_override("font_size", 12)
+	desc.add_theme_font_size_override("font_size", 14)
 	if not mine:
 		_refresh_live_buttons()
 		return
 	var hint := UiUtil.wrap_label("Klick ins eigene Gebiet setzt den Posten, dort greift die Einheit an.", _sel_box, 316)
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", UiTheme.CYAN)
 	if u.drone:
 		var slots := int(MaulData.pro().drones.slots)
@@ -911,13 +918,13 @@ func _unit_panel(u: MaulUnit) -> void:
 			row.add_theme_constant_override("separation", 6)
 			_sel_box.add_child(row)
 			var id := str(u.modules[slot])
-			var l := UiUtil.label(MaulData.item_name(id), row, 13)
+			var l := UiUtil.label(MaulData.item_name(id), row, 14)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			l.tooltip_text = item_text(MaulData.item(id))
 			l.mouse_filter = Control.MOUSE_FILTER_PASS
 			var sl := str(slot)
 			var refund := floori(int(MaulData.item(id).get("cost", 0)) * float(MaulData.rules().sell_refund))
-			UiUtil.button(tr("Verkaufen +%s") % MaulHud.big(refund), row, func(): game.submit({"type": "module_sell", "unit": u.net_id, "slot": sl})).add_theme_font_size_override("font_size", 12)
+			UiUtil.button(tr("Verkaufen +%s") % MaulHud.big(refund), row, func(): game.submit({"type": "module_sell", "unit": u.net_id, "slot": sl})).add_theme_font_size_override("font_size", 14)
 		var gold: int = game.players[game.local_player].gold
 		var ids := game.items_for(game.local_player, "module").filter(func(id):
 			var it := MaulData.item(str(id))
@@ -1256,7 +1263,7 @@ func show_game_over(victory: bool) -> void:
 	if news != "":
 		UiUtil.label(news, box, 15).add_theme_color_override("font_color", UiTheme.COIN)
 	elif game.sandbox or game.debug_used or Session.debug_immortal:
-		UiUtil.label("Zählt nicht fürs Profil (Sandbox oder Debug)", box, 13).add_theme_color_override("font_color", UiTheme.MUTED)
+		UiUtil.label("Zählt nicht fürs Profil (Sandbox oder Debug)", box, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)

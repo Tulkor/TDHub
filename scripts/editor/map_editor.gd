@@ -94,7 +94,7 @@ func _field(parent: Node, text: String, control: Control) -> Control:
 	v.add_theme_constant_override("separation", 4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(v)
-	var l := UiUtil.label(text, v, 13)
+	var l := UiUtil.label(text, v, 14)
 	l.add_theme_color_override("font_color", UiTheme.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(control)
@@ -186,7 +186,7 @@ func _build_ui() -> void:
 		var name_l := UiUtil.label(tr(str(TOOL_NAMES[t]).split(" (")[0]), h, 15)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var key_l := UiUtil.label(str(key), h, 12)
+		var key_l := UiUtil.label(str(key), h, 14)
 		key_l.add_theme_color_override("font_color", UiTheme.MUTED)
 		key_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_theme_stylebox_override("pressed", UiTheme.box(Color("2a0f2e"), UiTheme.GOLD))
@@ -218,7 +218,7 @@ func _build_ui() -> void:
 	lfill.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lv.add_child(lfill)
 	var help := UiUtil.wrap_label("Linksklick malt, Rechtsklick radiert.\nKamera: WASD/Pfeile, Fensterrand, rechte Maustaste ziehen, Q/E, Mausrad.", lv, 180)
-	help.add_theme_font_size_override("font_size", 12)
+	help.add_theme_font_size_override("font_size", 14)
 	help.add_theme_color_override("font_color", UiTheme.MUTED)
 
 	# Rechts: Eigenschaften in Tabs
@@ -294,7 +294,7 @@ func _build_ui() -> void:
 	rocks_spin = _field(var_tab, "Zufällige Steine zu Spielbeginn", _spin(0, 0, 500, func(v): map.variance["random_rocks"] = int(v)))
 	seed_spin = _field(var_tab, "Seed (−1 = jedes Mal zufällig)", _spin(-1, -1, 999999, func(v): map.variance["seed"] = int(v)))
 	var vh := UiUtil.wrap_label("Mit einem festen Seed liegen die Steine in jedem Spiel gleich.", var_tab, PANEL_WIDTH - 40)
-	vh.add_theme_font_size_override("font_size", 13)
+	vh.add_theme_font_size_override("font_size", 14)
 	vh.add_theme_color_override("font_color", UiTheme.MUTED)
 
 	water_tool = MapWaterEditor.new()
@@ -310,12 +310,12 @@ func _build_ui() -> void:
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 24)
 	bar.add_child(bh)
-	path_label = UiUtil.label("", bh, 13)
-	cell_label = UiUtil.label("", bh, 13)
+	path_label = UiUtil.label("", bh, 14)
+	cell_label = UiUtil.label("", bh, 14)
 	cell_label.add_theme_color_override("font_color", UiTheme.MUTED)
-	dirty_label = UiUtil.label("", bh, 13)
+	dirty_label = UiUtil.label("", bh, 14)
 	dirty_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	status_label = UiUtil.label("", bh, 13)
+	status_label = UiUtil.label("", bh, 14)
 	status_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	_refresh_load_list()
 

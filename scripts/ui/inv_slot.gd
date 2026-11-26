@@ -86,6 +86,10 @@ func set_marked(on: bool, dim := false) -> InvSlot:
 
 
 func _draw() -> void:
+	if UiTheme.bollwerk():
+		# Eisenliturgie: Achteck mit Edelstein-Fassungen, Rand und Steine aus der Bollwerk-Metalllage.
+		HdUiStyle.draw_slot(self)
+		return
 	var r := Rect2(Vector2.ZERO, size)
 	match state:
 		State.LOCKED:
@@ -151,7 +155,7 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	l.text = for_text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 420.0 if for_text.length() > 60 else 0.0
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	return l
 
 

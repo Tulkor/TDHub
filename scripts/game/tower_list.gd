@@ -45,7 +45,7 @@ func _ready() -> void:
 	v.add_child(head)
 	var title := UiUtil.label("Tower", head, 16)
 	UiTheme.heading(title, UiTheme.CYAN)
-	summary = UiUtil.label("", head, 12)
+	summary = UiUtil.label("", head, 14)
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	summary.add_theme_color_override("font_color", UiTheme.MUTED)
@@ -61,7 +61,7 @@ func _ready() -> void:
 	v.add_child(body)
 	select = OptionButton.new()
 	select.focus_mode = Control.FOCUS_NONE
-	select.add_theme_font_size_override("font_size", 12)
+	select.add_theme_font_size_override("font_size", 14)
 	for s in SORTS:
 		select.add_item(s[1])
 	select.item_selected.connect(func(i):
@@ -164,7 +164,7 @@ func refresh() -> void:
 		var group: Array = _groups.get(t.label(), [t]) if sort == "group" else [t]
 		r.name.text = t.label() + (" ×%d" % group.size() if group.size() > 1 else "")
 		r.gem.add_theme_color_override("font_color", t.color)
-		r.kills.text = "✖ %d" % group.reduce(func(a, o): return a + o.kills, 0) if t.can_attack() else "–"
+		r.kills.text = "☠ %d" % group.reduce(func(a, o): return a + o.kills, 0) if t.can_attack() else "–"
 		r.damage.text = DpsMeter._fmt(group_damage(t)) if t.can_attack() else tr("Aura")
 		var on: bool = group.has(sel)
 		if r.on != on:   # neuer Rahmen nur bei Wechsel der Auswahl, sonst baut jede Zeile alle 0,5 s ihr Layout neu
@@ -246,18 +246,18 @@ func _row(t) -> Dictionary:
 	h.offset_left = 6
 	h.offset_right = -6
 	b.add_child(h)
-	var gem := UiUtil.label("◆", h, 12)
+	var gem := UiUtil.label("◆", h, 14)
 	gem.add_theme_color_override("font_color", t.color)
-	var n := UiUtil.label(t.label(), h, 12)
+	var n := UiUtil.label(t.label(), h, 14)
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	n.clip_text = true
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	n.draw.connect(_draw_underline.bind(n))
-	var k := UiUtil.label("", h, 11)
+	var k := UiUtil.label("", h, 13)
 	k.custom_minimum_size.x = 38
 	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	k.add_theme_color_override("font_color", UiTheme.MUTED)
-	var d := UiUtil.label("", h, 12)
+	var d := UiUtil.label("", h, 14)
 	d.custom_minimum_size.x = 42
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	d.add_theme_color_override("font_color", UiTheme.COIN)
@@ -297,20 +297,20 @@ func _tooltip(t) -> Control:
 	for row in [[tr("Kills"), str(t.kills), UiTheme.TEXT], [tr("Schaden gesamt"), DpsMeter._fmt(t.total_damage), UiTheme.COIN]]:
 		var h := HBoxContainer.new()
 		v.add_child(h)
-		var l := UiUtil.label(row[0], h, 13)
+		var l := UiUtil.label(row[0], h, 14)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.add_theme_color_override("font_color", UiTheme.DIM)
-		UiUtil.label(row[1], h, 13).add_theme_color_override("font_color", row[2])
+		UiUtil.label(row[1], h, 14).add_theme_color_override("font_color", row[2])
 	var made := combos(t)
 	if not made.is_empty():
 		var c := UiUtil.wrap_label(tr("Kombinierbar zu: %s") % ", ".join(made), v, 250)
-		c.add_theme_font_size_override("font_size", 12)
+		c.add_theme_font_size_override("font_size", 14)
 		c.add_theme_color_override("font_color", UiTheme.CYAN_TEXT)
 		if not game.is_wave_running():
 			var w := UiUtil.wrap_label(tr("Kombinieren geht erst wieder während der Welle."), v, 250)
-			w.add_theme_font_size_override("font_size", 12)
+			w.add_theme_font_size_override("font_size", 14)
 			w.add_theme_color_override("font_color", UiTheme.MUTED)
 	var note := UiUtil.wrap_label(tr("Klick wählt den Tower aus, Doppelklick fährt die Kamera hin."), v, 250)
-	note.add_theme_font_size_override("font_size", 12)
+	note.add_theme_font_size_override("font_size", 14)
 	note.add_theme_color_override("font_color", UiTheme.MUTED)
 	return v

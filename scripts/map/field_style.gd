@@ -112,9 +112,11 @@ const STYLES := {
 		},
 		"floor": {
 			"floor_alpha": 0.0,
-			"line_color": Color("1c2416"), "edge_color": Color("3a2a1a"),
+			# Rasterlinien heller als der Boden, damit Bauplätze nachts sichtbar bleiben (UI-Prüfung 2026-11-25;
+			# vorher 1c2416, dunkler als der Boden selbst)
+			"line_color": Color("6e7a5c"), "edge_color": Color("3a2a1a"),
 			"line_energy": 1.0, "major_energy": 1.0, "minor_energy": 1.0, "cell_energy": 1.0,
-			"cell_alpha": 0.0, "minor_alpha": 0.2, "major_alpha": 0.42,
+			"cell_alpha": 0.0, "minor_alpha": 0.22, "major_alpha": 0.45,
 			"edge_energy": 1.0, "core_white": 0.0, "halo_width": 0.004, "line_width": 0.012,
 			"zone_color": Color("b0563a"), "zone_alpha": 0.28, "zone_edge_energy": 0.9,
 			"zone_edge_color": Color("5a2a18"),

@@ -57,13 +57,12 @@ func _ready() -> void:
 			race_id = id
 			_update_text())
 		b.tooltip_text = tr(str(r.hint))
-		# Rassen mit eigenem Look zeigen ihn schon auf dem Knopf (Schrift aus RgVandal)
-		var look: Dictionary = r.get("look", {})
-		if int(look.get("vandal", 0)) >= 3 and RgVandal.FONTS.has(str(look.style)):
-			b.add_theme_font_override("font", load(RgVandal.FONTS[str(look.style)]))
-			b.add_theme_font_size_override("font_size", 17)
-		# Rassenfarben sind für dunkle Flächen gedacht, auf dem Plakatpapier abgedunkelt
-		b.add_theme_color_override("font_color", Color(str(r.color)).darkened(0.45))
+		# Knöpfe in lesbarer fetter Schrift; die Zierschrift der Rasse zeigt der große Titel darunter
+		# (UI-Prüfung 2026-11-25: „Hip-Hop-Crew“, „Emos“, „Punks“ waren auf dem Knopf kaum lesbar)
+		b.add_theme_font_override("font", UiTheme.font(true))
+		# Rassenfarben sind für dunkle Flächen gedacht, auf dem Plakatpapier kräftig abgedunkelt, damit graue
+		# Rassen (Seniorenklub, Bürohengste) nicht wie gesperrt aussehen
+		b.add_theme_color_override("font_color", Color(str(r.color)).darkened(0.6))
 	_race_text = UiUtil.wrap_label("", v, 770)
 
 	UiTheme.caption("Schwierigkeit", v)

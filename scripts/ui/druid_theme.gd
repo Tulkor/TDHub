@@ -116,6 +116,9 @@ static func heading(l: Label) -> Label:
 	var size := l.get_theme_font_size("font_size") if l.has_theme_font_size_override("font_size") else 15
 	title(l)
 	l.add_theme_font_size_override("font_size", size + 3)
+	# Panel-Überschriften in fetter Textschrift: Unziale liest sich klein falsch („Nächsce“, „Laser“),
+	# sie bleibt für große Fenstertitel (UI-Prüfung 2026-11-25)
+	l.add_theme_font_override("font", font(true, 1))
 	l.add_theme_constant_override("shadow_offset_x", 1)
 	l.add_theme_constant_override("shadow_offset_y", 1)
 	return l

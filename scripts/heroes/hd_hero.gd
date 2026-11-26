@@ -15,6 +15,10 @@ const KITS := {
 	"zix": "res://scripts/heroes/hd_hero_zix.gd",
 }
 
+const ITEM_EFFECTS = preload("res://scripts/heroes/hd_item_effects.gd")
+var item_ready: Dictionary = {}
+var mastery_ready := 0.0
+
 var game  ## HdGame
 var def: Dictionary
 var level := 1
@@ -45,7 +49,7 @@ var attack_cd := 0.0:
 		attack_cd = value
 		if started and game != null and (game.coop == null or not game.coop.applying):
 			mark_combat()
-		if started and game != null and is_inside_tree() and not effect_scripts().is_empty():
+		if started and game != null and is_inside_tree() and (not effect_scripts().is_empty() or b("mastery") > 0):
 			script_event(game.nearest_enemy(position, attack_range()), "attack")
 var cd: Array = [0.0, 0.0, 0.0, 0.0]
 var dodge_cd := 0.0
@@ -243,6 +247,8 @@ func own_imprints() -> Array:
 func set_bonus(d: Dictionary) -> void:
 	bonus = d
 	_apply_level()
+	if skills != null:
+		skills.refresh_constructs()
 
 
 func attack_interval() -> float:
@@ -600,11 +606,12 @@ func cast(slot: int, at: Vector3) -> bool:
 	var tags: Array = a.get("tags", [])
 	if a.has("damage") or a.has("burn") or tags.any(func(tag): return tag in ["attack", "control", "debuff", "dot"]):
 		mark_combat()
-	script_event(game.nearest_enemy(at, 3), "cast")
 	_face(dir)
 	mana -= cost
 	if cd[slot] <= 0.0:
 		cd[slot] = float(a.cooldown) * (1.0 - minf(b("cdr"), 0.4))
+	script_event(game.nearest_enemy(at, 3), "cast")
+	ITEM_EFFECTS.after_cast(self, slot)
 	return true
 
 
@@ -645,6 +652,7 @@ func dodge(dir: Vector3) -> bool:
 	order = {}
 	dodges += 1
 	game.fx.dash_trail(position, dodge_dir * float(def.dodge.distance))
+	script_event(self, "dodge")
 	return true
 
 
@@ -677,30 +685,25 @@ func free_kit() -> void:
 
 
 func effect_scripts() -> Array:
-	var texts: Array = []
-	if not str(def.get("effect_script", "")).is_empty():
-		texts.append(str(def.effect_script))
-	var own_shop: HdShop = game.shop
-	if game.coop:
-		own_shop = game.coop.slots.get(game.hero_slot(self), {}).get("shop", own_shop)
-	if own_shop:
-		for entry in own_shop.inv:
-			if entry == null:
-				continue
-			var item: Dictionary = own_shop.items.get(str(entry.id), {})
-			var text := str(item.get("effect_script", ""))
-			if not text.is_empty():
-				texts.append(text)
-	return texts
+	return ITEM_EFFECTS.passive_scripts(self)
+
+
+func effect_script_source_key(text: String) -> String:
+	return str(get_meta("item_effect_scope", str(hash(text))))
 
 
 func script_event(target, event: String, dt := 0.0) -> void:
 	if game.coop and not game.coop.host:
 		return
-	if bool(get_meta("native_script_busy", false)):
+	if bool(get_meta("native_script_busy", false)) or bool(get_meta("item_effect_busy", false)):
 		return
+	if bool(get_meta(EffectScript.STATE, {}).get("busy", false)):
+		return
+	set_meta("item_effect_busy", true)
 	var errors: Array = EffectScript.trigger(self, target, event, dt, [""] if dead and event == "tick" else [])
 	EffectScript.report_errors(self, errors)
+	ITEM_EFFECTS.mastery_event(self, target, event)
+	set_meta("item_effect_busy", false)
 
 
 func supports_script_buff(key: String) -> bool:

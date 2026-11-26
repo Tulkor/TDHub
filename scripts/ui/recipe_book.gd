@@ -66,13 +66,13 @@ static func card(id: String, have: Array, on_pin: Callable, compact := false, no
 		status_text = "in der Welle"
 		status_col = UiTheme.GOLD
 		p.tooltip_text = "Fertige Tower auf dem Feld lassen sich nur während der Welle kombinieren."
-	var status_l := UiUtil.label(status_text, head, 12)
+	var status_l := UiUtil.label(status_text, head, 14)
 	status_l.add_theme_color_override("font_color", status_col)
 	var pin := Button.new()
 	pin.text = "Gepinnt" if pinned else "Pin"
 	pin.tooltip_text = "Rezept lösen" if pinned else "Rezept anpinnen: erscheint im Spiel links oben"
 	pin.focus_mode = Control.FOCUS_NONE
-	pin.add_theme_font_size_override("font_size", 12)
+	pin.add_theme_font_size_override("font_size", 14)
 	if pinned:
 		for k in ["normal", "hover", "pressed"]:
 			pin.add_theme_stylebox_override(k, UiTheme.box(UiTheme.GOLD if k != "hover" else UiTheme.GOLD.lightened(0.12)))
@@ -151,7 +151,7 @@ func _ready() -> void:
 	legend.add_theme_constant_override("separation", 18)
 	v.add_child(legend)
 	for leg in [["✓ fixiert", UiTheme.HAVE], ["✓ ausgewählter neuer Gem", UiTheme.PURPLE_LIGHT], ["✗ fehlt", UiTheme.MISSING], ["am wenigsten fehlt zuerst", UiTheme.MUTED]]:
-		UiUtil.label(leg[0], legend, 13).add_theme_color_override("font_color", leg[1])
+		UiUtil.label(leg[0], legend, 14).add_theme_color_override("font_color", leg[1])
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -164,7 +164,7 @@ func _ready() -> void:
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
 
-	var hint := UiUtil.label("Angepinnte Rezepte stehen im Spiel links oben und zeigen, was noch fehlt. Grün sind fixierte Tower aus früheren Runden, violett der ausgewählte neue Gem (bei One-Shots alle Zutaten aus der Runde), rot fehlt noch. Baubar ist ein Rezept aber nur so: beim Setzen und Auswählen aus den Gems dieser Runde, während der Welle aus fertigen Towern auf dem Feld.", v, 13)
+	var hint := UiUtil.label("Angepinnte Rezepte stehen im Spiel links oben und zeigen, was noch fehlt. Grün sind fixierte Tower aus früheren Runden, violett der ausgewählte neue Gem (bei One-Shots alle Zutaten aus der Runde), rot fehlt noch. Baubar ist ein Rezept aber nur so: beim Setzen und Auswählen aus den Gems dieser Runde, während der Welle aus fertigen Towern auf dem Feld.", v, 14)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_color", UiTheme.MUTED)
 	hide()

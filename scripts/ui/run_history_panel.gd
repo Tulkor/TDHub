@@ -141,13 +141,13 @@ func _run_button(i: int) -> Button:
 	l1.add_child(_badge(r))
 	var l2 := HBoxContainer.new()
 	v.add_child(l2)
-	var when := UiUtil.label("%s · %s" % [_date(r), tr("Punkte") if r.get("score_mode", false) else tr("Leben")], l2, 13)
+	var when := UiUtil.label("%s · %s" % [_date(r), tr("Punkte") if r.get("score_mode", false) else tr("Leben")], l2, 14)
 	when.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	when.add_theme_color_override("font_color", DecoTheme.MUTED)
 	var res := tr("Welle %d") % int(r.get("wave", 0))
 	if not r.get("score_mode", false):
 		res += " · " + tr("%d Leben") % int(r.get("lives", 0))
-	UiUtil.label(res, l2, 13).add_theme_color_override("font_color", DecoTheme.MUTED)
+	UiUtil.label(res, l2, 14).add_theme_color_override("font_color", DecoTheme.MUTED)
 	for c in [l1, l2, name_l, when]:
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return b
@@ -163,7 +163,7 @@ func _badge(r: Dictionary) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_theme_stylebox_override("panel", DecoTheme.box(Color.TRANSPARENT, col, 0, 2, 3))
-	var l := UiUtil.label(text, p, 13)
+	var l := UiUtil.label(text, p, 14)
 	l.uppercase = true
 	l.add_theme_font_override("font", DecoTheme.font(true))
 	l.add_theme_color_override("font_color", col)
@@ -318,7 +318,7 @@ func _tile(parent: Node, caption: String, value: String, col := DecoTheme.TEXT) 
 	v.add_theme_constant_override("separation", 0)
 	p.add_child(v)
 	var c := DecoTheme.caption(caption, v)
-	c.add_theme_font_size_override("font_size", 13)
+	c.add_theme_font_size_override("font_size", 14)
 	var l := UiUtil.label(value, v, 17)
 	l.add_theme_color_override("font_color", col)
 

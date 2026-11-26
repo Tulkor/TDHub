@@ -70,11 +70,11 @@ func _ready() -> void:
 	_ups = VBoxContainer.new()
 	right.add_child(_ups)
 	var note := UiUtil.wrap_label(tr("Holz brauchen auch Fallen, Aura-, Dual- und Stufe-6-Tower. Upgrades erst kaufen, wenn Holz übrig ist."), right, 500)
-	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_font_size_override("font_size", 14)
 	note.add_theme_color_override("font_color", UiTheme.MUTED)
 	_section("Drops", "", right)
 	var drops := UiUtil.wrap_label(tr("Ab Level 11 kann der erste Kill eines Levels ein Item fallen lassen, Chance und Stufe steigen mit dem Level. Jeder besiegte Golem bringt sicher zwei Items. Ist das Lager voll, wird das Item zum halben Wert verkauft."), right, 500)
-	drops.add_theme_font_size_override("font_size", 13)
+	drops.add_theme_font_size_override("font_size", 14)
 
 
 func _section(text: String, sub: String, parent: Node) -> void:
@@ -84,7 +84,7 @@ func _section(text: String, sub: String, parent: Node) -> void:
 	var l := UiUtil.label(text, h, 16)
 	UiTheme.heading(l)
 	if sub != "":
-		var s := UiUtil.label(sub, h, 13)
+		var s := UiUtil.label(sub, h, 14)
 		s.size_flags_vertical = Control.SIZE_SHRINK_END
 		s.add_theme_color_override("font_color", UiTheme.MUTED)
 
@@ -129,7 +129,7 @@ func refresh() -> void:
 			func(): game.submit({"type": "market_buy", "id": id}))
 	var inv: Array = st.get("items", [])
 	if inv.is_empty():
-		var none := UiUtil.label(tr("Das Lager ist leer."), _sell, 13)
+		var none := UiUtil.label(tr("Das Lager ist leer."), _sell, 14)
 		none.add_theme_color_override("font_color", UiTheme.MUTED)
 	for i in inv.size():
 		var id := str(inv[i])
@@ -171,7 +171,7 @@ func _row(parent: Node, id: String, name: String, text: String, price: String, r
 	var n := UiUtil.label(name, info, 15)
 	n.add_theme_font_override("font", UiTheme.font(true))
 	var t := UiUtil.wrap_label(text.replace("\n", " · "), info, 300)
-	t.add_theme_font_size_override("font_size", 12)
+	t.add_theme_font_size_override("font_size", 14)
 	t.add_theme_color_override("font_color", UiTheme.MUTED)
 	if pips >= 0:
 		var row := HBoxContainer.new()

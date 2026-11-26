@@ -1,6 +1,6 @@
 extends Node3D
 ## Echte GPU-Aufnahmen der Eisenliturgie-Oberfläche: Nahkampf mit Grolm und Torvik;
-## --imprint zeigt zusätzlich die Prägungswahl.
+## --imprint zeigt zusätzlich die Prägungswahl, --shop den Shop, --tooltip den Fähigkeits-Tooltip, --flash das Aufleuchten nach einem Zurücksetzen.
 ## --map: Kartenfotografie mit weitem Sichtbereich und reduziertem Fernnebel, ohne HUD.
 ## --size=1024x768/1280x720/1400x900 überschreibt die Probe-Auflösung.
 
@@ -49,6 +49,9 @@ func _ready() -> void:
 	boss.target = game.hero
 	boss.start_cast("grolm_kegel", game.play_time)
 	boss.cast.t = 0.35
+	# Zwei harte CC: gelber Aufbau unter dem Bossleben sichtbar.
+	boss.cc.hard(0.05, game.play_time - 1.0)
+	boss.cc.hard(0.05, game.play_time - 0.5)
 	game.cam_follow = false
 	game.cam_pos = at + Vector3(0, 0, -3)
 	game.cam_dist = 35
@@ -58,6 +61,21 @@ func _ready() -> void:
 		game.bot = false
 		game.offer_imprint()
 		shot = "bollwerk-eisenliturgie-praegung"
+	elif args.has("--tooltip"):
+		# Fähigkeits-Tooltip (MOBA-Stil) wie beim Zeigen auf das Plus von Q, fest eingeblendet.
+		game.hero.skills.points = 1
+		game.hero.skills.ranks[0] = 2
+		var tip := PanelContainer.new()
+		tip.add_theme_stylebox_override("panel", HdUiStyle.panel(10.0))
+		tip.add_child(HdSkillCard.tooltip(game.hero, 0, true))
+		tip.name = "ProbeTooltip"
+		game.hud.root.add_child(tip)
+		shot = "bollwerk-eisenliturgie-tooltip"
+		_place_tip.call_deferred(game, tip)
+	elif args.has("--shop"):
+		game.bot = false
+		game.hud.econ.toggle()
+		shot = "bollwerk-eisenliturgie-shop"
 	game.hud._banner_t = 0
 	game.hud._banner.modulate.a = 0
 	game.hud.refresh()
@@ -75,6 +93,15 @@ func _ready() -> void:
 		shot = "bollwerk-kathedrale-karte"
 	for _i in 20:
 		await get_tree().process_frame
+	if args.has("--flash"):
+		# Zurückgesetzte Abklingzeit von E: Aufleuchten kurz nach dem Zurücksetzen fotografieren.
+		game.hero.cd[1] = 5.0
+		game.hud.refresh()
+		game.hero.cd[1] = 0.0
+		game.hud.refresh()
+		shot = "bollwerk-eisenliturgie-aufleuchten"
+		for _i in 4:
+			await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	_audit(game)
 	if args.has("--layout-check"):
@@ -83,6 +110,13 @@ func _ready() -> void:
 	var result := get_viewport().get_texture().get_image().save_png(output)
 	print("BILD ", ProjectSettings.globalize_path(output))
 	get_tree().quit(result)
+
+
+func _place_tip(game: HdGame, tip: Control) -> void:
+	await get_tree().process_frame
+	var card: Control = game.hud._slots[0].panel
+	tip.size = tip.get_combined_minimum_size()
+	tip.global_position = Vector2(card.global_position.x, card.global_position.y - 36 - tip.size.y)
 
 
 func _audit(game: HdGame) -> void:

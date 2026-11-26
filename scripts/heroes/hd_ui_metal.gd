@@ -31,6 +31,8 @@ func _scan(node: Node) -> void:
 
 func _register(node) -> void:
 	if not is_instance_valid(node):return
+	if node is Label and not node is MetalText and root.is_ancestor_of(node):
+		HdUiStyle.normalize_label(node)
 	if node is Button and root.is_ancestor_of(node) and node.text!="" and not node.has_node("BollwerkMetalText"):
 		var text_layer := MetalText.new(node)
 		text_layer.name="BollwerkMetalText"
@@ -43,7 +45,7 @@ func _register(node) -> void:
 	if node is Button and not (node is CheckBox or node is CheckButton) and node.text!="":
 		for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 			var old: StyleBox=node.get_theme_stylebox(state)
-			if old is HdUiStyle.IronFrame and not old is HdUiStyle.MenuButtonFrame and not old.diamond:
+			if old is HdUiStyle.IronFrame and not old is HdUiStyle.MenuButtonFrame and not old is HdUiStyle.TabFrame and not old.diamond:
 				var style := HdUiStyle.menu_button_style(state,old.content_margin_left)
 				style.content_margin_right=old.content_margin_right
 				style.content_margin_top=old.content_margin_top
@@ -55,7 +57,7 @@ func _register(node) -> void:
 	if node is PanelContainer:
 		var old: StyleBox=node.get_theme_stylebox("panel")
 		if old is StyleBoxFlat and old.bg_color.b>old.bg_color.r:
-			var style := HdUiStyle.frame(old.bg_color,old.border_color,old.content_margin_left,0)
+			var style := HdUiStyle.frame(old.bg_color,old.border_color,old.content_margin_left,6)
 			style.content_margin_right=old.content_margin_right
 			style.content_margin_top=old.content_margin_top
 			style.content_margin_bottom=old.content_margin_bottom
@@ -69,10 +71,18 @@ func _register(node) -> void:
 
 class MetalLayer extends Node2D:
 	var control
+	## Steine liegen auf einer eigenen Lage ohne Metallshader über dem Messing.
+	var jewels := Node2D.new()
+	var _style: StyleBox
+	var _rect := Rect2()
 
 	func _init(owner_control) -> void:
 		control=owner_control
 		material=HdUiStyle.metal_material()
+		jewels.name="Jewels"
+		add_child(jewels)
+		jewels.draw.connect(func():
+			if _style != null and _style.has_method("draw_jewels"):_style.draw_jewels(jewels.get_canvas_item(),_rect))
 		if control is Window:
 			control.size_changed.connect(queue_redraw)
 			control.about_to_popup.connect(queue_redraw)
@@ -90,9 +100,7 @@ class MetalLayer extends Node2D:
 		if not is_instance_valid(control):return
 		var style: StyleBox
 		if control is PopupMenu or control is PopupPanel:style=HdUiStyle.panel()
-		elif control is InvSlot:
-			var edge: Color=control.border if control.border.a>0 else HdUiStyle.COLORS.BORDER
-			style=HdUiStyle.frame(Color.TRANSPARENT,edge,0,0)
+		elif control is InvSlot:style=HdUiStyle.slot_frame(control)
 		elif control is ProgressBar:style=control.get_theme_stylebox("background")
 		elif control is Button:
 			var state := "normal"
@@ -105,7 +113,10 @@ class MetalLayer extends Node2D:
 		if style is StyleBoxFlat:
 			if style.border_color.a<=0:return
 			style=HdUiStyle.frame(Color.TRANSPARENT,style.border_color,0,0)
-		if style is HdUiStyle.IronFrame:style.draw_metal(get_canvas_item(),Rect2(Vector2.ZERO,Vector2(control.size)))
+		_style=style
+		_rect=Rect2(Vector2.ZERO,Vector2(control.size))
+		if style is HdUiStyle.IronFrame:style.draw_metal(get_canvas_item(),_rect)
+		jewels.queue_redraw()
 
 
 class MetalText extends Label:
@@ -143,6 +154,8 @@ class MetalText extends Label:
 			var arrow: Texture2D=button.get_theme_icon("arrow")
 			if arrow:offset_right-=arrow.get_width()+button.get_theme_constant("h_separation")
 		var color: Color=HdUiStyle.COLORS.MUTED.darkened(.25) if button.disabled else (HdUiStyle.GOLD_HI if button.is_hovered() else HdUiStyle.GOLD)
+		if button.has_meta("metal_text_color") and not button.is_hovered() and not button.disabled:color=button.get_meta("metal_text_color")
+		if button.has_meta("bollwerk_primary") and not button.disabled:color=HdUiStyle.GOLD_HI
 		if get_theme_color("font_color")!=color:add_theme_color_override("font_color",color)
 		# Die native Beschriftung bleibt für Layout, Übersetzung und Bedienung erhalten.
 		for name in ["font_color","font_hover_color","font_pressed_color","font_hover_pressed_color","font_focus_color","font_disabled_color","font_outline_color"]:

@@ -162,7 +162,22 @@
 					"summary": "Verwandle dich in eine Windgestalt: Deine Grundangriffe werden zu Fernkampf-Windgeschossen. Ein Windstoß schleudert Gegner hoch."
 				}
 			],
-			"combat_role": "DD"
+			"combat_role": "DD",
+			"mastery": {
+				"name": "Sturmleitung",
+				"event": "attack",
+				"cooldown": 1.5,
+				"effect": "Chain(2, 5m, Damage({damage}, \"lightning\"))",
+				"scales": {
+					"damage": 0.6
+				},
+				"desc": "Grundangriffe lösen höchstens alle 1,5 s einen Blitz durch bis zu zwei Gegner für je {damage} Schaden aus."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Windaufstieg schützt zusätzlich Verbündete in 7 m mit 180 Schild für 5 s und macht Torvik 4 s immun gegen Verlangsamung.",
+				"effect": "Self(Allies(7m, Shield(180, 5s)), Buff(\"slow_immune\", 1, 4s))"
+			}
 		},
 		{
 			"id": "unrat",
@@ -316,7 +331,25 @@
 					"summary": "Ein Banner stärkt Verbündete und schwächt Gegner in seiner Umgebung."
 				}
 			],
-			"combat_role": "Tank"
+			"combat_role": "Tank",
+			"mastery": {
+				"name": "Seuchenrost",
+				"event": "hit",
+				"cooldown": 2,
+				"effect": "ArmorReduce({armor}, 4s)",
+				"scales": {
+					"armor": 0.035
+				},
+				"desc": "Treffer senken die Zielrüstung um {armor} für 4 s, höchstens alle 2 s."
+			},
+			"scepter": {
+				"slot": 1,
+				"desc": "Rattenschwarm verteilt sechs zusätzliche Ratten; die Seuche springt auf vier statt zwei Gegner über.",
+				"add": {
+					"rats": 6,
+					"plague.jumps": 2
+				}
+			}
 		},
 		{
 			"id": "vesna",
@@ -464,7 +497,22 @@
 					"summary": "Eine Hochdosis heilt und stärkt ein verbündetes Ziel vorübergehend."
 				}
 			],
-			"combat_role": "Heiler"
+			"combat_role": "Heiler",
+			"mastery": {
+				"name": "Nachsorge",
+				"event": "cast",
+				"cooldown": 3,
+				"effect": "Self(Allies(6m, Heal({heal})))",
+				"scales": {
+					"heal": 0.8
+				},
+				"desc": "Erfolgreiche Zauber heilen Verbündete im Umkreis von 6 m um {heal}, höchstens alle 3 s."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Hochdosis erzeugt zusätzlich eine Heilwelle: Verbündete in 7 m werden um 220 geheilt und erhalten 160 Schild für 5 s.",
+				"effect": "Self(Allies(7m, Heal(220), Shield(160, 5s)))"
+			}
 		},
 		{
 			"id": "zix",
@@ -537,7 +585,22 @@
 					"summary": "Repariere deine Konstrukte und verstärke vorübergehend ihre Leistung."
 				}
 			],
-			"combat_role": "DD"
+			"combat_role": "DD",
+			"mastery": {
+				"name": "Sicherungsnetz",
+				"event": "cast",
+				"cooldown": 5.0,
+				"effect": "Self(Allies(14m, Shield({shield}, 4s)))",
+				"scales": {
+					"shield": 0.9
+				},
+				"desc": "Nach einem Zauber erhalten Verbündete und Konstrukte in 14 m einen Schild über {shield} für 4 s; 5 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Überspannung gibt Verbündeten und Konstrukten in 30 m zusätzlich 260 Schild für 6 s.",
+				"effect": "Self(Allies(30m, Shield(260, 6s)))"
+			}
 		},
 		{
 			"id": "brennholt",
@@ -679,7 +742,23 @@
 					"id": "brennholt_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Unbeugsam",
+				"event": "hurt",
+				"cooldown": 4,
+				"effect": "Self(Shield({shield}, 2s), Buff(\"dmg_in\", {reduction}, 2s))",
+				"scales": {
+					"shield": 0.8,
+					"reduction": 0.0015
+				},
+				"desc": "Nach erlittenem Schaden: {shield} Schild und {reduction} % weniger Schaden für 2 s; 4 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Schildwall gewährt zusätzlich Verbündeten in 7 m einen Schild über 200 für 5 s.",
+				"effect": "Self(Allies(7m, Shield(200, 5s)))"
+			}
 		},
 		{
 			"id": "mira",
@@ -837,7 +916,25 @@
 					"id": "mira_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Felsantwort",
+				"event": "hurt",
+				"cooldown": 3,
+				"effect": "Self(Shield({shield}, 2s), AoE(4m, Slow({slow}, 2s)))",
+				"scales": {
+					"shield": 0.5,
+					"slow": 0.003
+				},
+				"desc": "Nach erlittenem Schaden: {shield} Schild und {slow} % Verlangsamung naher Gegner für 2 s; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Bergsturz lässt zwei zusätzliche Felsen einschlagen.",
+				"add": {
+					"count": 2
+				}
+			}
 		},
 		{
 			"id": "grauhirte",
@@ -986,7 +1083,26 @@
 					"id": "grauhirte_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Rudelatem",
+				"event": "attack",
+				"cooldown": 2,
+				"effect": "Self(Heal({heal}), Buff(\"attack_speed\", {haste}, 3s))",
+				"scales": {
+					"heal": 0.45,
+					"haste": 0.003
+				},
+				"desc": "Grundangriffe heilen dich um {heal} und geben {haste} % Angriffstempo für 3 s; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Ruf der Wölfe beschwört drei statt zwei Wölfe; das Limit steigt auf sechs.",
+				"add": {
+					"count": 1,
+					"limit": 2
+				}
+			}
 		},
 		{
 			"id": "sirra",
@@ -1132,7 +1248,26 @@
 					"id": "sirra_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Wundgift",
+				"event": "attack",
+				"cooldown": 2,
+				"effect": "Poison({damage}, 3s)\nSlow({slow}, 2s)",
+				"scales": {
+					"damage": 0.35,
+					"slow": 0.002
+				},
+				"desc": "Grundangriffe vergiften für {damage} Schaden/s über 3 s und verlangsamen 2 s um {slow} %; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Klingenwurf wirft drei durchschlagende Dolche in einem Fächer.",
+				"set": {
+					"op": "shots",
+					"count": 3
+				}
+			}
 		},
 		{
 			"id": "kaspar",
@@ -1287,7 +1422,26 @@
 					"id": "kaspar_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Sollbruchstelle",
+				"event": "attack",
+				"cooldown": 3,
+				"effect": "ArmorReduce({armor}, 4s)\nDamage({damage}, \"physical\")",
+				"scales": {
+					"armor": 0.04,
+					"damage": 0.4
+				},
+				"desc": "Grundangriffe verursachen {damage} Zusatzschaden und senken Rüstung um {armor} für 4 s; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Bolzen feuert drei durchschlagende Geschosse in einem Fächer.",
+				"set": {
+					"op": "shots",
+					"count": 3
+				}
+			}
 		},
 		{
 			"id": "yuna",
@@ -1428,7 +1582,25 @@
 					"id": "yuna_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Klingenrhythmus",
+				"event": "attack",
+				"cooldown": 2,
+				"effect": "Self(Buff(\"attack_speed\", {haste}, 3s), Buff(\"speed\", {speed}, 3s))",
+				"scales": {
+					"haste": 0.004,
+					"speed": 0.0015
+				},
+				"desc": "Grundangriffe geben {haste} % Angriffstempo und {speed} % Lauftempo für 3 s; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Tausend Schnitte führt vier zusätzliche Sprünge aus.",
+				"add": {
+					"count": 4
+				}
+			}
 		},
 		{
 			"id": "orrin",
@@ -1591,7 +1763,25 @@
 					"id": "orrin_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Nachglut",
+				"event": "hit",
+				"cooldown": 2,
+				"effect": "Burn({damage}, 3s)",
+				"scales": {
+					"damage": 0.4
+				},
+				"desc": "Treffer setzen das Ziel für {damage} Brandschaden/s über 3 s in Brand; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Meteor schlägt dreimal zeitversetzt ein.",
+				"set": {
+					"count": 3,
+					"gap": 0.65
+				}
+			}
 		},
 		{
 			"id": "ilsabet",
@@ -1756,7 +1946,26 @@
 					"id": "ilsabet_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Tiefenfrost",
+				"event": "hit",
+				"cooldown": 2,
+				"effect": "Slow({slow}, 3s)\nSelf(Shield({shield}, 3s))",
+				"scales": {
+					"slow": 0.004,
+					"shield": 0.5
+				},
+				"desc": "Treffer verlangsamen 3 s um {slow} % und geben dir {shield} Schild; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Eislanze feuert drei durchschlagende Lanzen in einem Fächer.",
+				"set": {
+					"op": "shots",
+					"count": 3
+				}
+			}
 		},
 		{
 			"id": "tamo",
@@ -1915,7 +2124,24 @@
 					"id": "tamo_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Übersprung",
+				"event": "attack",
+				"cooldown": 2,
+				"effect": "Chain(3, 5m, Damage({damage}, \"lightning\"))",
+				"scales": {
+					"damage": 0.4
+				},
+				"desc": "Grundangriffe lösen eine Blitzkette durch bis zu drei Gegner für je {damage} aus; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Blitzkette springt auf drei zusätzliche Gegner über.",
+				"add": {
+					"count": 3
+				}
+			}
 		},
 		{
 			"id": "albe",
@@ -2064,7 +2290,23 @@
 					"id": "albe_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Lichtnachhall",
+				"event": "cast",
+				"cooldown": 5,
+				"effect": "Self(Allies(8m, Heal({heal}), Shield({shield}, 4s)))",
+				"scales": {
+					"heal": 0.7,
+					"shield": 0.5
+				},
+				"desc": "Nach Zaubern werden Verbündete in 8 m um {heal} geheilt und erhalten {shield} Schild für 4 s; 5 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Auferstehung gibt zusätzlich allen Verbündeten in 12 m 300 Schild für 6 s.",
+				"effect": "Self(Allies(12m, Shield(300, 6s)))"
+			}
 		},
 		{
 			"id": "fenn",
@@ -2214,7 +2456,26 @@
 					"id": "fenn_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Weglicht",
+				"event": "dodge",
+				"cooldown": 3,
+				"effect": "Self(Mana({mana}), Buff(\"speed\", {speed}, 4s))",
+				"scales": {
+					"mana": 0.6,
+					"speed": 0.004
+				},
+				"desc": "Ausweichen gibt {mana} Mana und {speed} % Lauftempo für 4 s; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Laterne setzen erlaubt fünf statt drei Laternen und vergrößert deren Wirkbereich um 1,5 m.",
+				"add": {
+					"limit": 2,
+					"radius": 1.5
+				}
+			}
 		},
 		{
 			"id": "ralda",
@@ -2364,7 +2625,23 @@
 					"id": "ralda_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Runenprägung",
+				"event": "attack",
+				"cooldown": 3,
+				"effect": "ArmorReduce({armor}, 4s)\nSelf(Shield({shield}, 3s))",
+				"scales": {
+					"armor": 0.04,
+					"shield": 0.5
+				},
+				"desc": "Grundangriffe senken Rüstung um {armor} für 4 s und geben dir {shield} Schild für 3 s; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 2,
+				"desc": "Waffe schärfen gibt Ralda zusätzlich 35 % Angriffstempo und Verlangsamungsimmunität für 5 s.",
+				"effect": "Self(Buff(\"attack_speed\", 35%, 5s), Buff(\"slow_immune\", 1, 5s))"
+			}
 		},
 		{
 			"id": "varg",
@@ -2509,7 +2786,23 @@
 					"id": "varg_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Bluttempo",
+				"event": "hurt",
+				"cooldown": 3,
+				"effect": "Self(Buff(\"attack_speed\", {haste}, 3s), Buff(\"dmg_out\", {reduction}, 3s))",
+				"scales": {
+					"haste": 0.004,
+					"reduction": 0.001
+				},
+				"desc": "Erlittener Schaden gibt {haste} % Angriffstempo und {reduction} % Schadensbonus für 3 s; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 1,
+				"desc": "Kampfrausch gewährt zusätzlich 6 s Verlangsamungsimmunität und 15 % Lebensraub.",
+				"effect": "Self(Buff(\"slow_immune\", 1, 6s), Buff(\"lifesteal\", 15%, 6s))"
+			}
 		},
 		{
 			"id": "lior",
@@ -2661,7 +2954,26 @@
 					"id": "lior_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Spiegelhaut",
+				"event": "dodge",
+				"cooldown": 4,
+				"effect": "Self(Shield({shield}, 3s), Buff(\"speed\", {speed}, 2s))",
+				"scales": {
+					"shield": 0.7,
+					"speed": 0.003
+				},
+				"desc": "Ausweichen gibt {shield} Schild für 3 s und {speed} % Lauftempo für 2 s; 4 s Sperre."
+			},
+			"scepter": {
+				"slot": 1,
+				"desc": "Trugbilder beschwört ein zusätzliches Spiegelbild; das Limit steigt um zwei.",
+				"add": {
+					"count": 1,
+					"limit": 2
+				}
+			}
 		},
 		{
 			"id": "kraehenfrau",
@@ -2813,7 +3125,26 @@
 					"id": "kraehenfrau_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Unheilsfeder",
+				"event": "hit",
+				"cooldown": 2,
+				"effect": "Poison({damage}, 4s)\nArmorReduce({armor}, 4s)",
+				"scales": {
+					"damage": 0.2,
+					"armor": 0.02
+				},
+				"desc": "Treffer vergiften für {damage} Schaden/s und senken Rüstung um {armor} für 4 s; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 0,
+				"desc": "Fluchfeder schleudert drei durchschlagende Fluchfedern in einem Fächer.",
+				"set": {
+					"op": "shots",
+					"count": 3
+				}
+			}
 		},
 		{
 			"id": "bruno",
@@ -2967,7 +3298,25 @@
 					"id": "bruno_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Malzruhe",
+				"event": "hurt",
+				"cooldown": 3,
+				"effect": "Self(Heal({heal}), AoE(3m, Slow({slow}, 3s)))",
+				"scales": {
+					"heal": 0.5,
+					"slow": 0.002
+				},
+				"desc": "Erlittener Schaden heilt dich um {heal} und verlangsamt Gegner in 3 m für 3 s um {slow} %; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Große Fassflut rollt mit fünf statt drei Fässern heran.",
+				"add": {
+					"count": 2
+				}
+			}
 		},
 		{
 			"id": "tessa",
@@ -3114,7 +3463,23 @@
 					"id": "tessa_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Segelrhythmus",
+				"event": "dodge",
+				"cooldown": 3,
+				"effect": "Self(Buff(\"attack_speed\", {haste}, 3s), Mana({mana}))",
+				"scales": {
+					"haste": 0.005,
+					"mana": 0.3
+				},
+				"desc": "Ausweichen gibt {haste} % Angriffstempo für 3 s und {mana} Mana; 3 s Sperre."
+			},
+			"scepter": {
+				"slot": 2,
+				"desc": "Segelsprung gibt zusätzlich 40 % Angriffstempo und Verlangsamungsimmunität für 4 s.",
+				"effect": "Self(Buff(\"attack_speed\", 40%, 4s), Buff(\"slow_immune\", 1, 4s))"
+			}
 		},
 		{
 			"id": "totengraeber",
@@ -3267,7 +3632,26 @@
 					"id": "totengraeber_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Seelenrast",
+				"event": "kill",
+				"cooldown": 2,
+				"effect": "Self(Allies(7m, Heal({heal})), Mana({mana}))",
+				"scales": {
+					"heal": 0.8,
+					"mana": 0.3
+				},
+				"desc": "Eigene Kills heilen Verbündete in 7 m um {heal} und geben dir {mana} Mana; 2 s Sperre."
+			},
+			"scepter": {
+				"slot": 1,
+				"desc": "Grabhelfer ruft vier statt zwei Helfer; das Limit steigt auf sechs.",
+				"add": {
+					"count": 2,
+					"limit": 2
+				}
+			}
 		},
 		{
 			"id": "ada",
@@ -3416,7 +3800,28 @@
 					"id": "ada_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Schutzresonanz",
+				"event": "cast",
+				"cooldown": 4,
+				"effect": "Self(Allies(7m, Shield({shield}, 4s)), AoE(3m, Slow({slow}, 2s)))",
+				"scales": {
+					"shield": 0.8,
+					"slow": 0.002
+				},
+				"desc": "Zauber geben Verbündeten in 7 m {shield} Schild für 4 s und verlangsamen nahe Gegner 2 s um {slow} %; 4 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Abendglocke pulsiert alle 0,65 statt jede Sekunde und wirkt in einem um 2 m größeren Bereich.",
+				"add": {
+					"radius": 2
+				},
+				"set": {
+					"interval": 0.65
+				}
+			}
 		},
 		{
 			"id": "sorek",
@@ -3564,7 +3969,23 @@
 					"id": "sorek_3",
 					"unlock": 6
 				}
-			]
+			],
+			"mastery": {
+				"name": "Ankertreue",
+				"event": "hurt",
+				"cooldown": 4,
+				"effect": "Self(Shield({shield}, 3s), AoE(3m, ArmorReduce({armor}, 4s)))",
+				"scales": {
+					"shield": 1,
+					"armor": 0.03
+				},
+				"desc": "Erlittener Schaden gibt {shield} Schild für 3 s und senkt nahe Rüstung um {armor} für 4 s; 4 s Sperre."
+			},
+			"scepter": {
+				"slot": 3,
+				"desc": "Hafenbollwerk verwurzelt zusätzlich nahe Gegner für 1,5 s; Bosse nur halb so lange.",
+				"effect": "Self(AoE(6m, Root(1.5s)))"
+			}
 		}
 	],
 	"gadgets": {

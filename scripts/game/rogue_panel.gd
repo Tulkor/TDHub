@@ -50,7 +50,7 @@ func _ready() -> void:
 	var have := UiUtil.wrap_label(_boons_text(), bottom, 0)
 	have.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	have.add_theme_color_override("font_color", UiTheme.MUTED)
-	have.add_theme_font_size_override("font_size", 13)
+	have.add_theme_font_size_override("font_size", 14)
 	_take = UiUtil.button("Bonus nehmen", bottom, _confirm)
 	_take.custom_minimum_size = Vector2(220, 50)
 	_take.add_theme_font_size_override("font_size", 20)
@@ -112,7 +112,7 @@ func _card(o: Dictionary, index: int, parent: Node) -> Button:
 	var scope: String = {"gem": tr("Grund-Gem · alle Stufen"), "special": tr("Spezialtower · mit Upgrades")}.get(str(o.kind), tr("Gilt bis zum Spielende"))
 	var sc := UiUtil.wrap_label(scope, v, CARD_W - 32)
 	sc.add_theme_color_override("font_color", UiTheme.MUTED)
-	sc.add_theme_font_size_override("font_size", 13)
+	sc.add_theme_font_size_override("font_size", 14)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size.y = 4
@@ -133,17 +133,17 @@ func _card(o: Dictionary, index: int, parent: Node) -> Button:
 		st.add_theme_font_override("font", UiTheme.font(true))
 		st.add_theme_font_size_override("font_size", 16)
 	else:
-		st.add_theme_font_size_override("font_size", 13)
+		st.add_theme_font_size_override("font_size", 14)
 
 	var flavor := UiUtil.wrap_label(tr(str(Rogue.boon_def(str(o.boon)).get("title", ""))), v, CARD_W - 32)
 	flavor.add_theme_color_override("font_color", UiTheme.PURPLE_LIGHT)
-	flavor.add_theme_font_size_override("font_size", 13)
+	flavor.add_theme_font_size_override("font_size", 14)
 
 	var grow := Control.new()
 	grow.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(grow)
 	var info := UiUtil.wrap_label(_card_info(o), v, CARD_W - 32)
-	info.add_theme_font_size_override("font_size", 13)
+	info.add_theme_font_size_override("font_size", 14)
 	info.add_theme_color_override("font_color", UiTheme.HAVE if _owned(str(o.id)) > 0 else UiTheme.MUTED)
 	for c in m.find_children("*", "Control", true, false):
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE

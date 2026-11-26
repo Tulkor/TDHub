@@ -409,13 +409,26 @@ func _test_ui(game: HdGame) -> void:
 	hud.refresh()
 	hud._position_upgrades()
 	for slot in hud._slots:
-		check(slot.name.get_global_rect().end.y<=slot.panel.global_position.y,"Fähigkeitsname steht im Banner über dem Iconrahmen")
-		check(slot.cd.get_global_rect().end.y<=slot.panel.global_position.y,"Mana und Abklingzeit verdecken die Metallbeschläge nicht")
+		var card: Rect2 = slot.panel.get_global_rect()
+		check(card.encloses(slot.key.get_global_rect()) and (slot.mana.text=="" or card.encloses(slot.mana.get_global_rect())),"Taste und Mana stehen direkt auf der Karte")
+		check(slot.key.get_theme_constant("outline_size")>=4 and slot.mana.get_theme_constant("outline_size")>=4,"Taste und Mana sind mit dunkler Kontur kontrastreich")
 		check(slot.glyph.texture!=null and slot.glyph.size.x>=slot.panel.size.x*.65,"Eigenes Fähigkeitssymbol füllt den Rahmen großflächig")
 		check(slot.glyph.material==HdUiStyle.icon_metal_material() and slot.glyph.material.get_shader_parameter("metal_surface")==1.0,"Fähigkeitssymbole sind als Metallbeschläge auf dem Leder ausgeführt")
+		var tip = slot.panel._make_custom_tooltip("")
+		check(slot.panel.tooltip_text!="" and tip is Control,"Fähigkeitskarte zeigt einen MOBA-Tooltip")
+		if tip is Node:tip.free()
 		if slot.plus == null:continue
-		check(slot.plus.get_global_rect().end.y<hud._skills_panel.global_position.y,"Upgrade-Plus schwebt über der Leiste")
+		var plus: Rect2 = slot.plus.get_global_rect()
+		check(plus.end.y<=card.position.y and plus.position.y>=hud._skills_panel.global_position.y,"Upgrade-Plus sitzt über der Karte innerhalb der Leiste")
+		check(absf(plus.size.x-card.size.x*2.0/3.0)<=1.0,"Upgrade-Plus ist zwei Drittel so breit wie die Karte")
 		check(slot.plus.visible==game.hero.skills.can_upgrade(hud._slots.find(slot)),"Plus nur für tatsächlich aufwertbare Fähigkeiten")
+	game.hero.cd[0]=4.0
+	hud.refresh()
+	game.hero.cd[0]=0.0
+	hud.refresh()
+	check(hud._slots[0].panel._flash>0.0,"Zurückgesetzte Abklingzeit lässt die Karte aufleuchten")
+	var table: Array = game.hero.skills.rank_table(0)
+	check(not table.is_empty() and table.all(func(row):return row.values.size()==int(game.hero.skills.cfg.max_rank)),"Tooltip-Tabelle hat Werte für alle Ränge")
 	game.hero.skills.points=0
 	var ability_icons=preload("res://scripts/heroes/hd_ability_icons.gd")
 	var catalog: Dictionary=Database.load_json("res://data/heroes_helden.json")
@@ -479,7 +492,7 @@ func _test_map_zoom(game: HdGame) -> void:
 	check(game.hud._wave_panel.has_node("BollwerkMetal") and game.hud._skills_panel.has_node("BollwerkMetal"),"HUD-Leisten erhalten zentral Metallrahmen")
 	check(HdUiStyle.metal_material().get_shader_parameter("palette_metal")==1.0 and HdUiStyle.GOLD==UiTheme.GOLD,"Metallmaterial verwendet weiter die bisherige Goldpalette")
 	check(HdUiStyle.leather_texture()!=null,"Gewählter Lederhintergrund liegt als importiertes Projektasset vor")
-	check(plus.get_theme_stylebox("normal") is HdUiStyle.MenuButtonFrame,"Minimap-Knöpfe verwenden denselben blauen Hauptmenü-Look")
+	check(plus.get_theme_stylebox("normal") is HdUiStyle.SymbolFrame and plus.text=="","Minimap-Knöpfe sind Rautenknöpfe mit gezeichnetem Zeichen")
 	var dynamic := PanelContainer.new()
 	game.hud.root.add_child(dynamic)
 	await get_tree().process_frame

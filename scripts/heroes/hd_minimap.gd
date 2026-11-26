@@ -23,28 +23,36 @@ func _ready() -> void:
 	_metal_frame = Wc3Theme.BrassLayer.new(_draw_metal_frame)
 	_metal_frame.name="MetalFrame"
 	_metal_frame.material=HdUiStyle.metal_material()
-	_metal_frame.modulate=HdUiStyle.GOLD
 	add_child(_metal_frame)
 	resized.connect(_metal_frame.queue_redraw)
+	# Steine der Eckbeschläge auf eigener Lage ohne Metallshader.
+	var gems := Node2D.new()
+	gems.name="Gems"
+	gems.draw.connect(func():_frame_style().draw_jewels(gems.get_canvas_item(),Rect2(Vector2.ZERO,size)))
+	add_child(gems)
+	resized.connect(gems.queue_redraw)
 	_zoom_out = _zoom_button("−","ZoomOut",func():set_zoom(zoom/1.25))
 	_zoom_in = _zoom_button("+","ZoomIn",func():set_zoom(zoom*1.25))
 	resized.connect(_fit_buttons)
 	_fit_buttons()
 
+## Rahmen wie die großen Panels (Baukasten 2026-11-25): gebürstetes Messing, Eckbeschläge, Steine, Krone.
+func _frame_style() -> HdUiStyle.IronFrame:
+	return HdUiStyle.frame(Color.TRANSPARENT,HdUiStyle.GOLD,0,10,true)
+
 func _draw_metal_frame(canvas: CanvasItem) -> void:
-	Wc3Theme.frame(canvas,Rect2(Vector2.ZERO,size),8.0,6.0)
-	for at in [Vector2(6,6),Vector2(size.x-6,6),Vector2(6,size.y-6),size-Vector2(6,6)]:
-		Wc3Theme.screw(canvas,at,.3,10.0)
+	var rect := Rect2(Vector2.ZERO,size)
+	var style := _frame_style()
+	# Breiterer Rand, weil die Karte bis 8 px an den Rand reicht.
+	HdUiStyle.metal_outline(canvas.get_canvas_item(),style._shape(rect.grow(-3.0)),HdUiStyle.metal_tone(HdUiStyle.GOLD),6.0)
+	style.draw_metal(canvas.get_canvas_item(),rect)
 
 func _zoom_button(label: String, id: String, action: Callable) -> Button:
 	var button := Button.new()
 	button.name=id
-	button.text=label
 	button.set_meta("own_metal_frame",true)
-	button.add_theme_font_size_override("font_size",13)
-	button.add_theme_color_override("font_color",UiTheme.GOLD)
-	for state in ["normal","hover","pressed","disabled"]:button.add_theme_stylebox_override(state,HdUiStyle.menu_button_style(state,1))
-	button.add_theme_stylebox_override("focus",UiTheme.box(Color.TRANSPARENT,UiTheme.GOLD,0,1,1))
+	# Rautenknopf mit gezeichnetem, mittigem Zeichen (Bollwerk-Baukasten 2026-11-25).
+	HdUiStyle.symbol_button(button,"plus" if label=="+" else "minus")
 	button.pressed.connect(action)
 	add_child(button)
 	var metal := Wc3Theme.BrassLayer.new(func(canvas: CanvasItem):button.get_theme_stylebox("normal").draw_metal(canvas.get_canvas_item(),Rect2(Vector2.ZERO,button.size)))
@@ -55,10 +63,12 @@ func _zoom_button(label: String, id: String, action: Callable) -> Button:
 
 func _fit_buttons() -> void:
 	if not is_instance_valid(_zoom_in):return
-	_zoom_out.position=Vector2(size.x*.5-26,size.y-24)
-	_zoom_in.position=Vector2(size.x*.5+2,size.y-24)
-	_zoom_in.size=Vector2(24,24)
-	_zoom_out.size=Vector2(24,24)
+	# Erst Größe setzen: Schrift und Rand machen die Knöpfe höher als 24 px,
+	# deshalb an der tatsächlichen Höhe unten bündig ausrichten.
+	_zoom_in.size=Vector2(26,26)
+	_zoom_out.size=Vector2(26,26)
+	_zoom_out.position=Vector2(size.x*.5-28,size.y-_zoom_out.size.y)
+	_zoom_in.position=Vector2(size.x*.5+2,size.y-_zoom_in.size.y)
 	_zoom_in.disabled=zoom>=4.0
 	_zoom_out.disabled=zoom<=1.0
 
