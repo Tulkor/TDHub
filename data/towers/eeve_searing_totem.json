@@ -44,5 +44,6 @@
 	],
 	"flame": 0.45,
 	"flame_height": 0.95,
-	"hit_fx": "bk_fire"
+	"hit_fx": "bk_fire",
+	"element": "feuer"
 }

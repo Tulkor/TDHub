@@ -39,5 +39,6 @@
 	"model_solid": true,
 	"flame": 0.55,
 	"flame_height": 0.3,
-	"hit_fx": "bk_fire"
+	"hit_fx": "bk_fire",
+	"element": "feuer"
 }

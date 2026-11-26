@@ -11,6 +11,11 @@
   ],
   "immer": ["tabelle", "ui", "maps", "marken", "werkzeuge", "auswahl", "systeme_pruefen", "skripte"],
   "regeln": [
+    ["scripts/game/fx_data.gd", ["fxelement", "sound"]],
+    ["scripts/autoload/sfx.gd", ["fxelement", "sound"]],
+    ["scripts/youtd/youtd_tower.gd", ["fxelement", "youtd"]],
+    ["data/fx/elements.json", ["fxelement", "sound"]],
+    ["data/fx/tower_elements.json", ["fxelement"]],
 	["assets/shaders/hd_ground_height.gdshaderinc", ["heroesexplore", "heroescombat", "heroesnetstate", "heroesfinal"]],
 	["assets/shaders/hd_ground_blend.gdshaderinc", ["heroesplay", "heroesfinal", "terrainmaterials"]],
 	["assets/shaders/terrain_variation.gdshaderinc", ["gemtd", "eevetd", "shoppingmaul", "randgruppen", "youtd", "heroes", "survivors"]],

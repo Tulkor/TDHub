@@ -46,5 +46,6 @@
 			]
 		}
 	],
-	"hit_fx": "kb_shock_ring"
+	"hit_fx": "kb_shock_ring",
+	"element": "blitz"
 }

@@ -40,5 +40,6 @@
 	],
 	"model_tint": false,
 	"model_solid": true,
-	"hit_fx": "kb_nature_rays"
+	"hit_fx": "kb_nature_rays",
+	"element": "licht"
 }

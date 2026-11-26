@@ -53,5 +53,6 @@
 			]
 		}
 	],
-	"recipe_same_round": true
+	"recipe_same_round": true,
+	"element": "gift"
 }

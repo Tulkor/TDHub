@@ -28,9 +28,10 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	add_child(cam)
 	var fx := FxPlayer.new()
+	FxPlayer.lights_enabled = not opts.has("ohne-licht")
 	add_child(fx)
 	fx.set_process(false)
-	var cols := 6
+	var cols := int(opts.get("spalten", "6"))
 	var gap := 1.6
 	var items := []
 	if opts.has("tower"):

@@ -1,0 +1,92 @@
+{
+	"feuer": {
+		"shot": "fire_orb",
+		"hit": "bk_fire",
+		"splash": "bk_explosion",
+		"sound": {
+			"sound": "shot_blast",
+			"pitch": 1
+		}
+	},
+	"blitz": {
+		"shot": "lightning_arc",
+		"hit": "kb_shock_ring",
+		"splash": "cyan_shock",
+		"sound": {
+			"sound": "shot_zap",
+			"pitch": 1
+		}
+	},
+	"wasser": {
+		"shot": "energy_orb",
+		"hit": "kb_splash",
+		"splash": "kb_splash",
+		"sound": {
+			"sound": "shot_blip",
+			"pitch": 0.8
+		}
+	},
+	"eis": {
+		"shot": "energy_orb",
+		"hit": "blue_ring",
+		"splash": "blue_ring",
+		"sound": {
+			"sound": "shot_pew",
+			"pitch": 1.3
+		}
+	},
+	"gift": {
+		"shot": "energy_orb",
+		"hit": "green_poison",
+		"splash": "green_poison",
+		"sound": {
+			"sound": "shot_blip",
+			"pitch": 0.6
+		}
+	},
+	"erde": {
+		"shot": "energy_orb",
+		"hit": "brown_dirt",
+		"splash": "brown_dirt",
+		"sound": {
+			"sound": "thud",
+			"pitch": 1
+		}
+	},
+	"physisch": {
+		"shot": "magic_beam",
+		"hit": "white_slash",
+		"splash": "bk_explosion",
+		"sound": {
+			"sound": "thud",
+			"pitch": 1.2
+		}
+	},
+	"dunkel": {
+		"shot": "magic_beam",
+		"hit": "violet_dark",
+		"splash": "violet_dark",
+		"sound": {
+			"sound": "shot_pew",
+			"pitch": 0.6
+		}
+	},
+	"licht": {
+		"shot": "magic_beam",
+		"hit": "gold_star",
+		"splash": "white_spark",
+		"sound": {
+			"sound": "shot_blip",
+			"pitch": 1.4
+		}
+	},
+	"natur": {
+		"shot": "magic_beam",
+		"hit": "kb_nature_rays",
+		"splash": "kb_nature_rays",
+		"sound": {
+			"sound": "shot_blip",
+			"pitch": 1
+		}
+	}
+}

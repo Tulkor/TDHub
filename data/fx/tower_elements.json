@@ -1,0 +1,186 @@
+{
+	"eeve_arcane_lava_piles": {
+		"element": "feuer"
+	},
+	"eeve_camp_fire": {
+		"element": "feuer"
+	},
+	"eeve_essence_of_fire": {
+		"element": "feuer"
+	},
+	"eeve_fire_base_tower": {
+		"element": "feuer"
+	},
+	"eeve_fire_berry_bush": {
+		"element": "feuer"
+	},
+	"eeve_fire_breathing_snowman": {
+		"element": "feuer"
+	},
+	"eeve_flame_grate": {
+		"element": "feuer"
+	},
+	"eeve_heat_stakes": {
+		"element": "feuer"
+	},
+	"eeve_phoenix_egg": {
+		"element": "feuer"
+	},
+	"eeve_scorched_rune": {
+		"element": "feuer"
+	},
+	"eeve_searing_totem": {
+		"element": "feuer"
+	},
+	"eeve_volcano": {
+		"element": "feuer"
+	},
+	"eeve_arcane_lightning_generator": {
+		"element": "blitz"
+	},
+	"eeve_ball_lightning": {
+		"element": "blitz"
+	},
+	"eeve_great_lightning_turret": {
+		"element": "blitz"
+	},
+	"eeve_heart_of_the_storm": {
+		"element": "blitz"
+	},
+	"eeve_lightning_field": {
+		"element": "blitz"
+	},
+	"eeve_lightning_generator": {
+		"element": "blitz"
+	},
+	"eeve_lightning_rock_elemental": {
+		"element": "blitz"
+	},
+	"eeve_lightning_trap": {
+		"element": "blitz"
+	},
+	"eeve_red_lightning_generator": {
+		"element": "blitz"
+	},
+	"eeve_storm_base_tower": {
+		"element": "blitz"
+	},
+	"eeve_storm_cloud": {
+		"element": "blitz"
+	},
+	"eeve_storm_generator": {
+		"element": "blitz"
+	},
+	"eeve_storm_lantern": {
+		"element": "blitz"
+	},
+	"eeve_stormy_peak": {
+		"element": "blitz"
+	},
+	"eeve_xtreme_lightning_this_is_madness_ultra_q_q_tower": {
+		"element": "blitz"
+	},
+	"eeve_ancient_fountain_of_wisdom": {
+		"element": "wasser"
+	},
+	"eeve_gaea_spring": {
+		"element": "wasser"
+	},
+	"eeve_geyser": {
+		"element": "wasser"
+	},
+	"eeve_small_geyser": {
+		"element": "wasser"
+	},
+	"eeve_glowing_fountain_of_oxidization": {
+		"element": "wasser"
+	},
+	"eeve_hydro_cannon": {
+		"element": "wasser"
+	},
+	"eeve_tsunami_cannon": {
+		"element": "wasser"
+	},
+	"eeve_water_base_tower": {
+		"element": "wasser"
+	},
+	"eeve_glacier": {
+		"element": "eis"
+	},
+	"eeve_ice_cube": {
+		"element": "eis"
+	},
+	"eeve_icy_time_crystal": {
+		"element": "eis"
+	},
+	"eeve_permafrost_blaster": {
+		"element": "eis"
+	},
+	"eeve_acid_fountain": {
+		"element": "gift"
+	},
+	"eeve_fountain_of_corrosion": {
+		"element": "gift"
+	},
+	"eeve_noxious_tendril_trap": {
+		"element": "gift"
+	},
+	"eeve_ultra_toxic_shroom_field": {
+		"element": "gift"
+	},
+	"eeve_crater": {
+		"element": "erde"
+	},
+	"eeve_deep_crater": {
+		"element": "erde"
+	},
+	"eeve_earth_base_tower": {
+		"element": "erde"
+	},
+	"eeve_earthbind_trap": {
+		"element": "erde"
+	},
+	"eeve_lesser_rock_launcher": {
+		"element": "erde"
+	},
+	"eeve_rock_launcher": {
+		"element": "erde"
+	},
+	"eeve_greater_rock_launcher": {
+		"element": "erde"
+	},
+	"eeve_runed_rock": {
+		"element": "erde"
+	},
+	"eeve_stone_of_wisdom": {
+		"element": "erde"
+	},
+	"eeve_moonlight_beam": {
+		"element": "licht"
+	},
+	"eeve_sacred_orb_of_power": {
+		"element": "licht"
+	},
+	"eeve_scaring_statue_of_corruption": {
+		"element": "dunkel"
+	},
+	"aquamarine": {
+		"element": "wasser"
+	},
+	"poison_slate": {
+		"element": "gift"
+	},
+	"wraith_slate": {
+		"element": "dunkel"
+	},
+	"rg_eislaeuferin": {
+		"element": "eis"
+	},
+	"rg_kanonenkugel_mann": {
+		"element": "physisch",
+		"shot_sfx": "shot_blast@0.7"
+	},
+	"rg_steinschleuder": {
+		"element": "erde"
+	}
+}

@@ -43,5 +43,6 @@
 		}
 	],
 	"model_tint": true,
-	"model_solid": false
+	"model_solid": false,
+	"element": "feuer"
 }

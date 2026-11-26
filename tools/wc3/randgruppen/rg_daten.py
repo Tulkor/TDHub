@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "modelle"))
 from tower_look import look  # noqa: E402  Modelle aus data/tower_models.json
 
 ROOT = Path(__file__).resolve().parents[3]
+ELEMENTS = json.loads((ROOT / "data/fx/tower_elements.json").read_text(encoding="utf-8"))
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/mnt/project-files/konzepte/recherche-stand/randgruppen")
 U = 128.0  # WC3-Einheiten pro Towerbreite
 
@@ -415,6 +416,7 @@ def main():
     for old in (out / "enemies").glob("rg_*.json"):
         old.unlink()
     for t in towers.values():
+        t.update(ELEMENTS.get(t["id"], {}))
         # Passendes Modell aus data/tower_models.json statt Stadthaus (sonst bleibt das Haus)
         m = look("randgruppen", t["id"][3:])
         if m:

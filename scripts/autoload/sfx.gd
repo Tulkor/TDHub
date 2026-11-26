@@ -157,11 +157,7 @@ func play_nova(id: String, tier: int) -> void:
 
 ## Welcher Schuss-Sound zu einem Tower gehört: {sound, pitch, db}, leer = keiner.
 func shot_for(id: String, tier: int) -> Dictionary:
-	var def: Dictionary = Database.towers.get(id, {})
-	if def.is_empty():
-		def = MaulData.tower(id)
-	if def.is_empty() and id.begins_with("youtd_"):
-		def = YoutdTower.fx_def(id)
+	var def := FxData.tower_def(id)
 	var rules: Dictionary = _data.get("shots", {})
 	var own := str(def.get("shot_sfx", ""))
 	if own == "none":
@@ -169,10 +165,12 @@ func shot_for(id: String, tier: int) -> Dictionary:
 	if own != "":
 		var parts := own.split("@")
 		return {"sound": parts[0], "pitch": float(parts[1]) if parts.size() > 1 else 1.0, "db": 0.0}
-	var pick := {}
+	var pick: Dictionary = FxData.element_for(def).get("sound", {}).duplicate()
 	var types := FxData._ability_types(def, tier)
+	if pick.is_empty() and ("bounce" in types or "chain" in types):
+		pick = {"sound": "shot_zap", "pitch": 1.0}
 	for t in types:
-		if rules.get("ability", {}).has(t):
+		if pick.is_empty() and rules.get("ability", {}).has(t):
 			pick = rules.ability[t].duplicate()
 			break
 	var col := Color.from_string(str(def.get("color", "#ffffff")), Color.WHITE)

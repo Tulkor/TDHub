@@ -35,5 +35,7 @@
 				}
 			]
 		}
-	]
+	],
+	"element": "physisch",
+	"shot_sfx": "shot_blast@0.7"
 }
