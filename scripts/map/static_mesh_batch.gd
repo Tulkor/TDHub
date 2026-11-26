@@ -4,11 +4,22 @@ static var enabled := true
 
 static func add(root: Node3D, mesh: Mesh, transforms: Array, cell_size := 48.0,
 		shadow := GeometryInstance3D.SHADOW_CASTING_SETTING_ON, layers := 1, gi := GeometryInstance3D.GI_MODE_DISABLED) -> int:
+	return add_nodes(root, mesh, transforms, cell_size, shadow, layers, gi).size()
+
+
+## Wie add, gibt aber die erzeugten Knoten zurück. Kacheln statt einer kartengroßen MultiMesh haben
+## zwei Vorteile: Kacheln außerhalb des Bildes fallen weg, und Godots automatisches LOD greift. Bei einer
+## MultiMesh, deren AABB die Kameraebene schneidet, rechnet Godot mit Abstand 0 und zeichnet jede Instanz
+## in voller Auflösung (Bäume: 3000–5000 Dreiecke je Stück).
+static func add_nodes(root: Node3D, mesh: Mesh, transforms: Array, cell_size := 48.0,
+		shadow := GeometryInstance3D.SHADOW_CASTING_SETTING_ON, layers := 1, gi := GeometryInstance3D.GI_MODE_DISABLED,
+		cull_margin := 0.0) -> Array[MultiMeshInstance3D]:
 	var cells := {}
 	for transform: Transform3D in transforms:
 		var cell := Vector2i(floori(transform.origin.x / cell_size), floori(transform.origin.z / cell_size)) if enabled and cell_size > 0.0 else Vector2i.ZERO
 		if not cells.has(cell): cells[cell] = []
 		cells[cell].append(transform)
+	var out: Array[MultiMeshInstance3D] = []
 	for cell in cells:
 		var instances: Array = cells[cell]
 		var mm := MultiMesh.new()
@@ -21,8 +32,10 @@ static func add(root: Node3D, mesh: Mesh, transforms: Array, cell_size := 48.0,
 		node.cast_shadow = shadow
 		node.layers = layers
 		node.gi_mode = gi
+		node.extra_cull_margin = cull_margin
 		root.add_child(node)
-	return cells.size()
+		out.append(node)
+	return out
 
 
 static func combine(root: Node3D, sources: Array, cell_size := 24.0) -> Dictionary:

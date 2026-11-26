@@ -7,6 +7,8 @@ extends Node3D
 ## Außerhalb der Karte geht die Stadt OUTER Felder weit weiter (Boden, Häuser, Bäume), damit man beim
 ## weitesten Zoom am Rand nicht ins Leere schaut (wie der Wald in eeveTD).
 
+const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
+static var tree_cell := 16.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 const C := "res://assets/models/city/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
@@ -326,14 +328,10 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool, tint: bool) -> void
 				mesh.surface_set_material(i, t)
 				# Auch deckende Baumteile übernehmen ihre Textur/Farbe; die Basis bleibt fest.
 				mesh.surface_set_material(i, VisualFx.wind_material(t, mesh.get_aabb(), self))
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = xfs.size()
-	for i in xfs.size():
-		mm.set_instance_transform(i, xfs[i] * m[1])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	mmi.extra_cull_margin = 0.5 if tint else 0.0
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mmi)
+	var placed := []
+	for xf in xfs:
+		placed.append(xf * m[1])
+	# In Kacheln, damit Godot außerhalb des Bildes weglässt und weiter weg LOD nimmt (Leistung, 2026-11-25)
+	StaticMeshBatch.add_nodes(self, mesh, placed, tree_cell,
+			GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
+			1, GeometryInstance3D.GI_MODE_DISABLED, 0.5 if tint else 0.0)

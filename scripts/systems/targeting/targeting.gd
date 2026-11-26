@@ -34,14 +34,23 @@ func reach(e) -> float:
 ## Bis zu count Ziele für Tower t (t.can_target, t.in_range), am weitesten gelaufene zuerst.
 func find_targets(t, count: int) -> Array:
 	var enemies: Array = game.enemies
+	# Vorfilter über die Entfernung: in_range und can_target rufen je Gegner mehrere Funktionen auf (Reichweite
+	# mit Boni, Sichtbarkeit), bei 15 Towern und 35 Gegnern waren das in Shopping Maul ~3 ms je Bild.
+	var r2 := INF
+	if t.has_method("max_reach") and str(cfg.get("position", "pos")) == "pos" and str(cfg.get("radius", "")) == "":
+		var r: float = t.max_reach() + 0.001
+		r2 = r * r
+	var tp: Vector2 = t.pos if r2 < INF else Vector2.ZERO
 	if count == 1:
 		# häufigster Fall ohne Lambda, Zwischenliste und Sortieren
 		var best = null
 		for e in enemies:
-			if not e.dead and (best == null or e.traveled > best.traveled) and t.can_target(e) and t.in_range(e):
+			if not e.dead and (best == null or e.traveled > best.traveled) and (r2 == INF or e.pos.distance_squared_to(tp) <= r2) \
+					and t.can_target(e) and t.in_range(e):
 				best = e
 		return [] if best == null else [best]
-	var list := enemies.filter(func(e): return not e.dead and t.can_target(e) and t.in_range(e))
+	var list := enemies.filter(func(e): return not e.dead and (r2 == INF or e.pos.distance_squared_to(tp) <= r2) \
+			and t.can_target(e) and t.in_range(e))
 	list.sort_custom(func(a, b): return a.traveled > b.traveled)
 	return list.slice(0, count)
 

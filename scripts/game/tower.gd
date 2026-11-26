@@ -51,6 +51,7 @@ static var _slab_cache := {}
 ## eeveTD: wie die Tower nachts hervorgehoben werden (Lukas, 2026-10-29, zur Wahl):
 ## "sockel" = vier Lampen in den Sockelecken leuchten den Tower an, "kontur" = weiße Kontur, "" = nichts.
 static var eeve_accent := "sockel"
+var _corner_spots: Array[SpotLight3D] = []
 const SOCKEL_LIGHT := Color(1.0, 0.8, 0.55)
 
 var game  # game.gd
@@ -242,6 +243,16 @@ func range_for(e) -> float:
 
 
 ## Fallen mit kurzer Reichweite treffen alles auf ihrer 3×3-Fläche, alle anderen im Kreis.
+## Größte Entfernung, in der in_range überhaupt wahr sein kann (Vorfilter beim Zielsuchen).
+func max_reach() -> float:
+	var r := range_cells()
+	if stats.has("range_air"):
+		r = maxf(r, float(stats.range_air) * range_mult())
+	if is_trap():
+		r = maxf(r, Board3D.TRAP_CELLS * Board3D.CELL * 0.7072)
+	return r
+
+
 func in_range(e) -> bool:
 	var r := range_for(e)
 	if is_trap() and r <= Board3D.TRAP_CELLS * Board3D.CELL:
@@ -801,6 +812,7 @@ func _build_visual() -> void:
 	if _visual:
 		_visual.queue_free()
 	_preview_ring = null
+	_corner_spots.clear()
 	_visual = Node3D.new()
 	add_child(_visual)
 	var mat := VisualFx.gem_material(game, tier >= 4 and str(def.get("category", "gem")) == "gem" and FieldStyle.is_neon())
@@ -963,7 +975,32 @@ func _add_corner_lights(foot: float, base_h: float) -> void:
 		spot.shadow_enabled = false
 		spot.position = p + Vector3(corner.x, 0, corner.y) * 0.03
 		spot.basis = Basis.looking_at(top - spot.position)
+		spot.set_meta("energy", spot.light_energy)
+		spot.set_meta("corner", _corner_spots.size())
 		_visual.add_child(spot)
+		_corner_spots.append(spot)
+	_apply_corner_quality()
+	if not Display.quality_changed.is_connected(_apply_corner_quality):
+		Display.quality_changed.connect(_apply_corner_quality)
+
+
+## Sockellichter je Grafikstufe (Leistung 2026-11-25: vier Spots je Tower waren in eeveTD über 100 Lichter
+## und kosteten auf einer RX 9070 XT rund 4 ms je Bild): Hoch alle vier, Mittel zwei gegenüberliegende
+## mit mehr Kraft, Niedrig keine (die Lämpchen leuchten weiter).
+func _apply_corner_quality() -> void:
+	for spot in _corner_spots:
+		if not is_instance_valid(spot):
+			continue
+		var i: int = spot.get_meta("corner")
+		match Display.quality:
+			Display.HIGH:
+				spot.visible = true
+				spot.light_energy = spot.get_meta("energy")
+			Display.MEDIUM:
+				spot.visible = i == 0 or i == 3
+				spot.light_energy = float(spot.get_meta("energy")) * 1.6
+			_:
+				spot.visible = false
 
 
 ## "flame": Größe der Flamme in Towerbreiten, sitzt oben auf dem Modell (Lagerfeuer, Kohlenbecken).

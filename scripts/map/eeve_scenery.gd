@@ -4,6 +4,8 @@ extends Node3D
 ## Spawn, Wegpunkten und Ziel und die Nachtvariante (Mondlicht, leuchtende Laternen, Glühwürmchen).
 ## Rein optisch: läuft bei jedem Spieler gleich (fester Zufallsstartwert), nichts davon geht über das Netz.
 
+const StaticMeshBatch = preload("res://scripts/map/static_mesh_batch.gd")
+static var tree_cell := 16.0  ## Kachelgröße der Baum-MultiMeshes (Weltmaß, ein Feld = 0,5; 0 = eine je Art)
 const N := "res://assets/models/nature/%s.glb"
 ## Bäume: [Modell, Höhe von, Höhe bis, Gewicht]
 const TREES := [
@@ -116,19 +118,21 @@ func _ready() -> void:
 	var macro = gm.get_shader_parameter("macro")
 	_ground_day = [tint if tint is Vector3 else Vector3.ONE, float(bright) if bright != null else 0.72,
 		float(contrast) if contrast != null else 1.0, float(macro) if macro != null else 0.12]
-	_add_forest_floor()
-	_add_corner_mountain()
+	# Teile benannt (Szenerie_<teil>_N), damit Leistungsmessungen sie einzeln abschalten können
+	# (tools/screenshot.gd --ohne=Szenerie_nebel)
+	var parts := [["boden", _add_forest_floor], ["berg", _add_corner_mountain]]
 	if map.district == BezirkUeberwuchert.ID:
-		_add_district()
-	_add_forest()
-	if bezirk == null:
-		_add_graveyard()
-	_add_mine()
-	_add_earth_walks()
-	_add_mist()
-	_add_lanterns()
-	_add_fires()
-	_add_fireflies()
+		parts.append(["bezirk", _add_district])
+	parts.append(["wald", _add_forest])
+	# erst beim Aufruf prüfen: der Bezirk entsteht in derselben Liste weiter oben
+	parts.append(["friedhof", func(): if bezirk == null: _add_graveyard()])
+	parts.append_array([["mine", _add_mine], ["erdwege", _add_earth_walks], ["nebel", _add_mist],
+		["laternen", _add_lanterns], ["feuer", _add_fires], ["gluehwuermchen", _add_fireflies]])
+	for part in parts:
+		var from := get_child_count()
+		part[1].call()
+		for i in range(from, get_child_count()):
+			get_child(i).name = "Szenerie_%s_%d" % [part[0], i - from]
 	# Laternen beleuchten Tower und Gegner, den Boden nur über ihren Lichtfleck (Ebene 2 ausgenommen)
 	board._ground.layers = 2
 	_apply(FieldStyle.night)
@@ -327,12 +331,9 @@ func _add_earth_walks() -> void:
 func _add_forest_floor() -> void:
 	var size := _size()
 	var floor := MeshInstance3D.new()
-	if board.path_depth > 0.0:
-		floor.mesh = frame_mesh(size, FLOOR_MARGIN)
-	else:
-		var plane := PlaneMesh.new()
-		plane.size = size + Vector2.ONE * FLOOR_MARGIN * 2.0
-		floor.mesh = plane
+	# Nur als Rahmen um die Karte: eine ganze Fläche läge unter dem Spielfeldboden, und beide teuren
+	# Bodenshader liefen dort doppelt (Leistung 2026-11-25: der Waldboden kostete 5,7 von 12,8 ms je Bild).
+	floor.mesh = frame_mesh(size, FLOOR_MARGIN)
 	var mat: ShaderMaterial = board._ground_mat.duplicate()
 	var none := Image.create(1, 1, false, Image.FORMAT_RGBA8)
 	none.fill(Color.BLACK)
@@ -648,20 +649,16 @@ func _add_multimesh(path: String, xfs: Array, shadows: bool) -> void:
 	var m := ModelLoader.mesh_with_transform(path, 1.0)
 	if m.is_empty():
 		return
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = _muted(m[0])
-	mm.instance_count = xfs.size()
-	for i in xfs.size():
-		mm.set_instance_transform(i, xfs[i] * m[1])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	# Schwenkende Kronen können etwas über die statische Mesh-AABB hinausragen.
-	mmi.extra_cull_margin = 0.5
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var placed := []
+	for xf in xfs:
+		placed.append(xf * m[1])
+	# In Kacheln, damit Godot außerhalb des Bildes weglässt und weiter weg LOD nimmt (Leistung, 2026-11-25).
+	# Schwenkende Kronen können etwas über die statische Mesh-AABB hinausragen (cull_margin).
+	var nodes := StaticMeshBatch.add_nodes(self, _muted(m[0]), placed, tree_cell,
+			GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
+			1, GeometryInstance3D.GI_MODE_DISABLED, 0.5)
 	if shadows:
-		_shadow_mmis.append(mmi)
-	add_child(mmi)
+		_shadow_mmis.append_array(nodes)
 
 
 ## Kopie des Meshes mit abgedunkelten Materialien: die Modelle sind satter als der Boden (Druidenhain

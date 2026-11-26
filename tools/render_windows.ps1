@@ -17,7 +17,9 @@ $stdout = Join-Path $repo ".godot/$Name.log"
 $stderr = Join-Path $repo ".godot/$Name-errors.log"
 # Isolierter Projekt-Header: NO_FOCUS muss bereits vor der nativen Fenstererzeugung gelten.
 # Ressourcen/Importcache werden per Junction geteilt; das echte Projekt bleibt interaktiv.
-$qaProject = Join-Path (Split-Path $repo -Parent) '.tdhub-render-project'
+# Je Repo-Ordner ein eigenes Testprojekt (z. B. Worktree neben dem Klon), sonst zeigen die Junctions auf den anderen Ordner.
+$leaf = Split-Path $repo -Leaf
+$qaProject = Join-Path (Split-Path $repo -Parent) $(if ($leaf -eq 'TDHub') { '.tdhub-render-project' } else { '.tdhub-render-' + $leaf })
 New-Item -ItemType Directory -Force -Path $qaProject | Out-Null
 foreach ($directory in @('assets','data','docs','export','scenes','scripts','tests','tools','.godot')) {
     $target = Join-Path $repo $directory
@@ -41,7 +43,7 @@ if (-not (Test-Path -LiteralPath $qaConfig) -or [IO.File]::ReadAllText($qaConfig
 $before = $env:APPDATA
 try {
     $env:APPDATA = Join-Path (Split-Path $repo -Parent) '.tdhub-test-profile'
-    $options = @(ConvertFrom-Json $OptionsJson)
+    $options = @((ConvertFrom-Json $OptionsJson) | ForEach-Object { $_ })
     $arguments = @('--audio-driver', 'Dummy', '--path', ('"' + $qaProject + '"'), '--screen', '1', '--windowed', '--resolution', '1600x1000', $Scene)
     if (-not @($options | Where-Object { [string]$_ -like '--messen=*' }).Count) { $arguments += @('--max-fps','30') }
     if ($EngineVerbose) { $arguments = @('--verbose') + $arguments }
@@ -57,12 +59,12 @@ try {
     while (-not $process.WaitForExit(1000)) {
         $parseErrors = @(Select-String -LiteralPath $stdout, $stderr -Pattern 'SCRIPT ERROR: Parse Error|Failed to load script' -ErrorAction SilentlyContinue)
         if ($parseErrors.Count) {
-            $process.Kill($true)
+            $process.Kill()
             $parseErrors | Select-Object -First 6 | ForEach-Object { Write-Output $_.Line }
             throw "Godot-Parserfehler; Details in $stderr"
         }
         if ([DateTime]::UtcNow -gt $deadline) {
-            $process.Kill($true)
+            $process.Kill()
             throw "Godot-Aufnahme: Timeout; Details in $stderr"
         }
     }

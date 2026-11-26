@@ -7,6 +7,7 @@ const OCCLUDED := preload("res://assets/shaders/enemy_occluded.gdshader")
 const RANGE := preload("res://assets/shaders/range_area.gdshader")
 const BUILD := preload("res://assets/shaders/build_preview.gdshader")
 const WIND := preload("res://assets/shaders/foliage_wind.gdshader")
+const WIND_SOLID := preload("res://assets/shaders/foliage_wind_solid.gdshader")  ## ohne Alpha-Schnitt (Stämme)
 const SHOCK := preload("res://assets/shaders/shockwave.gdshader")
 const DISSOLVE := preload("res://assets/shaders/dissolve.gdshader")
 const GEM := preload("res://assets/shaders/gem.gdshader")
@@ -101,7 +102,12 @@ static func area(radius: float, color: Color, context: Object = null, pattern :=
 
 static func wind_material(base: BaseMaterial3D, bounds: AABB, context: Object) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
-	mat.shader = WIND
+	# Deckende Teile (Stamm, Äste) ohne ALPHA: ein Shader, der Pixel verwerfen kann, schaltet den frühen
+	# Tiefentest ab und läuft auch für verdeckte Pixel
+	# (Die Modelle markieren auch die Rinde als Alpha-Schnitt; Rinden-Texturen heißen *Bark*.)
+	var bark := base.albedo_texture != null and base.albedo_texture.resource_path.to_lower().contains("bark")
+	var cutout := base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and not bark
+	mat.shader = WIND if cutout else WIND_SOLID
 	mat.set_shader_parameter("albedo_color", base.albedo_color)
 	if base.albedo_texture != null:
 		mat.set_shader_parameter("albedo_texture", base.albedo_texture)

@@ -36,6 +36,18 @@ class FakeTower extends RefCounted:
 		return e.pos.distance_to(pos) <= range
 
 
+## Tower mit max_reach: find_targets filtert vorher über die Entfernung (Leistung), Ergebnis muss gleich bleiben.
+class ReachTower extends FakeTower:
+	var calls := 0
+
+	func max_reach() -> float:
+		return range
+
+	func can_target(e) -> bool:
+		calls += 1
+		return super.can_target(e)
+
+
 func check(cond: bool, msg: String) -> void:
 	if cond:
 		print("OK   ", msg)
@@ -69,6 +81,13 @@ func _ready() -> void:
 	check(tg.find_targets(t, 1) == [far], "ein Ziel: am weitesten gelaufen, in Reichweite, angreifbar, lebend")
 	check(tg.find_targets(t, 3) == [far, near], "mehrere Ziele nach Weg sortiert")
 	check(tg.find_targets_in(t, 20.0, 2) == [near], "eigene Reichweite statt in_range")
+	var rt := ReachTower.new()
+	check(tg.find_targets(rt, 1) == [far] and tg.find_targets(rt, 3) == [far, near], "Vorfilter über max_reach: gleiche Ziele")
+	rt.calls = 0
+	tg.find_targets(rt, 3)
+	check(rt.calls == 3, "Vorfilter: Gegner außer Reichweite werden nicht weiter geprüft (%d Prüfungen)" % rt.calls)
+	rt.range = 50.0
+	check(tg.find_targets(rt, 1) == [far], "Vorfilter: genau am Rand der Reichweite noch Ziel")
 	check(tg.enemies_in_radius(Vector2.ZERO, 20.0).size() == 2, "Kreis: lebende Gegner, auch Flieger")
 	check(tg.nearest(Vector2(45, 0), 100.0) == far, "nächster Gegner")
 	check(tg.nearest(Vector2(45, 0), 100.0, [far]) == flyer, "nächster ohne die übersprungenen")
