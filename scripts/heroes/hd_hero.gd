@@ -15,9 +15,17 @@ const KITS := {
 	"zix": "res://scripts/heroes/hd_hero_zix.gd",
 }
 
+const ITEM_EFFECTS = preload("res://scripts/heroes/hd_item_effects.gd")
+var item_ready: Dictionary = {}
+var mastery_ready := 0.0
+
 var game  ## HdGame
 var def: Dictionary
 var level := 1
+var skills: HdSkills
+var _script_spawned := false
+var _swing_tween: Tween
+var _rank_preview := 0
 var xp := 0.0
 var hp := 100.0
 var max_hp := 100.0
@@ -35,10 +43,18 @@ var aim := Vector3.ZERO         ## Mauspunkt am Boden
 var attack_held := false        ## WASD: Linksklick gehalten
 var order: Dictionary = {}      ## Maus-Modus: {kind: move, point} | {kind: attack, target}
 var auto_attack := false        ## Maus-Modus: in der Nähe selbst angreifen
-var attack_cd := 0.0
+var attack_cd := 0.0:
+	set(value):
+		var started := value > attack_cd + 0.01 and value > 0
+		attack_cd = value
+		if started and game != null and (game.coop == null or not game.coop.applying):
+			mark_combat()
+		if started and game != null and is_inside_tree() and (not effect_scripts().is_empty() or b("mastery") > 0):
+			script_event(game.nearest_enemy(position, attack_range()), "attack")
 var cd: Array = [0.0, 0.0, 0.0, 0.0]
 var dodge_cd := 0.0
 var dodge_t := 0.0
+var dodge_iframe_until := 0.0  ## Autoritative Spielzeit; unabhängig von der Bewegungsintegration.
 var dodge_dir := Vector3.ZERO
 var buffs: Dictionary = {}      ## Name → {until, dmg_out, dmg_in, speed, slow_immune}
 var shield := 0.0
@@ -54,6 +70,7 @@ var bonus: Dictionary = {}
 var ward_until := 0.0           ## Schutzrolle: weniger Schaden bis dahin
 var ward := 0.0
 var dodges := 0
+var combat_until := 5.0        ## Nach fünf Sekunden ohne Kampf: +70 % Laufgeschwindigkeit.
 var _body: Node3D
 var _glow: MeshInstance3D
 ## Figur aus Blender (tools/modelle/helden_bau.py) mit Animationen idle/run/attack/cast/death; ohne Modell
@@ -64,11 +81,14 @@ var _anim_lock := 0.0
 var _anim_pos := Vector3.ZERO
 var _anim_cd: Array = []
 var _anim_attack := 0.0
+var _attack_anim_index := 0
 var _dead_t := 0.0
 
 
 ## Neuen Helden zur Datenzeile anlegen (Unterklasse nach id).
 static func create(d: Dictionary) -> HdHero:
+	if str(d.get("kit", "")) == "roster":
+		return load("res://scripts/heroes/hd_hero_roster.gd").new()
 	var path: String = KITS.get(str(d.get("id", "")), "")
 	if path == "":
 		return HdHero.new()
@@ -78,6 +98,8 @@ static func create(d: Dictionary) -> HdHero:
 func setup(g, d: Dictionary) -> void:
 	game = g
 	def = d
+	mark_combat()
+	skills = HdSkills.new(self)
 	radius = float(d.radius)
 	speed = float(d.speed)
 	cc = HdCc.new(game.cfg.cc, "hero")
@@ -110,6 +132,7 @@ func _load_model() -> void:
 		c.visible = false
 	var m: Node3D = scene.instantiate()
 	Metall.modell(m)
+	HdStoffe.modell(m)
 	m.scale = Vector3.ONE * float(def.get("model_scale", 1.0))
 	_body.add_child(m)
 	var players := m.find_children("*", "AnimationPlayer", true, false)
@@ -157,22 +180,37 @@ func _anim_step(dt: float) -> void:
 		_anim_cd = cd.duplicate()
 		return
 	var cast := false
+	var cast_slot := -1
 	for i in mini(cd.size(), _anim_cd.size()):
 		if float(cd[i]) > float(_anim_cd[i]) + 0.01:
 			cast = true
+			cast_slot = i
 	_anim_cd = cd.duplicate()
 	var hit := attack_cd > _anim_attack + 0.01
 	_anim_attack = attack_cd
 	if cast:
-		_play("cast", 1.0, 1.4)
+		var clip := "cast_%d" % cast_slot
+		_play(clip if _anim.has_animation(clip) else "cast", 1.0, 1.4)
 	elif hit:
-		_play("attack", 1.0, clampf(0.9 / maxf(attack_interval(), 0.2), 1.0, 2.5))
+		_play(_attack_clip(), 1.0, clampf(0.9 / maxf(attack_interval(), 0.2), 1.0, 2.5))
 	elif _anim_lock > 0.0:
 		return
 	elif moved > 0.5:
 		_play("run", 0.0, clampf(moved / 5.0, 0.6, 2.2))
 	else:
 		_play("idle")
+
+
+## Cosmetic attack rotation, configured per hero; old models retain their attack clip.
+func _attack_clip() -> String:
+	var variants: Array = def.get("attack", {}).get("animations", [])
+	for offset in variants.size():
+		var index := (_attack_anim_index + offset) % variants.size()
+		var clip := str(variants[index])
+		if _anim != null and _anim.has_animation(clip):
+			_attack_anim_index = (index + 1) % variants.size()
+			return clip
+	return "attack"
 
 
 func _apply_level() -> void:
@@ -190,13 +228,27 @@ func _apply_level() -> void:
 
 
 func b(key: String) -> float:
-	return float(bonus.get(key, 0.0))
+	var value := float(bonus.get(key, 0.0))
+	for imprint in own_imprints():
+		var amount := float(imprint.get("stats", {}).get(key, 0))
+		value += float(def.hp) * amount if key == "hp" else amount
+	if key in ["hp", "mana", "armor", "damage", "attack_speed", "cdr", "hp_regen", "mana_regen", "lifesteal"]:
+		for buff in buffs.values():
+			if game.play_time < float(buff.until):
+				value += float(buff.get(key, 0.0))
+	return value
 
 
 ## Neue Item-/Holzwerte übernehmen (Leben wächst mit, wie in WC3).
+func own_imprints() -> Array:
+	return game.imprints.filter(func(p): return (not p.has("hero") or str(p.hero) == str(def.id)) and (not p.has("owner") or int(p.owner) == game.hero_slot(self)))
+
+
 func set_bonus(d: Dictionary) -> void:
 	bonus = d
 	_apply_level()
+	if skills != null:
+		skills.refresh_constructs()
 
 
 func attack_interval() -> float:
@@ -214,6 +266,7 @@ func add_xp(amount: float) -> void:
 	while level < int(lv.max) and xp >= xp_needed(level):
 		xp -= xp_needed(level)
 		level += 1
+		skills.points += 1
 		_apply_level()
 		mana = max_mana
 		game.on_level_up()
@@ -224,15 +277,26 @@ func power() -> float:
 
 
 func alive() -> bool:
-	return not dead
+	return not dead and not bool(get_meta("offline", false))
 
 
 func dodging() -> bool:
 	return dodge_t > 0.0
 
 
+func dodge_invulnerable() -> bool:
+	return alive() and (dodging() or game.play_time < dodge_iframe_until)
+
+
 func ability(slot: int) -> Dictionary:
-	return def.abilities[slot]
+	return skills.resolve(def.abilities[slot], slot, _rank_preview)
+
+
+func ability_at_rank(slot: int, extra: int) -> Dictionary:
+	_rank_preview = extra
+	var result := ability(slot)
+	_rank_preview = 0
+	return result
 
 
 func ability_cost(slot: int) -> float:
@@ -257,6 +321,8 @@ func add_buff(id: String, d: Dictionary, time: float) -> void:
 	var b := d.duplicate()
 	b.until = game.play_time + time
 	buffs[id] = b
+	if d.has("hp") or d.has("mana") or d.has("armor"):
+		_apply_level()
 
 
 func has_buff(id: String) -> bool:
@@ -272,10 +338,27 @@ func out_mult() -> float:
 
 
 func speed_mult() -> float:
-	var m := 1.0
+	var m := run_bonus()
 	for b in buffs.values():
 		m *= 1.0 + float(b.get("speed", 0.0))
 	return m
+
+
+func mark_combat() -> void:
+	combat_until = game.play_time + 5.0
+
+
+func out_of_combat() -> bool:
+	return game != null and alive() and game.play_time >= combat_until
+
+
+func run_bonus() -> float:
+	return 1.7 if out_of_combat() else 1.0
+
+
+## Dieselbe Laufgeschwindigkeit für Host, Vorhersage und wiederholte Netzwerkeingaben.
+func movement_speed(now: float) -> float:
+	return speed * speed_mult() * (1.0 if slow_immune() else cc.speed_factor(now))
 
 
 func slow_immune() -> bool:
@@ -287,6 +370,10 @@ func slow_immune() -> bool:
 
 ## Eingehender Schaden nach Stärkungen und Schild (Rüstung rechnet HdGame vorher).
 func incoming(amount: float) -> float:
+	if dodge_invulnerable():
+		return 0.0
+	if amount > 0.0:
+		mark_combat()
 	for b in buffs.values():
 		amount *= 1.0 - float(b.get("dmg_in", 0.0))
 	if shield > 0.0 and game.play_time < shield_until:
@@ -318,6 +405,11 @@ func heal(amount: float, quiet := false) -> float:
 # ---------------------------------------------------------------- Schritt
 
 func step(dt: float, now: float) -> void:
+	if not _script_spawned:
+		_script_spawned = true
+		script_event(self, "spawn")
+	if has_meta(EffectScript.STATE) or not effect_scripts().is_empty():
+		script_event(game.nearest_enemy(position, maxf(attack_range(), 12)), "tick", dt)
 	_anim_step(dt)
 	for i in 4:
 		cd[i] = maxf(0.0, cd[i] - dt)
@@ -325,7 +417,10 @@ func step(dt: float, now: float) -> void:
 	attack_cd -= dt
 	for k in buffs.keys():
 		if now >= float(buffs[k].until):
+			var derived: bool = buffs[k].has("hp") or buffs[k].has("mana") or buffs[k].has("armor")
 			buffs.erase(k)
+			if derived:
+				_apply_level()
 	_glow.visible = not buffs.is_empty() and not dead
 	_kit_step(dt, now)
 	if dead:
@@ -337,15 +432,16 @@ func step(dt: float, now: float) -> void:
 	mana = minf(max_mana, mana + (float(def.mana_regen) + b("mana_regen")) * dt)
 	cc.update(now)
 	if dodge_t > 0.0:
-		dodge_t -= dt
+		var move_dt := minf(dt, dodge_t)
+		dodge_t = maxf(0.0, dodge_t - dt)
 		var dd: Dictionary = def.dodge
-		game.move_unit(self, dodge_dir, float(dd.distance) / float(dd.time), dt, true)
+		game.move_unit(self, dodge_dir, float(dd.distance) / float(dd.time), move_dt, true)
 		return
 	if cc.stunned(now):
 		_body.rotation.x = -0.5
 		return
 	_body.rotation.x = 0.0
-	var spd := speed * speed_mult() * (1.0 if slow_immune() else cc.speed_factor(now))
+	var spd := movement_speed(now)
 	if move_dir.length_squared() > 0.01:
 		order = {}
 		game.move_unit(self, move_dir.limit_length(1.0), spd, dt)
@@ -379,9 +475,13 @@ func step(dt: float, now: float) -> void:
 			if attack_cd <= 0.0:
 				_ranged_shot(facing, null)
 		else:
-			var e = game.enemy_in_arc(position, aim_dir, attack_range() + radius, float(def.attack.get("arc", 120)))
-			if e:
-				_try_attack(e)
+			if attack_cd <= 0.0:
+				attack_cd = attack_interval()
+				_swing_fx()
+				var e = game.enemy_in_arc(position, aim_dir, attack_range() + radius, float(def.attack.get("arc", 120)))
+				if e:
+					game.hero_hit(e, float(def.attack.damage) * power(), "attack")
+					on_hit(e)
 	elif auto_attack and order.is_empty() and move_dir.length_squared() < 0.01:
 		var e = game.nearest_enemy(position, maxf(4.5, attack_range() if ranged() else 0.0))
 		if e:
@@ -430,15 +530,30 @@ func on_hit(_e) -> void:
 
 
 func _swing_fx() -> void:
-	if has_model():
+	if str(def.get("id","")) == "sirra" and _attack_anim_index % 3 < 2:
+		game.fx.play("thrust",position,facing,attack_range(),Color("e4d2b4"))
+	else:
+		game.fx.swing(position, facing, attack_range(), Color("e4d2b4"))
+	swing_motion()
+
+
+func swing_motion() -> void:
+	# Authored combo clips already contain torso follow-through and weapon alignment.
+	if has_model() and not def.get("attack", {}).get("animations", []).is_empty():
 		return
-	var tw := create_tween()
-	tw.tween_property(_body, "rotation:y", -0.5, 0.08)
-	tw.tween_property(_body, "rotation:y", 0.0, 0.14)
+	if _swing_tween and _swing_tween.is_valid():
+		_swing_tween.kill()
+	_body.rotation.y = -0.8
+	_swing_tween = create_tween()
+	_swing_tween.tween_property(_body, "rotation:y", 1.05, 0.12)
+	_swing_tween.tween_property(_body, "rotation:y", 0.0, 0.16)
 
 
 func _respawn() -> void:
 	dead = false
+	dodge_t = 0.0
+	dodge_iframe_until = 0.0
+	mark_combat()
 	visible = true
 	_dead_t = 0.0
 	_play("idle")
@@ -451,6 +566,9 @@ func _respawn() -> void:
 
 func die() -> void:
 	dead = true
+	dodge_t = 0.0
+	dodge_iframe_until = 0.0
+	mark_combat()
 	deaths += 1
 	visible = has_model()  # mit Modell erst nach der Sterbe-Animation ausblenden (_anim_step)
 	order = {}
@@ -469,6 +587,9 @@ func _on_death() -> void:
 
 ## Fähigkeit in Richtung/auf den Punkt at wirken. Gibt false zurück, wenn es nicht geht.
 func cast(slot: int, at: Vector3) -> bool:
+	if game.coop and not game.coop.host:
+		game.coop.command({"kind":"cast", "slot":slot, "at":at})
+		return true
 	if dead or dodging() or cc.stunned(game.play_time) or slot < 0 or slot > 3:
 		return false
 	if cd[slot] > 0.0 or not unlocked(slot) or mana < ability_cost(slot):
@@ -482,10 +603,15 @@ func cast(slot: int, at: Vector3) -> bool:
 	var cost := ability_cost(slot)
 	if not _cast(slot, a, dir, at):
 		return false
+	var tags: Array = a.get("tags", [])
+	if a.has("damage") or a.has("burn") or tags.any(func(tag): return tag in ["attack", "control", "debuff", "dot"]):
+		mark_combat()
 	_face(dir)
 	mana -= cost
 	if cd[slot] <= 0.0:
 		cd[slot] = float(a.cooldown) * (1.0 - minf(b("cdr"), 0.4))
+	script_event(game.nearest_enemy(at, 3), "cast")
+	ITEM_EFFECTS.after_cast(self, slot)
 	return true
 
 
@@ -504,6 +630,16 @@ func clamp_point(at: Vector3, r: float) -> Vector3:
 
 
 func dodge(dir: Vector3) -> bool:
+	if game.coop and not game.coop.host:
+		if dead or dodge_cd > 0 or cc.stunned(game.play_time):
+			return false
+		dodge_dir = dir.normalized() if dir.length_squared() > 0.01 else facing
+		dodge_t = float(def.dodge.time)
+		dodge_iframe_until = game.play_time + dodge_t
+		dodge_cd = float(def.dodge.cooldown)
+		game.fx.dash_trail(position, dodge_dir * float(def.dodge.distance))
+		game.coop.command({"kind":"dodge", "dir":dir})
+		return true
 	if dead or dodge_cd > 0.0 or cc.stunned(game.play_time):
 		return false
 	dir.y = 0.0
@@ -511,10 +647,12 @@ func dodge(dir: Vector3) -> bool:
 		dir = facing
 	dodge_dir = dir.normalized()
 	dodge_t = float(def.dodge.time)
+	dodge_iframe_until = game.play_time + dodge_t
 	dodge_cd = float(def.dodge.cooldown)
 	order = {}
 	dodges += 1
 	game.fx.dash_trail(position, dodge_dir * float(def.dodge.distance))
+	script_event(self, "dodge")
 	return true
 
 
@@ -523,6 +661,8 @@ func dodge(dir: Vector3) -> bool:
 ## Zustandszeilen für die Heldenleiste.
 func status_lines() -> Array:
 	var st: Array = []
+	if out_of_combat():
+		st.append(tr("Erkundungstempo +70 %"))
 	if shield_left() > 0.0:
 		st.append(tr("Schild %d") % roundi(shield_left()))
 	return st
@@ -542,3 +682,29 @@ func bot_act(_e, _to: Vector3, _d: float, _near: int) -> float:
 ## Held wird ersetzt oder das Spiel endet: eigene Objekte in der Welt (Banner, Gebäude) entfernen.
 func free_kit() -> void:
 	pass
+
+
+func effect_scripts() -> Array:
+	return ITEM_EFFECTS.passive_scripts(self)
+
+
+func effect_script_source_key(text: String) -> String:
+	return str(get_meta("item_effect_scope", str(hash(text))))
+
+
+func script_event(target, event: String, dt := 0.0) -> void:
+	if game.coop and not game.coop.host:
+		return
+	if bool(get_meta("native_script_busy", false)) or bool(get_meta("item_effect_busy", false)):
+		return
+	if bool(get_meta(EffectScript.STATE, {}).get("busy", false)):
+		return
+	set_meta("item_effect_busy", true)
+	var errors: Array = EffectScript.trigger(self, target, event, dt, [""] if dead and event == "tick" else [])
+	EffectScript.report_errors(self, errors)
+	ITEM_EFFECTS.mastery_event(self, target, event)
+	set_meta("item_effect_busy", false)
+
+
+func supports_script_buff(key: String) -> bool:
+	return key in ["dmg_out", "dmg_in", "speed", "slow_immune", "hp", "mana", "armor", "damage", "attack_speed", "cdr", "hp_regen", "mana_regen", "lifesteal"]

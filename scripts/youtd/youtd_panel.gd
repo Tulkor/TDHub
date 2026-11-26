@@ -157,7 +157,7 @@ func _build_elements() -> void:
 		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var lvl := UiUtil.label("0", row, 15)
 		lvl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var cost := UiUtil.label("", row, 13)
+		var cost := UiUtil.label("", row, 14)
 		cost.custom_minimum_size.x = 76
 		cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		cost.add_theme_color_override("font_color", UiTheme.MUTED)
@@ -167,7 +167,7 @@ func _build_elements() -> void:
 		plus.custom_minimum_size = Vector2(30, 28)
 		_rows[id] = {"level": lvl, "cost": cost, "plus": plus, "row": row}
 	var note := UiUtil.wrap_label(tr("Das Fenster geht von selbst auf, sobald die Bücher für ein neues Level reichen."), v, 470)
-	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_font_size_override("font_size", 14)
 	note.add_theme_color_override("font_color", UiTheme.MUTED)
 
 
@@ -212,7 +212,7 @@ func _refresh_elements() -> void:
 func _build_recipes() -> void:
 	var v := _window("recipes", "Rezepte")
 	var sub := UiUtil.wrap_label(tr("Grünes Feld anklicken: das Rezept läuft sofort, die Zutaten nimmt das Spiel aus dem Lager (niedrigstes Level zuerst)."), v, 640)
-	sub.add_theme_font_size_override("font_size", 13)
+	sub.add_theme_font_size_override("font_size", 14)
 	sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	_rec_grid = GridContainer.new()
 	_rec_grid.columns = 2 + YoutdCube.RARITIES.size()
@@ -220,7 +220,7 @@ func _build_recipes() -> void:
 	_rec_grid.add_theme_constant_override("v_separation", 6)
 	v.add_child(_rec_grid)
 	var note := UiUtil.wrap_label(tr("Rechtsklick auf ein Item im Lager sperrt es für Rezepte."), v, 640)
-	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_font_size_override("font_size", 14)
 	note.add_theme_color_override("font_color", UiTheme.MUTED)
 
 
@@ -250,7 +250,7 @@ func _refresh_recipes() -> void:
 	UiUtil.label("", _rec_grid)
 	UiUtil.label("", _rec_grid)
 	for rar in YoutdCube.RARITIES:
-		var h := UiUtil.label(YoutdData.rarity_name(rar), _rec_grid, 13)
+		var h := UiUtil.label(YoutdData.rarity_name(rar), _rec_grid, 14)
 		h.add_theme_color_override("font_color", YoutdData.rarity_color(rar))
 		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	for r in YoutdCube.recipes():
@@ -259,7 +259,7 @@ func _refresh_recipes() -> void:
 		var name := UiUtil.label(recipe_name(r), _rec_grid, 15)
 		name.add_theme_font_override("font", UiTheme.font(true))
 		var desc := UiUtil.wrap_label(recipe_text(r), _rec_grid, 260)
-		desc.add_theme_font_size_override("font_size", 13)
+		desc.add_theme_font_size_override("font_size", 14)
 		desc.add_theme_color_override("font_color", UiTheme.MUTED)
 		for i in YoutdCube.RARITIES.size():
 			_recipe_cell(r, i)
@@ -351,6 +351,14 @@ func _refresh_messages() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_outline_color", UiTheme.GOLD_DARK)
 		l.add_theme_constant_override("outline_size", 4)
+		# Auf dunkler Platte statt direkt auf dem Spielfeld (UI-Prüfung 2026-11-25, Lesbarkeit)
+		var plate := StyleBoxFlat.new()
+		plate.bg_color = Color(0, 0, 0, 0.62)
+		plate.set_content_margin_all(4)
+		plate.content_margin_left = 12
+		plate.content_margin_right = 12
+		l.add_theme_stylebox_override("normal", plate)
+		l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var tw := l.create_tween()
 		tw.tween_interval(MSG_TIME)
 		tw.tween_property(l, "modulate:a", 0.0, 0.8)

@@ -135,7 +135,10 @@ def resolve(arg):
 
 
 def main():
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
     opt = dict((a[2:].partition("=")[0], a[2:].partition("=")[2] or True) for a in sys.argv[1:] if a.startswith("--"))
     if not pos:

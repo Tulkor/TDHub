@@ -79,8 +79,24 @@ func _build_zone(z: Dictionary) -> void:
 	var c := center(str(z.id))
 	var r := float(cfg.radius)
 	var col := Color(str(z.color))
-	_root.add_child(HdDev.cyl(r, r, 0.02, HdDev.mat(col.darkened(0.72), 0.5), c + Vector3(0, 0.004, 0), 40))
-	_root.add_child(HdDev.cyl(r, r, 0.03, HdDev.flat(col, 0.18), c + Vector3(0, 0.012, 0), 40))
+	var cathedral := str(game.cfg.arena.get("theme", "")) == "cathedral"
+	var base: Material = HdCathedral.floor_material() if cathedral else HdDev.mat(col.darkened(0.72), 0.5)
+	var floor_mesh := HdDev.cyl(r, r, 0.04, HdTerrain.material("rock") if str(z.id)=="hain" else base, c + Vector3(0, 0.012, 0), 40)
+	if str(z.id)=="hain":floor_mesh.set_meta("vegetation_ground",true)
+	_root.add_child(floor_mesh)
+	if cathedral:
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = r - 0.13
+		torus.outer_radius = r + 0.02
+		torus.rings = 40
+		torus.ring_segments = 6
+		ring.mesh = torus
+		ring.position = c + Vector3(0, 0.065, 0)
+		ring.material_override = HdDev.flat(col.lerp(Color("b8ad82"), 0.7).darkened(0.28))
+		_root.add_child(ring)
+	else:
+		_root.add_child(HdDev.cyl(r, r, 0.03, HdDev.flat(col, 0.18), c + Vector3(0, 0.012, 0), 40))
 	# Zaunpfähle, zur Feste hin offen
 	var to_fort: Vector3 = (game.fortress_pos - c).normalized()
 	for k in 28:
@@ -88,24 +104,31 @@ func _build_zone(z: Dictionary) -> void:
 		var d := Vector3(cos(a), 0, sin(a))
 		if d.dot(to_fort) > 0.9:
 			continue
-		_root.add_child(HdDev.box(Vector3(0.35, 1.4, 0.35), HdDev.mat(col.darkened(0.4), 0.5), c + d * r + Vector3(0, 0.7, 0)))
+		_root.add_child(HdDev.box(Vector3(0.35, 1.4, 0.35), HdCathedral.wall_material() if cathedral else HdDev.mat(col.darkened(0.4), 0.5), c + d * r + Vector3(0, 0.7, 0)))
 	match str(z.id):
 		"arena":
 			for k in 8:
 				var a := k * TAU / 8.0
-				_root.add_child(HdDev.cyl(0.5, 0.6, 3.0, HdDev.mat(Color("8a7a8a"), 0.5), c + Vector3(cos(a), 0, sin(a)) * (r - 2.0) + Vector3(0, 1.5, 0), 8))
+				var pillar := HdGothic.trial_pillar()
+				pillar.position = c + Vector3(cos(a),0,sin(a))*(r-2.0)
+				pillar.scale = Vector3.ONE*.78
+				_root.add_child(pillar)
 		"hain":
 			var rng := RandomNumberGenerator.new()
 			rng.seed = 7
 			for k in 16:
 				var a := rng.randf() * TAU
 				var p := c + Vector3(cos(a), 0, sin(a)) * rng.randf_range(r * 0.45, r - 1.5)
-				_root.add_child(HdDev.cyl(0.3, 0.4, 1.6, HdDev.mat(Color("6a4a2a"), 0.5), p + Vector3(0, 0.8, 0), 6))
-				_root.add_child(HdDev.cyl(0.0, 1.4, 3.0, HdDev.mat(Color("2f7a3a"), 0.5), p + Vector3(0, 3.0, 0), 7))
+				var tree := ModelLoader.instantiate_fit("res://assets/models/nature/pine_%s.glb" % (1+k%3), 2.6, 5.5)
+				if tree != null:
+					tree.position = p
+					tree.set_meta("vegetation_root",true)
+					_root.add_child(tree)
 		"schmiede":
-			_root.add_child(HdDev.box(Vector3(4.0, 2.0, 3.0), HdDev.mat(Color("5a5a62"), 0.5), c + Vector3(0, 1.0, -2.0)))
-			_root.add_child(HdDev.box(Vector3(1.6, 0.9, 0.8), HdDev.mat(Color("2a2a30"), 0.5), c + Vector3(2.5, 0.45, 1.5)))
-			_root.add_child(HdDev.cyl(0.9, 0.9, 0.3, HdDev.mat(Color("ff7a2a"), 0.5, 2.0), c + Vector3(0, 2.1, -2.0), 12))
+			preload("res://scripts/heroes/hd_city_streets.gd").forecourt(game,_root,c+Vector3(0,0,-2),0.0,Vector2(5.0,4.5))
+			var workshop := HdGothic.workshop()
+			workshop.position = c + Vector3(0,0,-2)
+			_root.add_child(workshop)
 			var gems: Array = cfg.schmiede.gems
 			for k in gems.size():
 				var a := PI * 0.15 + k * PI * 0.14
@@ -113,7 +136,9 @@ func _build_zone(z: Dictionary) -> void:
 		"pruefung":
 			for k in 4:
 				var a := k * TAU / 4.0 + PI * 0.25
-				_root.add_child(HdDev.box(Vector3(0.8, 4.0, 0.8), HdDev.mat(Color("3a5a8a"), 0.5, 0.4), c + Vector3(cos(a), 0, sin(a)) * 6.0 + Vector3(0, 2.0, 0)))
+				var pillar := HdGothic.trial_pillar()
+				pillar.position = c + Vector3(cos(a),0,sin(a))*6.0
+				_root.add_child(pillar)
 
 
 ## Teleport-Steine: an der Feste je Zone einer in ihrer Richtung, in der Zone einer zurück.
@@ -129,8 +154,10 @@ func add_stones() -> void:
 		game.stones.append({"pos": home, "to": inside + dir * 2.0, "zone": id, "out": true})
 		game.stones.append({"pos": back, "to": game.hero_spawn(), "zone": id, "out": false})
 		for st in [home, back]:
-			root.add_child(HdDev.cyl(1.0, 1.2, 0.3, HdDev.mat(Color("3a3f55"), 0.5), st + Vector3(0, 0.15, 0), 12))
-			root.add_child(HdDev.cyl(0.7, 0.7, 0.06, HdDev.mat(Color(str(z.color)), 0.5, 1.6), st + Vector3(0, 0.34, 0), 12))
+			var shrine := HdGothic.waystone(Color(str(z.color)))
+			shrine.position = st
+			shrine.rotation.y = atan2(dir.x, dir.z)
+			root.add_child(shrine)
 
 
 # ---------------------------------------------------------------- Takt

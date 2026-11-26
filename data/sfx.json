@@ -1,5 +1,5 @@
 {
-	"_info": "Sounds (assets/sounds/, geschnitten von tools/sfx/schneiden.py) und wann sie spielen. db = Lautstärke, pitch = Tonhöhe (1 = normal). Ein Tower kann mit \"shot_sfx\": \"<sound>\" oder \"<sound>@<pitch>\" oder \"none\" in seiner Datei eine eigene Wahl treffen. bursts bei einem Ambiente: nur ab und zu ein Stück (play Sekunden, zufällige Stelle), dazwischen pause Sekunden Stille.",
+	"_info": "Sounds (assets/sounds/, geschnitten von tools/sfx/schneiden.py) und wann sie spielen. db = LautstÃ¤rke, pitch = TonhÃ¶he (1 = normal). Ein Tower kann mit \"shot_sfx\": \"<sound>\" oder \"<sound>@<pitch>\" oder \"none\" in seiner Datei eine eigene Wahl treffen. bursts bei einem Ambiente: nur ab und zu ein StÃ¼ck (play Sekunden, zufÃ¤llige Stelle), dazwischen pause Sekunden Stille.",
 	"sounds": {
 		"shot_pew": {"file": "shot_pew.wav", "db": -14},
 		"shot_pew_short": {"file": "shot_pew_short.wav", "db": -14},
@@ -13,6 +13,7 @@
 		"wave_start": {"file": "wave_start.ogg", "db": -9},
 		"boss": {"file": "boss.ogg", "db": -3},
 		"amb_forest": {"file": "amb_forest.ogg", "db": -14, "bursts": {"first": [3, 8], "play": [4, 8], "pause": [20, 45], "fade": 1.5}},
+		"hd_wind": {"file": "bollwerk/wind.wav", "db": -22},
 		"amb_night": {"file": "amb_night.ogg", "db": -10}
 	},
 	"events": {
@@ -26,7 +27,7 @@
 		"boss": {"sound": "boss", "gap": 6}
 	},
 	"shots": {
-		"_info": "Schuss-Sound nach Farbe des Towers: der Eintrag mit dem nächsten Farbton (0 = rot, 0.33 = grün, 0.66 = blau), die Tonhöhe verschiebt sich mit dem Abstand dazu, damit jede Farbe etwas anders klingt. Blasse Tower nehmen pale, sehr dunkle dark. Fähigkeiten in ability gehen vor. Höhere Stufen klingen etwas tiefer (tier_pitch pro Stufe).",
+		"_info": "Schuss-Sound nach Farbe des Towers: der Eintrag mit dem nÃ¤chsten Farbton (0 = rot, 0.33 = grÃ¼n, 0.66 = blau), die TonhÃ¶he verschiebt sich mit dem Abstand dazu, damit jede Farbe etwas anders klingt. Blasse Tower nehmen pale, sehr dunkle dark. FÃ¤higkeiten in ability gehen vor. HÃ¶here Stufen klingen etwas tiefer (tier_pitch pro Stufe).",
 		"hue": [
 			{"hue": 0.0, "sound": "shot_blast", "pitch": 1.0},
 			{"hue": 0.08, "sound": "shot_blast", "pitch": 0.75},

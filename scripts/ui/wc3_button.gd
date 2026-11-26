@@ -109,12 +109,12 @@ func _draw() -> void:
 	if red:
 		tint = Wc3Theme.RED_HOVER if hover else Wc3Theme.RED
 	else:
-		tint = Wc3Theme.DARK_HOVER if hover else Wc3Theme.DARK
+		tint = Wc3Theme.MINOR_HOVER if hover else Wc3Theme.MINOR
 	if disabled:
 		tint = Wc3Theme.DISABLED
 	if down:
 		tint = tint.darkened(0.25)
-	Wc3Theme.fill_textured(self, face, _rock if red else _tex, 180.0 if red else 200.0, tint)
+	Wc3Theme.fill_textured(self, face, _rock, 180.0, tint)
 	# Innenschatten: nach innen dunkler werdende Ränder, oben ein schwacher Lichtstreif, unten Schatten
 	for i in 5:
 		draw_polyline(Wc3Theme.closed(Wc3Theme.hex(fr.grow(-1.5 - i * 2.0), TIP - 2 - i)), Color(0, 0, 0, 0.22 - i * 0.04), 2.0, true)

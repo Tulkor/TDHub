@@ -58,9 +58,12 @@ def wo(box):
     return (v + " " + h).strip() if h or v != "Mitte" else "Mitte"
 
 
-def vergleiche(alt, neu, schwelle, aus):
+def vergleiche(alt, neu, schwelle, aus, ausschnitt=None, sauber=False, breite=1024):
     a = lade(alt)
     b = lade(neu, a.size)
+    if ausschnitt:
+        x, y, cw, ch = ausschnitt
+        a, b = a.crop((x, y, x + cw, y + ch)), b.crop((x, y, x + cw, y + ch))
     w, h = a.size
     d = np.abs(np.asarray(a, np.int16) - np.asarray(b, np.int16)).max(axis=2)
     gx, gy = RASTER
@@ -82,31 +85,52 @@ def vergleiche(alt, neu, schwelle, aus):
     x1 = (max(b[2] for b in bs) + 1) * w // gx; y1 = (max(b[3] for b in bs) + 1) * h // gy
     rand = max(w, h) // 40
     x0, y0, x1, y1 = max(0, x0 - rand), max(0, y0 - rand), min(w, x1 + rand), min(h, y1 + rand)
+    if sauber:
+        x0, y0, x1, y1 = 0, 0, w, h
     ca, cb = a.crop((x0, y0, x1, y1)), b.crop((x0, y0, x1, y1))
     cw, ch = ca.size
-    bild = Image.new("RGB", (cw * 2 + 8, ch), (255, 0, 160))
+    bild = Image.new("RGB", (cw * 2 + 8, ch), (19, 23, 28) if sauber else (255, 0, 160))
     bild.paste(ca, (0, 0)); bild.paste(cb, (cw + 8, 0))
     zeichnen = ImageDraw.Draw(bild)
-    for bx in bs:  # geänderte Bereiche im neuen Bild markieren
+    for bx in ([] if sauber else bs):  # geänderte Bereiche im neuen Bild markieren
         r = (bx[0] * w // gx - x0 + cw + 8, bx[1] * h // gy - y0, (bx[2] + 1) * w // gx - x0 + cw + 8, (bx[3] + 1) * h // gy - y0)
         zeichnen.rectangle(r, outline=(0, 255, 255), width=2)
-    if bild.width > 1024:
-        bild = bild.resize((1024, max(1, bild.height * 1024 // bild.width)))
+    if bild.width > breite:
+        bild = bild.resize((breite, max(1, bild.height * breite // bild.width)))
+    if sauber:
+        from PIL import ImageFont
+        try:
+            font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 24)
+        except OSError:
+            font = ImageFont.load_default()
+        labeled = Image.new("RGB", (bild.width, bild.height + 44), (19, 23, 28))
+        labeled.paste(bild, (0, 44))
+        draw = ImageDraw.Draw(labeled)
+        draw.text((14, 8), "VORHER", fill="white", font=font)
+        draw.text((bild.width // 2 + 14, 8), "NACHHER", fill="white", font=font)
+        bild = labeled
     if not aus:
         aus = os.path.join("/tmp/gemtd-vergleich", os.path.splitext(name)[0] + "_vergleich.jpg")
     os.makedirs(os.path.dirname(aus) or ".", exist_ok=True)
-    bild.save(aus, quality=85)
+    bild.save(aus, quality=95 if sauber else 85)
     print("VERGLEICH %s (alt links, neu rechts, Ausschnitt %dx%d, ca. %d Tokens)" % (aus, cw, ch, bild.width * bild.height // 750))
     return True
 
 
 def main(argv):
     schwelle, aus, pfade = 12, "", []
+    ausschnitt, sauber, breite = None, False, 1024
     for x in argv:
         if x.startswith("--schwelle="):
             schwelle = int(x.split("=", 1)[1])
         elif x.startswith("--aus="):
             aus = x.split("=", 1)[1]
+        elif x.startswith("--ausschnitt="):
+            ausschnitt = tuple(map(int, x.split("=", 1)[1].split(",")))
+        elif x == "--sauber":
+            sauber = True
+        elif x.startswith("--breite="):
+            breite = int(x.split("=", 1)[1])
         else:
             pfade.append(x)
     if len(pfade) != 2:
@@ -119,9 +143,9 @@ def main(argv):
             if not namen:
                 print("Keine gleichnamigen Bilder in beiden Ordnern.")
                 return 2
-            geaendert = [vergleiche(os.path.join(alt, n), os.path.join(neu, n), schwelle, "") for n in namen]
+            geaendert = [vergleiche(os.path.join(alt, n), os.path.join(neu, n), schwelle, "", ausschnitt, sauber, breite) for n in namen]
             return 1 if any(geaendert) else 0
-        return 1 if vergleiche(alt, neu, schwelle, aus) else 0
+        return 1 if vergleiche(alt, neu, schwelle, aus, ausschnitt, sauber, breite) else 0
     except OSError as e:
         print("Fehler: %s" % e)
         return 2

@@ -74,7 +74,8 @@ func _panel(parent: Node, pad := 10.0, tab := false, ticks := false) -> PanelCon
 
 
 func _label(text: String, parent: Node, size := 15, color := Color.TRANSPARENT, bold := false) -> Label:
-	var l := UiUtil.label(text, parent, size)
+	# Untergrenze 13 px (UI-Prüfung 2026-11-25): kleinere Hologramm-Schrift war über Schnee kaum lesbar
+	var l := UiUtil.label(text, parent, maxi(size, 13))
 	if color.a > 0.0:
 		l.add_theme_color_override("font_color", color)
 	if bold:
@@ -101,7 +102,7 @@ func _head(parent: Node, title: String) -> Label:
 func _small_button(text: String, parent: Node, cb: Callable) -> Button:
 	var b := UiUtil.button(text, parent, cb)
 	b.add_theme_font_override("font", HoloTheme.mono())
-	b.add_theme_font_size_override("font_size", 13)
+	b.add_theme_font_size_override("font_size", 14)
 	return b
 
 
@@ -187,7 +188,7 @@ func _build_left() -> void:
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.clip_text = true
 		var sell := _small_button("", top, func(): game.sell(i))
-		sell.add_theme_font_size_override("font_size", 11)
+		sell.add_theme_font_size_override("font_size", 13)
 		var bot := HBoxContainer.new()
 		bot.add_theme_constant_override("separation", 8)
 		cv.add_child(bot)
@@ -295,8 +296,16 @@ func _build_bottom() -> void:
 	_ruler.boss_every = int(game.cfg.waves.boss_every)
 	_ruler.perk_every = int(game.cfg.waves.perk_every)
 	v.add_child(_ruler)
-	var hint := _mono(tr("Klick wählt aus · Q/E drehen · Mausrad zoomt · Leertaste Pause · R neu würfeln"), v, 11, UiTheme.MUTED)
+	var hint := _mono(tr("Klick wählt aus · Q/E drehen · Mausrad zoomt · P/Leertaste Pause · 1–3 Tempo · R neu würfeln"), v, 13, UiTheme.TEXT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Dunkle Platte, sonst geht die Zeile über hellem Schnee unter
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(0.02, 0.08, 0.15, 0.78)
+	plate.set_content_margin_all(3)
+	plate.content_margin_left = 10
+	plate.content_margin_right = 10
+	hint.add_theme_stylebox_override("normal", plate)
+	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 func _set_play_visible(on: bool) -> void:
@@ -487,10 +496,11 @@ func _fill_slot(i: int) -> void:
 	var sell: Button = c.sell
 	var seg: SvHolo.Seg = c.seg
 	if i >= game.slots_open:
-		p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(UiTheme.MISSING, 0.05), Color(UiTheme.MISSING, 0.45), 9))
+		# Gesperrt ist kein Fehler: neutral statt Warnrot (UI-Prüfung 2026-11-25), Rot bleibt für Gefahr
+		p.add_theme_stylebox_override("panel", HoloTheme.frame(Color(LINE, 0.02), Color(UiTheme.MUTED, 0.3), 9))
 		c.name.text = tr("P%d · GESPERRT") % (i + 1)
-		c.name.add_theme_color_override("font_color", Color(UiTheme.MISSING, 0.9))
-		c.info.text = tr("AUFRÜSTEN: MONTAGEPLATZ")
+		c.name.add_theme_color_override("font_color", UiTheme.MUTED)
+		c.info.text = tr("FREI DURCH AUFRÜSTEN: MONTAGEPLATZ")
 		seg.visible = false
 		sell.visible = false
 		return

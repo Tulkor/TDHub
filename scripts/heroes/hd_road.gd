@@ -6,26 +6,55 @@ extends RefCounted
 
 var id := ""
 var name := ""
+var raw_points: Array = []
 var points: Array = []      ## Vector3
 var cum: Array = []         ## Länge bis Punkt i
 var length := 0.0
 var gates: Array = []       ## HdBuilding, Vorwerk zuerst
 var fast := {}              ## {"vorwerk": 1.3, "innentor": 1.15}
+var gate_side := 1.0       ## Getrennte Turmseiten für Lanes mit gemeinsamem Schlussabschnitt.
 
 
 func _init(d: Dictionary, fast_mult: Dictionary) -> void:
 	id = str(d.id)
 	name = str(d.get("name", id))
+	gate_side = float(d.get("gate_side", 1.0))
 	fast = fast_mult
-	var total := 0.0
+	var raw: Array = []
 	for i in d.points.size():
 		var p: Array = d.points[i]
-		var v := Vector3(float(p[0]), 0, float(p[1]))
+		raw.append(Vector3(float(p[0]), 0, float(p[1])))
+	raw_points=raw
+	points = rounded(raw, float(d.get("corner_radius", 6.0)),int(d.get("merge_index",-1)))
+	var total := 0.0
+	for i in points.size():
+		var v: Vector3 = points[i]
 		if i > 0:
 			total += v.distance_to(points[i - 1])
-		points.append(v)
 		cum.append(total)
 	length = total
+
+
+## Quadratische Kurven liegen innerhalb der alten Ecken; Spawn/Ziel bleiben unverändert.
+static func rounded(raw: Array, cut := 4.0, keep_index := -1) -> Array:
+	if raw.size()<3:return raw.duplicate()
+	var result: Array = [raw[0]]
+	for i in range(1,raw.size()-1):
+		var incoming: Vector3 = raw[i]-raw[i-1]
+		var outgoing: Vector3 = raw[i+1]-raw[i]
+		if i==keep_index or incoming.normalized().dot(outgoing.normalized())>.995:
+			result.append(raw[i])
+			continue
+		var radius := minf(cut,minf(incoming.length(),outgoing.length())*.28)
+		var a: Vector3 = raw[i]-incoming.normalized()*radius
+		var b: Vector3 = raw[i]+outgoing.normalized()*radius
+		result.append(a)
+		var steps := maxi(3,ceili(radius/1.8))
+		for k in range(1,steps+1):
+			var t := float(k)/steps
+			result.append(a.lerp(raw[i],t).lerp(raw[i].lerp(b,t),t))
+	result.append(raw[-1])
+	return result
 
 
 func _segment(s: float) -> int:

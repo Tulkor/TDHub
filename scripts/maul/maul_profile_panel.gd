@@ -36,7 +36,7 @@ func _ready() -> void:
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	box.add_child(bottom)
-	var hint := UiUtil.label("Gezählt wird ohne Sandbox und ohne Debug-Menü. Im Koop speichert jeder sein eigenes Profil auf seinem Rechner.", bottom, 13)
+	var hint := UiUtil.label("Gezählt wird ohne Sandbox und ohne Debug-Menü. Im Koop speichert jeder sein eigenes Profil auf seinem Rechner.", bottom, 14)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.custom_minimum_size.x = 500
@@ -138,7 +138,7 @@ func _shop_table(parent: Node) -> void:
 	grid.add_theme_constant_override("h_separation", 16)
 	v.add_child(grid)
 	for h in ["Filiale", "Partien", "Siege", "Bestes Level", "Schwerster Sieg"]:
-		var l := UiUtil.label(h, grid, 13)
+		var l := UiUtil.label(h, grid, 14)
 		l.add_theme_color_override("font_color", DecoTheme.GOLD)
 	var levels := MaulData.levels().size()
 	for s in MaulData.shops():

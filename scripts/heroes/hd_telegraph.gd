@@ -11,6 +11,9 @@ const CIRCLE := 0
 const RING := 1
 const CONE := 2
 const LINE := 3
+const CROSS := 4
+const ARC := 5
+const BOX := 6
 
 const RED := Color(1.0, 0.16, 0.12, 1.0)
 const BLUE := Color(0.25, 0.65, 1.0, 1.0)
@@ -36,6 +39,7 @@ static func enemy_color() -> Color:
 const CODE := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled, blend_mix;
+#include "res://assets/shaders/hd_ground_height.gdshaderinc"
 uniform int shape = 0;
 uniform float radius = 2.0;
 uniform float inner = 0.0;
@@ -51,6 +55,8 @@ uniform vec4 color : source_color = vec4(1.0, 0.16, 0.12, 1.0);
 varying vec2 p;
 void vertex() {
 	p = VERTEX.xz;
+	vec2 at=(MODEL_MATRIX*vec4(VERTEX,1.0)).xz;
+	VERTEX+=(inverse(MODEL_MATRIX)*vec4(0.0,hd_effect_height(at),0.0,0.0)).xyz;
 }
 void fragment() {
 	float d = length(p);
@@ -62,10 +68,17 @@ void fragment() {
 	} else if (shape == 1) {
 		e = min(radius - d, inner > 0.0 ? d - inner : radius);
 		fill = step(d, inner + (radius - inner) * progress);
-	} else if (shape == 2) {
+	} else if (shape == 2 || shape == 5) {
 		float a = abs(atan(p.x, -p.y));
 		e = min(radius - d, (half_angle - a) * max(d, 0.3));
+		if (shape == 5) { e = min(e, d - inner); }
 		fill = step(d, radius * progress);
+	} else if (shape == 4) {
+		e = max(min(radius - abs(p.x), width * 0.5 - abs(p.y)), min(width * 0.5 - abs(p.x), radius - abs(p.y)));
+		fill = step(max(abs(p.x), abs(p.y)), radius * progress);
+	} else if (shape == 6) {
+		e = min(len * 0.5 - abs(p.y), width * 0.5 - abs(p.x));
+		fill = step(abs(p.y), len * 0.5 * progress);
 	} else {
 		float f = -p.y;
 		e = min(min(f + 0.02, len - f), width * 0.5 - abs(p.x));
@@ -152,12 +165,16 @@ func _ready() -> void:
 		_shader = Shader.new()
 		_shader.code = CODE
 	var m := PlaneMesh.new()
-	if shape == LINE:
+	if shape == LINE or shape == BOX:
 		m.size = Vector2(width + 0.1, length + 0.1)
-		m.center_offset = Vector3(0, 0, -length * 0.5)
+		if shape == LINE:
+			m.center_offset = Vector3(0, 0, -length * 0.5)
 	else:
 		m.size = Vector2.ONE * (radius * 2.0 + 0.2)
 	mesh = m
+	set_meta("terrain_ground",true)
+	m.subdivide_width=clampi(ceili(m.size.x/1.5)-1,0,32)
+	m.subdivide_depth=clampi(ceili(m.size.y/1.5)-1,0,32)
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_mat = ShaderMaterial.new()
 	_mat.shader = _shader
@@ -205,8 +222,10 @@ static func in_shape(kind: int, origin: Vector3, dir: Vector3, r: float, r_in: f
 			return d <= r + extra
 		RING:
 			return d <= r + extra and d >= r_in - extra
-		CONE:
+		CONE, ARC:
 			if d > r + extra:
+				return false
+			if kind == ARC and d < r_in - extra:
 				return false
 			if d < extra + 0.3:
 				return true
@@ -216,6 +235,13 @@ static func in_shape(kind: int, origin: Vector3, dir: Vector3, r: float, r_in: f
 			var along := local.dot(f)
 			var side := absf(local.dot(Vector3(-f.z, 0, f.x)))
 			return along >= -extra and along <= l + extra and side <= w * 0.5 + extra
+		CROSS, BOX:
+			var f := Vector3(dir.x, 0, dir.z).normalized()
+			var along := absf(local.dot(f))
+			var side := absf(local.dot(Vector3(-f.z, 0, f.x)))
+			if kind == BOX:
+				return along <= l * 0.5 + extra and side <= w * 0.5 + extra
+			return (along <= r + extra and side <= w * 0.5 + extra) or (side <= r + extra and along <= w * 0.5 + extra)
 	return false
 
 

@@ -13,6 +13,8 @@ const DECO := "deco"
 const POSTER := "poster"
 ## Tower Survivors: Hologramm (holo_theme.gd), Cyan-Linien auf halbtransparentem Dunkelblau.
 const HOLO := "holo"
+## Bollwerk: Eisenliturgie (Nachtblau, Gold, geschmiedete Doppelrahmen).
+const BOLLWERK := "bollwerk"
 
 const ARCADE_COLORS := {
 	"BG": Color("07040e"), "BAR": Color("0d0618"), "PANEL": Color("0d0618"), "PANEL_2": Color("160b28"),
@@ -65,6 +67,7 @@ static func use_skin(name: String) -> void:
 		DECO: c = _deco_colors()
 		POSTER: c = PosterTheme.COLORS
 		HOLO: c = HoloTheme.COLORS
+		BOLLWERK: c = HdUiStyle.COLORS
 	BG = c.BG
 	BAR = c.BAR
 	PANEL = c.PANEL
@@ -102,6 +105,10 @@ static func holo() -> bool:
 	return skin == HOLO
 
 
+static func bollwerk() -> bool:
+	return skin == BOLLWERK
+
+
 ## Farben von DecoTheme unter den Namen von UiTheme (kein Versatz-Schatten: SHADOW = Leistenfarbe).
 static func _deco_colors() -> Dictionary:
 	return {
@@ -134,6 +141,8 @@ static func box(bg: Color, border := Color.TRANSPARENT, _radius := 0, border_wid
 
 ## Kasten mit schräg abgeschnittenen Ecken oben links und unten rechts (Tooltips).
 static func chamfer(bg: Color, border: Color, cut := 10, pad := 10.0) -> StyleBox:
+	if bollwerk():
+		return HdUiStyle.frame(bg, border, pad, float(cut))
 	if druid():
 		return DruidTheme.frame(bg, border, pad)
 	if deco():
@@ -153,6 +162,8 @@ static func chamfer(bg: Color, border: Color, cut := 10, pad := 10.0) -> StyleBo
 
 ## Hauptpanel: dicker rosa Rahmen, harter türkiser Schatten nach rechts unten.
 static func panel(pad := 14.0, alpha := 0.95, border := Color.TRANSPARENT) -> StyleBox:
+	if bollwerk():
+		return HdUiStyle.panel(pad, alpha, border)
 	if poster():
 		return PosterTheme.panel(pad, alpha, BORDER if border.a == 0.0 else border)
 	if holo():
@@ -172,6 +183,8 @@ static func panel(pad := 14.0, alpha := 0.95, border := Color.TRANSPARENT) -> St
 
 
 static func font(bold := false) -> Font:
+	if bollwerk():
+		return HdUiStyle.font(bold)
 	if druid():
 		return DruidTheme.font(bold)
 	if deco():
@@ -185,6 +198,9 @@ static func font(bold := false) -> Font:
 
 static func get_theme() -> Theme:
 	if _themes.has(skin):
+		return _themes[skin]
+	if bollwerk():
+		_themes[skin] = HdUiStyle.get_theme()
 		return _themes[skin]
 	if deco():
 		_themes[skin] = DecoTheme.get_theme()
@@ -280,6 +296,9 @@ static func icon(kind: String, px := 22) -> Texture2D:
 
 ## Button in einer Akzentfarbe (Rosa für die Hauptaktion, Lila für One-Shots), mit hartem Versatz-Schatten.
 static func accent_button(b: Button, bg: Color, fg: Color, _glow: Color = Color.TRANSPARENT) -> void:
+	if bollwerk():
+		HdUiStyle.accent_button(b, bg, fg)
+		return
 	if druid():
 		DruidTheme.accent_button(b, bg, fg)
 		return
@@ -327,6 +346,8 @@ static func caption(text: String, parent: Node) -> Label:
 ## Panel-Überschrift (DPS, Gegner, Tower, Elemente …): Arcade in Großbuchstaben und fett, optional farbig;
 ## Druidenhain in Uncial Antiqua, etwas größer, in hellem Messing mit schwarzem Schatten.
 static func heading(l: Label, color := Color.TRANSPARENT) -> Label:
+	if bollwerk():
+		return HdUiStyle.heading(l, color)
 	if druid():
 		return DruidTheme.heading(l)
 	if poster():
@@ -348,6 +369,8 @@ static func heading(l: Label, color := Color.TRANSPARENT) -> Label:
 
 ## Überschrift im Arcade-Stil: Großbuchstaben, fett, rosa mit türkisem Schatten.
 static func title(l: Label, size := 0) -> Label:
+	if bollwerk():
+		return HdUiStyle.title(l, size)
 	if druid():
 		return DruidTheme.title(l, size)
 	if poster():

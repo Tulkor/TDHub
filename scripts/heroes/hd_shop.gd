@@ -60,6 +60,10 @@ func consumable(id: String) -> bool:
 	return item(id).has("use")
 
 
+func usable(id: String) -> bool:
+	return consumable(id) or item(id).has("active")
+
+
 ## Gesamtwert eines Items (mit allen Bauteilen), Grundlage für den Verkaufspreis.
 func total_cost(id: String) -> int:
 	var it := item(id)
@@ -227,9 +231,14 @@ func _changed() -> void:
 # ---------------------------------------------------------------- Befehle
 
 func act(cmd: Dictionary) -> String:
+	if game.coop and not game.coop.host:
+		game.coop.command({"kind":"shop", "cmd":cmd})
+		return ""
 	if game.state != "play" and game.state != "setup":
 		return tr("Das Spiel ist vorbei")
 	match str(cmd.get("kind", "")):
+		"explore":
+			return game.exploration.act(cmd)
 		"buy":
 			return buy(str(cmd.id))
 		"craft":
@@ -345,6 +354,8 @@ func missing(id: String) -> Array:
 ## Gold für das Rezept, mit buy_missing auch für fehlende Bauteile (die selbst Rezepte sein können).
 func craft_cost(id: String, buy_missing := false) -> int:
 	var c := int(item(id).get("price", 0))
+	if str(game.hero.def.get("passive_kind", "")) == "craft":
+		c = ceili(c * .9)
 	if buy_missing:
 		for m in missing(id):
 			c += total_cost(m)
@@ -444,8 +455,13 @@ func move(from: String, fi: int, to: String, ti: int) -> String:
 
 func use(i: int) -> String:
 	var x = at("hero", i)
-	if x == null or not consumable(x.id):
+	if x == null or not usable(x.id):
 		return "?"
+	if item(x.id).has("active"):
+		var why: String = game.hero.ITEM_EFFECTS.activate(game.hero, item(x.id))
+		if why == "":
+			_changed()
+		return why
 	var h = game.hero
 	if h == null or not h.alive():
 		return tr("Der Held ist gefallen")
@@ -527,6 +543,7 @@ const STAT_TEXT := {
 	"hp": "+%d Leben", "mana": "+%d Mana", "armor": "+%s Rüstung", "hp_regen": "+%s Leben/s",
 	"mana_regen": "+%s Mana/s", "damage": "+%d %% Schaden", "attack_speed": "+%d %% Angriffstempo",
 	"speed": "+%d %% Lauftempo", "cdr": "−%d %% Abklingzeit", "lifesteal": "%d %% Lebensraub",
+	"mastery": "+%d Meisterschaftswertung",
 }
 const PCT := ["damage", "attack_speed", "speed", "cdr", "lifesteal"]
 
@@ -539,7 +556,7 @@ static func stat_text(stats: Dictionary) -> String:
 		var v := float(stats[k])
 		if k in PCT:
 			out.append(TranslationServer.translate(STAT_TEXT[k]) % roundi(v * 100.0))
-		elif k in ["hp", "mana"]:
+		elif k in ["hp", "mana", "mastery"]:
 			out.append(TranslationServer.translate(STAT_TEXT[k]) % roundi(v))
 		else:
 			out.append(TranslationServer.translate(STAT_TEXT[k]) % String.num(v, 1))
@@ -555,6 +572,9 @@ func tooltip(id: String, x = null) -> String:
 		for gid in x.get("gems", []):
 			gl.append(tr(str(game.zones.gem(str(gid)).get("name", gid))))
 		var lines2: Array = [head, stat_text(entry_stats(x))]
+		if it.has("desc"):
+			lines2.append(tr(str(it.desc)))
+		lines2.append_array(_effect_lines(it))
 		if not gl.is_empty():
 			lines2.append(tr("Edelsteine: %s") % ", ".join(gl))
 		lines2.append(tr("Verkauf %d Gold") % sell_price(id))
@@ -564,6 +584,7 @@ func tooltip(id: String, x = null) -> String:
 		lines.append(stat_text(it.stats))
 	if it.has("desc"):
 		lines.append(tr(str(it.desc)))
+	lines.append_array(_effect_lines(it))
 	if it.has("recipe"):
 		var parts: Array = []
 		for c in it.recipe:
@@ -571,3 +592,21 @@ func tooltip(id: String, x = null) -> String:
 		lines.append(tr("Rezept: %s + %d Gold") % [" + ".join(parts), int(it.price)])
 	lines.append(tr("Verkauf %d Gold") % sell_price(id))
 	return "\n".join(lines)
+
+
+func _effect_lines(it: Dictionary) -> Array:
+	var lines: Array = []
+	if it.has("effect_desc"):
+		lines.append(tr(str(it.effect_desc)))
+	if it.has("effect_group"):
+		lines.append(tr("Einzigartige Passive: je Effektfamilie wirkt nur die höchste Itemstufe."))
+	if it.has("active"):
+		lines.append(tr("Aktiv: %s · %d s Abklingzeit") % [tr(str(it.active.desc)), int(it.active.cooldown)])
+		if str(it.active.get("group", "")) == "mobility":
+			lines.append(tr("Teilt die Abklingzeit mit anderen Bewegungsitems."))
+	if float(it.get("stats", {}).get("mastery", 0)) > 0:
+		lines.append(game.hero.ITEM_EFFECTS.mastery_text(game.hero, float(it.stats.mastery)))
+	if bool(it.get("scepter", false)):
+		var upgrade: Dictionary = game.hero.def.get("scepter", {})
+		lines.append(tr("Szepter: %s") % tr(str(upgrade.get("desc", ""))))
+	return lines

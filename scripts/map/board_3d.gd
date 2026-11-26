@@ -91,6 +91,7 @@ var grid_strength := 0.0:
 			_floor_mat.set_shader_parameter("fine_strength", v)
 
 var _ground: MeshInstance3D
+var _ground_wear: MeshInstance3D
 var _ground_mat: ShaderMaterial
 var _floor: MeshInstance3D
 ## Spiegelung auf dem Feld (FieldStyle "reflect"), gleiche Fläche wie _floor
@@ -171,10 +172,10 @@ func _ready() -> void:
 	_ground = MeshInstance3D.new()
 	_ground_mat = ShaderMaterial.new()
 	_ground_mat.shader = load(GROUND_SHADER)
-	var textures: Dictionary = GROUND_TEXTURES.duplicate()
-	textures.merge(style.get("ground_textures", {}), true)
+	var textures := FieldStyle.surface_textures(GROUND_TEXTURES, style.get("ground_textures", {}))
 	for key in textures:
 		_ground_mat.set_shader_parameter(key, load(textures[key]))
+	_ground_mat.set_shader_parameter("surface_pbr", textures.has("grass_a_specular") and textures.has("grass_b_specular") and textures.has("dirt_specular"))
 	_ground_mat.set_shader_parameter("cell", CELL)
 	_ground_mat.set_shader_parameter("ground_alpha", ground_alpha)
 	for key in style.get("ground", {}):
@@ -195,6 +196,8 @@ func _ready() -> void:
 	var floor_params := FieldStyle.floor_params()
 	for key in floor_params:
 		_floor_mat.set_shader_parameter(key, floor_params[key])
+	if style.get("floor_lit", false) and float(floor_params.get("line_finish", 0.0)) > 0.0:
+		Metall.linien(_floor_mat)
 	_floor_mat.render_priority = -1
 	_floor.material_override = _floor_mat
 	_floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -283,11 +286,7 @@ func _ready() -> void:
 func _rock_material() -> Material:
 	match style.rock:
 		"stone":
-			var m := StandardMaterial3D.new()
-			m.albedo_color = Color("4f5346")
-			m.roughness = 0.95
-			m.metallic_specular = 0.12
-			return m
+			return preload("res://scripts/map/ground_wear.gd").rock_material()
 		"marble":
 			var m := StandardMaterial3D.new()
 			m.albedo_color = Color("16393b")
@@ -341,6 +340,10 @@ func rebuild() -> void:
 		return
 	_rebuild_ground()
 	_rebuild_floor()
+	if _ground_wear != null:
+		_ground_wear.queue_free()
+	var wear = preload("res://scripts/map/ground_wear.gd")
+	_ground_wear = wear.add_paths(self, wear.map_edges(map, CELL, ground_y), CELL*.75, FieldStyle.current_name())
 	_rebuild_markers()
 	refresh_rocks()
 	refresh_path()
@@ -705,6 +708,8 @@ func _add_zone(r: Rect2i, col: Color, width := 0.12, energy := 2.4) -> void:
 		curtain.position = Vector3(mid.x, ZONE_BEAM_HEIGHT / 2.0, mid.y)
 		for m: MeshInstance3D in [strip, curtain]:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# Decorative zone indicators must never illuminate the level through GI.
+			m.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 			if along_z:
 				m.rotation.y = PI / 2.0
 			_markers.add_child(m)
@@ -712,11 +717,12 @@ func _add_zone(r: Rect2i, col: Color, width := 0.12, energy := 2.4) -> void:
 
 func _zone_material(col: Color, energy: float, curtain: bool, side_len: float) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
-	mat.shader = preload("res://assets/shaders/zone_beam.gdshader")
+	mat.shader = preload("res://assets/shaders/zone_beam_surface.gdshader") if style.get("zone_surface_only", false) else preload("res://assets/shaders/zone_beam.gdshader")
 	mat.set_shader_parameter("color", col)
 	mat.set_shader_parameter("energy", energy)
 	mat.set_shader_parameter("curtain", 1.0 if curtain else 0.0)
 	mat.set_shader_parameter("side_len", side_len)
+	mat.set_shader_parameter("radiance_limit", float(style.get("zone_radiance_limit", 0.0)))
 	mat.set_shader_parameter("intensity", _zone_shown)
 	_zone_mats.append(mat)
 	return mat

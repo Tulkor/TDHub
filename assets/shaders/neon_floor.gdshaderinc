@@ -1,4 +1,5 @@
 // Gemeinsamer Teil von neon_floor.gdshader (unbeleuchtet) und neon_floor_lit.gdshader (beleuchtet).
+#include "res://assets/shaders/light_profiles.gdshaderinc"
 /// 1 = blockiertes Feld, ein Pixel pro Feld
 uniform sampler2D blocked : filter_nearest, repeat_disable;
 uniform vec2 cells = vec2(74.0, 74.0);
@@ -54,10 +55,25 @@ uniform vec4 paving_color : source_color = vec4(0.06, 0.2, 0.21, 1.0);
 /// Bodenleuchten in den Kreuzungen der Hauptlinien: Helligkeit des Kerns (0 = keine)
 uniform float floor_lamp = 0.0;
 uniform vec4 lamp_color : source_color = vec4(1.0, 0.85, 0.55, 1.0);
+uniform vec4 lamp_silver_color : source_color = vec4(0.78, 0.87, 1.0, 1.0);
+uniform float lamp_silver_nonbuildable = 0.0;
 /// Radius des Kerns und des Lichtscheins auf dem Boden in Einheiten, Helligkeit des Scheins
 uniform float lamp_size = 0.06;
 uniform float lamp_radius = 0.9;
 uniform float lamp_pool = 0.25;
+/// Higher powers produce a spotlight-like pool with a steeper outer falloff.
+uniform float lamp_falloff = 2.0;
+/// Recessed metal housing and individual warm LEDs; preserve surface texture in the light pool.
+uniform float lamp_recess = 0.0;
+/// -1 preserves the original profile; 0 soft, 1 hard, 2 spotlight.
+uniform int lamp_type = -1;
+uniform float lamp_half_distance = 0.6;
+uniform float lamp_edge_width = 0.03;
+uniform float lamp_height = 1.0;
+uniform vec3 lamp_direction = vec3(0.0, -1.0, 0.0);
+uniform float lamp_inner_angle = 20.0;
+uniform float lamp_outer_angle = 40.0;
+uniform float lamp_focus = 1.0;
 /// Fläche der blockierten Felder (0 = durchsichtig wie bisher)
 uniform vec4 blocked_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
 uniform float blocked_alpha = 0.0;
@@ -81,6 +97,8 @@ uniform float glow_width = 0.22;
 uniform float glow_sat = 0.8;
 
 #ifdef LIT
+#include "res://assets/shaders/terrain_relief.gdshaderinc"
+uniform float floor_relief : hint_range(0.0, 1.0) = 0.3;
 /// Nur beleuchtetes Feld: Helligkeit der Fläche vor dem Licht (das Licht hellt sie wieder auf)
 uniform float lit_albedo = 1.0;
 /// Eigenleuchten der Linien (Anteil der Linienfarbe)
@@ -90,6 +108,9 @@ uniform float major_glow = 0.0;
 uniform vec4 major_glow_color : source_color = vec4(1.0, 0.78, 0.4, 1.0);
 uniform float line_metallic = 0.8;
 uniform float line_roughness = 0.35;
+uniform sampler2D metal_roughness : filter_linear_mipmap, repeat_enable, hint_default_white;
+uniform float line_finish = 0.0;
+uniform float line_clearcoat = 0.0;
 /// Marmor: glatt, mit sichtbarem Glanzlicht der Sonne
 uniform float floor_roughness = 0.3;
 uniform float floor_specular = 0.6;
@@ -166,7 +187,11 @@ float noise(vec2 p) {
 // Marmor: dunkle Grundfläche mit feinen hellen Adern
 vec3 marble_color(vec3 base, vec2 p) {
 	float n = noise(p * 0.7) * 0.6 + noise(p * 1.9) * 0.3 + noise(p * 5.0) * 0.1;
-	float vein = 1.0 - smoothstep(0.0, 0.035, abs(sin((p.x * 0.6 + p.y * 0.35 + n * 5.0) * 3.14159)));
+	vec2 drift=vec2(noise(p*.08+vec2(13,7)),noise(p*.09+vec2(3,29)))-.5;
+	vec2 q=p+drift*5.0;
+	float vein_a = 1.0 - smoothstep(0.0,0.035,abs(sin((q.x*.6+q.y*.35+n*5.0)*3.14159)));
+	float vein_b = 1.0 - smoothstep(0.0,0.035,abs(sin((-q.x*.28+q.y*.71+noise(q*.7+vec2(17,9))*4.0)*3.14159)));
+	float vein=mix(vein_a,vein_b,smoothstep(.25,.75,noise(p*.06)));
 	return mix(base * (0.85 + n * 0.3), vein_color.rgb, vein * vein_color.a);
 }
 
@@ -232,7 +257,8 @@ void fragment() {
 			alpha = max(alpha, l.a);
 			lines = max(lines, joints ? 0.0 : l.a);
 			vec2 gm = go / (grid_cells * major_every);
-			vec2 dm = abs(fract(gm + 0.5) - 0.5) * grid_cells * major_every * cell;
+			vec2 lamp_offset = (fract(gm + 0.5) - 0.5) * grid_cells * major_every * cell;
+			vec2 dm = abs(lamp_offset);
 			float dmm = min(dm.x, dm.y);
 			if (major_double > 0.5) {
 				dmm = abs(dmm - line_width * 3.0);
@@ -258,12 +284,39 @@ void fragment() {
 				majors = max(majors, fill * major_alpha);
 			}
 			if (floor_lamp > 0.0) {
+				// Anchor classification keeps a fixture one color even at a zone boundary.
+				ivec2 lamp_cell = ivec2(floor(grid_origin + floor(gm + 0.5) * grid_cells * major_every));
+				float silver = 0.0;
+				if (lamp_silver_nonbuildable > 0.0 && lamp_cell.x >= 0 && lamp_cell.y >= 0 && lamp_cell.x < int(cells.x) && lamp_cell.y < int(cells.y)) {
+					silver = max(texelFetch(paving, lamp_cell, 0).r, is_zone(lamp_cell));
+				}
+				vec3 fixture_light = mix(lamp_color.rgb, lamp_silver_color.rgb, silver);
 				// Bodenleuchte in jeder Kreuzung der Hauptlinien: heller Kern und ein Lichtkegel auf dem Boden
 				float r = length(dm);
 				float lamp_core = 1.0 - smoothstep(lamp_size, lamp_size + aa, r);
-				float pool = exp(-r * r / (lamp_radius * lamp_radius)) * lamp_pool;
-				lamp_light = lamp_color.rgb * (lamp_core * floor_lamp + pool * (1.0 - lamp_core));
-				col = mix(col, lamp_color.rgb, lamp_core);
+				float radius = max(lamp_radius, 0.001);
+				float pool = exp(-pow(r / radius, lamp_falloff)) * lamp_pool;
+				pool *= 1.0 - smoothstep(radius, radius * 2.0, r);
+				if (lamp_type >= 0) {
+					pool = surface_light_profile(lamp_type, lamp_offset, lamp_half_distance, radius,
+						lamp_edge_width, lamp_height, lamp_direction, lamp_inner_angle, lamp_outer_angle, lamp_focus) * lamp_pool;
+				}
+				if (lamp_recess > 0.0) {
+					float housing = 1.0 - smoothstep(lamp_size * 2.0, lamp_size * 2.0 + aa, r);
+					float bezel = smoothstep(lamp_size * 1.55 - aa, lamp_size * 1.55, r);
+					vec3 surface = col;
+					vec3 bezel_color = mix(vec3(0.19, 0.15, 0.085), vec3(0.30, 0.34, 0.39), silver);
+					col = mix(col, mix(vec3(0.018, 0.021, 0.023), bezel_color, bezel), housing);
+					float angle = atan(dm.y + 0.00001, dm.x + 0.00001);
+					float leds = pow(0.5 + 0.5 * cos(angle * 8.0), 5.0);
+					float ring = 1.0 - smoothstep(lamp_size * 0.3, lamp_size * 0.3 + aa, abs(r - lamp_size * 1.05));
+					lamp_core = max(ring * leds, lamp_core * 0.04);
+					// Diffuse pool is modulated by the actual paving, rather than a flat emissive disc.
+					lamp_light = fixture_light * (lamp_core * floor_lamp + surface * pool * 2.5 * (1.0 - housing));
+				} else {
+					lamp_light = fixture_light * (lamp_core * floor_lamp + pool * (1.0 - lamp_core));
+					col = mix(col, fixture_light, lamp_core);
+				}
 			}
 		} else {
 			col *= plain_shade;
@@ -324,8 +377,15 @@ void fragment() {
 	ALBEDO = col * mix(lit_albedo, 1.0, lines);
 	EMISSION = col * lines * line_glow + major_glow_color.rgb * majors * major_glow + lamp_light;
 	METALLIC = lines * line_metallic;
-	ROUGHNESS = mix(floor_roughness, line_roughness, lines);
-	SPECULAR = floor_specular;
+	// Calculated marble/metal microrelief; the unshaded holographic floor is unchanged.
+	float grain = noise(world_xz * 8.0);
+	float relief = grain * 0.0012 * marble + lines * 0.0015;
+	NORMAL = terrain_relief_normal(NORMAL, VERTEX, relief, floor_relief);
+	float polished = line_roughness * mix(1.0, texture(metal_roughness, world_xz * 0.18).r, line_finish);
+	ROUGHNESS = clamp(mix(floor_roughness + (grain - 0.5) * 0.04 * marble, polished, lines), 0.04, 1.0);
+	SPECULAR = clamp(mix(floor_specular * mix(0.94, 1.02, grain), 0.65, lines * line_finish), 0.0, 1.0);
+	CLEARCOAT = lines * line_clearcoat;
+	CLEARCOAT_ROUGHNESS = 0.22;
 #else
 	ALBEDO = col + lamp_light;
 	ALPHA = clamp(alpha, 0.0, 1.0);

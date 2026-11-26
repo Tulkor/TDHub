@@ -22,10 +22,13 @@ var _core_light: OmniLight3D
 var _core_mat: StandardMaterial3D
 var _time := 0.0
 var _tex_cache := {}
+var _model_cache := {}
+var _bounds_cache := {}
 
 const FOG_WALL := preload("res://scripts/ui/wc3_nebelwand.gdshader")
 const DETAIL := preload("res://assets/textures/ground/concrete.jpg")
 const DETAIL_NORMAL := preload("res://assets/textures/ground/concrete_normal.jpg")
+const DETAIL_SPECULAR := preload("res://assets/textures/ground/concrete_specular.png")
 const STONE := preload("res://scripts/ui/wc3_stein.gdshader")
 const GROUND := preload("res://scripts/ui/wc3_boden.gdshader")
 const CRYSTAL := preload("res://scripts/ui/wc3_kristall.gdshader")
@@ -49,6 +52,7 @@ const CAM_POS := Vector3(5.5, 4.2, 20)
 
 
 func _ready() -> void:
+	var build_start := Time.get_ticks_usec()
 	rng.seed = 7
 	_environment()
 	_ground()
@@ -71,6 +75,7 @@ func _ready() -> void:
 	moon.look_at_from_position(Vector3.ZERO, -to_moon, Vector3.UP)
 	_clouds.set_shader_parameter("moon_dir", to_moon)
 	_animate(0.0)
+	set_meta("menu_build_ms",(Time.get_ticks_usec()-build_start)/1000.0)
 
 
 func _process(delta: float) -> void:
@@ -140,6 +145,7 @@ func _ground() -> void:
 		var file: String = "grass_a" if k == "grass" else k
 		gm.set_shader_parameter(k, load(GT + file + ".jpg"))
 		gm.set_shader_parameter(k + "_n", load(GT + file + "_normal.jpg"))
+		gm.set_shader_parameter(k + "_s", load(GT + file + "_specular.png"))
 	gm.set_shader_parameter("plaza", Vector3(SHRINE.x, SHRINE.z, PLAZA_R))
 	gm.set_shader_parameter("path_pts", PackedVector2Array(PATH))
 	g.material_override = gm
@@ -408,6 +414,8 @@ func _texturize(n: Node, scale: float, moss: float) -> void:
 				m.set_shader_parameter("base_color", Color(c.r, c.g, c.b))
 				m.set_shader_parameter("detail", DETAIL)
 				m.set_shader_parameter("detail_n", DETAIL_NORMAL)
+				m.set_shader_parameter("detail_s", DETAIL_SPECULAR)
+				m.set_shader_parameter("moss_s", load(GT + "grass_b_specular.png"))
 				m.set_shader_parameter("tex_scale", scale)
 				m.set_shader_parameter("moss", moss)
 				if moss > 0.0:
@@ -436,12 +444,16 @@ func _darken(n: Node, k: float) -> void:
 
 ## Modell auf Höhe h skaliert, mit der Unterkante auf pos.
 func _place(path: String, pos: Vector3, h: float, rot := 0.0, moss := 0.0) -> Node3D:
-	var n: Node3D = load(M + path).instantiate()
+	var cache_models := not OS.get_cmdline_user_args().has("--menu-cache=off")
+	if cache_models and not _model_cache.has(path): _model_cache[path] = load(M+path)
+	var scene: PackedScene = _model_cache[path] if cache_models else load(M+path)
+	var n: Node3D = scene.instantiate()
 	add_child(n)
 	if not path.begins_with("crystals/") and not path.begins_with("scenery/tiere/"):
 		# Bäume feiner gekachelt als Kirche, Säulen und Steine
 		_texturize(n, 0.3 if path.begins_with("nature/pine") or path.begins_with("nature/common_tree") else 0.12, moss)
-	var ab := _aabb(n)
+	if cache_models and not _bounds_cache.has(path): _bounds_cache[path] = _aabb(n)
+	var ab: AABB = _bounds_cache[path] if cache_models else _aabb(n)
 	var s: float = h / maxf(ab.size.y, 0.001)
 	n.scale = Vector3.ONE * s
 	n.rotation.y = rot

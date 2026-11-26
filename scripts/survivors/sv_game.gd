@@ -206,10 +206,14 @@ func _unhandled_input(ev: InputEvent) -> void:
 				# erst die Auswahl aufheben, dann das Menü
 				if not hud.deselect():
 					hud.toggle_menu()
-			KEY_SPACE:
+			# Pause auch auf P und Tempo auf 1–3 wie in den anderen Modi (UI-Prüfung 2026-11-25)
+			KEY_SPACE, KEY_P:
 				if state == "play":
 					paused = not paused
 					changed.emit()
+			KEY_1, KEY_2, KEY_3:
+				if state == "play":
+					hud._set_speed(ev.keycode - KEY_0)
 			KEY_R:
 				reroll()
 

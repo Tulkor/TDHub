@@ -200,7 +200,7 @@ func _add_card(id: String, name: String, text: String, col: Color, bonus: String
 	title.add_theme_color_override("font_color", col)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var short := _short(text)
-	var info := UiUtil.label(short, v, 13)
+	var info := UiUtil.label(short, v, 14)
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	info.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -214,7 +214,7 @@ func _add_card(id: String, name: String, text: String, col: Color, bonus: String
 		b.tooltip_text += "\n\n" + tr("Dein Rekord: Level %d, %d von %d Partien gewonnen") % [int(rec.best_level), int(rec.wins), int(rec.games)]
 	var tag: Label = null
 	if bonus != "" or _kind == "pro":
-		tag = UiUtil.label("", v, 13)
+		tag = UiUtil.label("", v, 14)
 		tag.add_theme_color_override("font_color", DecoTheme.CYAN)
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cards[id] = [b, title, info, tag, bonus, col]
@@ -274,12 +274,11 @@ func _refresh() -> void:
 		_asc.set_difficulty(_difficulty)
 	for e in _mode_buttons:
 		e[0].set_pressed_no_signal(e[1] == _mode)
-	if _sandbox_button != null:
-		_sandbox_button.set_pressed_no_signal(_sandbox)
-	if _foreign_button != null:
-		_foreign_button.set_pressed_no_signal(_foreign)
-	if _share_button != null:
-		_share_button.set_pressed_no_signal(_share)
+	# Schalter sagen ihren Zustand auch in Worten, nicht nur über die Farbe (UI-Prüfung 2026-11-25)
+	for e in [[_sandbox_button, _sandbox, "Sandbox"], [_foreign_button, _foreign, "Überall bauen"], [_share_button, _share, "Geldteilen"]]:
+		if e[0] != null:
+			e[0].set_pressed_no_signal(e[1])
+			e[0].text = tr(e[2]) + " · " + (tr("an") if e[1] else tr("aus"))
 	for k in _kind_buttons:
 		_kind_buttons[k].set_pressed_no_signal(k == _kind)
 	var pro_open := _pro_open()

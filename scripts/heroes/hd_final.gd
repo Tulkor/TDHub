@@ -24,6 +24,12 @@ var _root: Node3D
 var _stations: Dictionary = {}  ## id → {pos, node, ring}
 var _hold: Dictionary = {}      ## id → Sekunden draufstehen
 var _deaths := 0
+var challenger: HdHero
+var remote_lines: Array = []
+var remote_run := {}
+var arena_theme := ""
+var _visuals: Node3D
+var layout: HdFinalLayout
 
 
 func _init(g) -> void:
@@ -68,13 +74,19 @@ func enter() -> void:
 	var c: Array = data.area.center
 	center = Vector3(float(c[0]), 0, float(c[1]))
 	active = true
+	layout = HdFinalLayout.new(data, center)
+	game.day_cycle.atmosphere = data.get("lighting", {}).duplicate(true)
+	game.day_cycle.apply()
 	if bool(data.boss.get("variants", false)):
 		HdBossCatalog.resolve(game)
 	game.events.kinds.clear()
 	_build()
-	_deaths = game.hero.deaths
+	_deaths = _death_count()
 	if not game.hero.alive():
 		game.hero._respawn()
+	for actor: HdHero in game.playing_heroes():
+		actor.position = start_pos() + Vector3(game.hero_slot(actor) * 1.5, 0, 0)
+		actor.order = {}
 	game.teleport_hero(start_pos())
 	game.message.emit(tr("Ihr betretet %s. Löst Challenges oder geht direkt durch das Tor.") % tr(str(data.name)))
 	if sys():
@@ -85,39 +97,10 @@ func enter() -> void:
 func _build() -> void:
 	_root = Node3D.new()
 	game.add_child(_root)
-	var b := bounds()
-	var ground := MeshInstance3D.new()
-	var gm := PlaneMesh.new()
-	gm.size = Vector2(b[2] - b[0] + 8.0, b[3] - b[1] + 8.0)
-	ground.mesh = gm
-	ground.position = center + Vector3(0, -0.02, 0)
-	ground.material_override = HdDev.mat(Color(str(data.area.ground)))
-	_root.add_child(ground)
-	# Rand aus Felszacken
-	var edge := HdDev.mat(Color(str(data.area.edge)), 0.5, 0.3)
-	for k in 64:
-		var t := k / 64.0
-		var p: Vector3
-		if t < 0.25:
-			p = Vector3(lerpf(b[0], b[2], t * 4.0), 0, b[1])
-		elif t < 0.5:
-			p = Vector3(b[2], 0, lerpf(b[1], b[3], (t - 0.25) * 4.0))
-		elif t < 0.75:
-			p = Vector3(lerpf(b[2], b[0], (t - 0.5) * 4.0), 0, b[3])
-		else:
-			p = Vector3(b[0], 0, lerpf(b[3], b[1], (t - 0.75) * 4.0))
-		var h := 2.0 + fmod(k * 1.37, 2.5)
-		_root.add_child(HdDev.cyl(0.8, 1.8, h, edge, p + Vector3(0, h * 0.5, 0), 5))
-	# Kampfplatz und Tor
-	var ap := arena_pos()
-	var ar := float(data.arena.radius)
-	_root.add_child(HdDev.cyl(ar, ar, 0.08, HdDev.mat(Color("2a1a40"), 0.5, 0.2), ap + Vector3(0, 0.02, 0), 32))
+	var selected := str(game.final_boss_id) if bool(data.boss.get("variants", false)) else str(data.boss.id)
+	arena_theme = HdFinalStyle.theme_id(selected)
+	_visuals = HdFinalStyle.build(game, _root, data, center, selected)
 	var gp := gate_pos()
-	var stone := HdDev.mat(Color("4a3a6a"), 0.5)
-	for sx in [-3.2, 3.2]:
-		_root.add_child(HdDev.box(Vector3(1.2, 6.0, 1.2), stone, gp + Vector3(sx, 3.0, 0)))
-	_root.add_child(HdDev.box(Vector3(7.6, 1.0, 1.4), stone, gp + Vector3(0, 6.3, 0)))
-	_root.add_child(HdDev.box(Vector3(5.2, 5.2, 0.2), HdDev.mat(UiTheme.PURPLE_LIGHT, 0.5, 1.4), gp + Vector3(0, 2.8, 0)))
 	_station_ring(gp, 2.0, UiTheme.PURPLE_LIGHT)
 	# Stationen
 	for cd in data.list:
@@ -125,8 +108,6 @@ func _build() -> void:
 		var col := Color(str(cd.get("color", "ffffff")))
 		var n := Node3D.new()
 		n.position = p
-		n.add_child(HdDev.cyl(1.6, 1.9, 0.5, stone, Vector3(0, 0.25, 0), 8))
-		n.add_child(HdDev.box(Vector3(0.6, 3.2, 0.6), HdDev.mat(col, 0.5, 1.0), Vector3(0, 2.1, 0)))
 		_root.add_child(n)
 		var ring := _station_ring(p, 2.2, col)
 		_stations[str(cd.id)] = {"pos": p, "node": n, "ring": ring}
@@ -143,11 +124,18 @@ func _station_ring(p: Vector3, r: float, c: Color) -> HdTelegraph:
 # ---------------------------------------------------------------- Ablauf
 
 func step(dt: float) -> void:
+	if game.coop and is_instance_valid(challenger) and challenger != game.hero:
+		game.call_as_hero(challenger, func(): _step(dt))
+	else:
+		_step(dt)
+
+
+func _step(dt: float) -> void:
 	if not active:
 		return
-	if game.hero.deaths > _deaths:
-		_deaths = game.hero.deaths
-		var n := int(data.get("death_lives", 3))
+	if _death_count() > _deaths:
+		var n := int(data.get("death_lives", 3)) * (_death_count() - _deaths)
+		_deaths = _death_count()
 		game.lives -= n
 		game.message.emit(tr("Gefallen im Schlund: −%d Feste-Leben") % n)
 		if str(run.get("kind", "")) == "echos":
@@ -168,6 +156,8 @@ func step(dt: float) -> void:
 			_step_path(dt)
 		"halten":
 			_step_hold(dt)
+		"jagd":
+			_step_hunt(dt)
 	if boss != null and not boss_dead and boss.dead:
 		boss_dead = true
 	if boss_dead and game.state == "play":
@@ -177,7 +167,7 @@ func step(dt: float) -> void:
 ## Draufstehen auf Stationen und Tor (station_hold / gate.hold Sekunden).
 func _step_stands(dt: float) -> void:
 	var h = game.hero
-	if not h.alive():
+	if game.playing_heroes().all(func(actor): return not actor.alive()):
 		_hold = {}
 		return
 	var spots := {"_tor": [gate_pos(), float(data.gate.hold)]}
@@ -187,7 +177,9 @@ func _step_stands(dt: float) -> void:
 				spots[id] = [_stations[id].pos, float(data.get("station_hold", 1.0))]
 	for id in spots:
 		var p: Vector3 = spots[id][0]
-		if Vector2(h.position.x - p.x, h.position.z - p.z).length() < 2.2:
+		var nearby: Array = game.playing_heroes().filter(func(actor): return actor.alive() and Vector2(actor.position.x - p.x, actor.position.z - p.z).length() < 2.2)
+		if not nearby.is_empty():
+			challenger = nearby[0]
 			_hold[id] = float(_hold.get(id, 0.0)) + dt
 			if float(_hold[id]) >= float(spots[id][1]):
 				_hold = {}
@@ -233,12 +225,20 @@ func on_begin(d: Dictionary) -> void:
 			run.hits = 0
 			run.next = 0.0
 			run.from = p
-			run.to = p + Vector3(0, 0, -float(d.length))
+			run.to = layout.arm_point_from_room(str(d.id), float(d.length))
 			run.altar = HdDev.cyl(1.0, 1.2, 1.4, HdDev.mat(UiTheme.GOLD, 0.5, 1.0), run.to + Vector3(0, 0.7, 0), 8)
 			_root.add_child(run.altar)
 		"halten":
 			run.held = 0.0
 			run.wave_t = 1.5
+		"jagd":
+			run.targets = []
+			for i in int(d.count):
+				var angle := TAU * i / int(d.count)
+				var at := layout.constrain(p + Vector3(sin(angle), 0, cos(angle)) * 9.0, 1.0)
+				var enemy: HdEnemy = game.spawn_home(str(d.spawn.base), at, "final_run", p)
+				enemy.gold_free = true
+				run.targets.append(enemy)
 		"wagnis":
 			sys().finish(str(d.id), true)
 	game.changed.emit()
@@ -429,6 +429,15 @@ func _step_hold(dt: float) -> void:
 		_end_run(true)
 
 
+func _step_hunt(dt: float) -> void:
+	run.t = float(run.t) + dt
+	var living: Array = run.targets.filter(func(e): return is_instance_valid(e) and not e.dead)
+	if living.is_empty():
+		_end_run(true)
+	elif float(run.t) >= float(run.def.time):
+		_end_run(false, tr("Zeit abgelaufen."))
+
+
 # ---------------------------------------------------------------- Endboss
 
 ## Haken final_boss_start: Verschlinger mit allen Schwächungen, Held mit allen Endkampf-Werten.
@@ -462,11 +471,15 @@ func start_boss(mods: Dictionary, reason: String) -> void:
 			stats[k] = hm[k]
 	if not stats.is_empty():
 		game.add_event_buff(tr("Endkampf"), stats, 99999.0)
-	if hm.has("dmg_in"):
-		game.hero.add_buff("endkampf", {"dmg_in": float(hm.dmg_in)}, 99999.0)
-	if hm.has("shield"):
-		game.hero.add_shield(float(hm.shield), 99999.0)
-	game.teleport_hero(ap + Vector3(0, 0, float(data.arena.radius) - 3.0))
+	var party: Array = game.playing_heroes()
+	for i in party.size():
+		var actor: HdHero = party[i]
+		if hm.has("dmg_in"):
+			actor.add_buff("endkampf", {"dmg_in": float(hm.dmg_in)}, 99999.0)
+		if hm.has("shield"):
+			actor.add_shield(float(hm.shield), 99999.0)
+		var entry := ap + Vector3((i - (party.size() - 1) * 0.5) * 1.5, 0, float(data.arena.radius) - 3.0)
+		game.call_as_hero(actor, func(): game.teleport_hero(entry))
 	if reason == "awaken":
 		game.message.emit(tr("%s erwacht! Der Endkampf beginnt.") % tr(str(base.name)))
 	else:
@@ -489,6 +502,8 @@ func on_kill(e: HdEnemy) -> bool:
 
 ## Stand der laufenden Challenge für die Anzeige {text, frac} ({} = keine).
 func run_state() -> Dictionary:
+	if game.coop and not game.coop.host:
+		return remote_run
 	if run.is_empty():
 		return {}
 	var d: Dictionary = run.def
@@ -509,6 +524,9 @@ func run_state() -> Dictionary:
 			return {"text": tr("Treffer %d / %d") % [int(run.hits), int(d.max_hits)], "frac": f}
 		"halten":
 			return {"text": tr("Halten %d / %d s") % [floori(float(run.held)), int(d.time)], "frac": clampf(float(run.held) / float(d.time), 0.0, 1.0)}
+		"jagd":
+			var left: int = run.targets.filter(func(e): return is_instance_valid(e) and not e.dead).size()
+			return {"text": tr("Schatten %d / %d · %d s") % [int(d.count) - left, int(d.count), maxi(0, ceili(float(d.time) - float(run.t)))], "frac": 1.0 - float(left) / int(d.count)}
 	return {}
 
 
@@ -521,6 +539,8 @@ func _seal_name(k: int) -> String:
 
 ## Zeilen für die Seitenleiste.
 func lines() -> Array:
+	if game.coop and not game.coop.host:
+		return remote_lines
 	var out: Array = []
 	if not active or sys() == null:
 		return out
@@ -535,3 +555,10 @@ func lines() -> Array:
 		var mark: String = {"done": "✓", "failed": "✗", "active": "▶"}.get(st, "○")
 		out.append("%s %s" % [mark, tr(str(cd.name))])
 	return out
+
+
+func _death_count() -> int:
+	var count := 0
+	for actor: HdHero in game.playing_heroes():
+		count += actor.deaths
+	return count

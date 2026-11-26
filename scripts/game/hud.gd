@@ -306,7 +306,7 @@ func _chip(caption: String, parent: Node, color := UiTheme.TEXT) -> Label:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 6)
 	p.add_child(h)
-	UiUtil.label(caption, h, 12).add_theme_color_override("font_color", UiTheme.MUTED)
+	UiUtil.label(caption, h, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	var v := UiUtil.label("", h, 16)
 	v.add_theme_color_override("font_color", color)
 	return v
@@ -327,7 +327,7 @@ func _stat_tile() -> Dictionary:
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	host.add_child(v)
-	var caption := UiUtil.label("", v, 11)
+	var caption := UiUtil.label("", v, 13)
 	caption.uppercase = true
 	caption.add_theme_color_override("font_color", UiTheme.MUTED)
 	var value := UiUtil.label("", v, 18)
@@ -417,6 +417,9 @@ func _build_top_bar() -> void:
 	debug_button.tooltip_text = "Debug-Menü"
 	debug_button.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN, 0, 2))
 	debug_button.add_theme_color_override("font_pressed_color", UiTheme.GOLD_DARK)
+	# Nur mit Entwickler-Werkzeugen (Einstellungen); der Knopf bleibt für Tests da, nur unsichtbar
+	debug_button.visible = Display.dev_tools
+	Display.dev_tools_changed.connect(func(on): debug_button.visible = on)
 
 	recipes_button = _button("Rezepte", h, toggle_recipe_book)
 	recipes_button.tooltip_text = "Rezeptbuch (Taste R)"
@@ -477,7 +480,7 @@ static func key_badge(b: Button, key: String) -> Label:
 	var l := Label.new()
 	l.text = key
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", UiTheme.CYAN)
 	var st := UiTheme.box(UiTheme.BG, UiTheme.CYAN, 0, 1, 0)
 	st.content_margin_left = 3
@@ -514,7 +517,7 @@ func _build_pause_banner() -> void:
 	pause_banner.add_child(v)
 	var t := UiTheme.title(UiUtil.label("PAUSE", v, 26), 26)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var sub := UiUtil.label("P: weiter · Tower lassen sich ansehen", v, 13)
+	var sub := UiUtil.label("P: weiter · Tower lassen sich ansehen", v, 14)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	pause_banner.hide()
@@ -554,7 +557,7 @@ func _build_hover_card() -> void:
 	hover_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hover_card.add_theme_stylebox_override("panel", UiTheme.panel(8.0, 0.95))
 	full.add_child(hover_card)
-	_hover_label = UiUtil.label("", hover_card, 13)
+	_hover_label = UiUtil.label("", hover_card, 14)
 	hover_card.hide()
 
 
@@ -590,7 +593,7 @@ func set_gem_tags(tags: Array) -> void:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.text = t.text
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", 14)
 		b.add_theme_color_override("font_color", col)
 		b.add_theme_color_override("font_hover_color", col.lightened(0.3))
 		b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL, col, 0, 2, 5))
@@ -673,7 +676,7 @@ func _build_banner() -> void:
 	oneshot_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	oneshot_pill.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PURPLE, Color.TRANSPARENT, 0, 0, 10))
 	h.add_child(oneshot_pill)
-	oneshot_label = UiUtil.label("", oneshot_pill, 13)
+	oneshot_label = UiUtil.label("", oneshot_pill, 14)
 	oneshot_label.add_theme_color_override("font_color", Color.WHITE)
 
 
@@ -723,7 +726,7 @@ func _build_bottom() -> void:
 	strip_row = HBoxContainer.new()
 	strip_row.add_theme_constant_override("separation", 8)
 	strip_col.add_child(strip_row)
-	strip_hint = UiUtil.label("", strip_col, 12)
+	strip_hint = UiUtil.label("", strip_col, 14)
 	strip_hint.add_theme_color_override("font_color", UiTheme.CYAN_TEXT)
 	_vsep(h)
 
@@ -766,7 +769,7 @@ func _build_bottom() -> void:
 	info_kills.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	info_kills.make = _kills_tooltip
 	head.add_child(info_kills)
-	info_kills_label = UiUtil.label("", info_kills, 12)
+	info_kills_label = UiUtil.label("", info_kills, 14)
 	info_kills_label.add_theme_color_override("font_color", UiTheme.COIN)
 	# Öle neben dem Namen (YouTD): nur ein Kästchen, Hover zeigt, welche Werte der Tower durch Öle hat
 	info_oils = TooltipHost.new()
@@ -785,11 +788,11 @@ func _build_bottom() -> void:
 	_oils_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_oils_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	oils_row.add_child(_oils_icon)
-	UiUtil.label(tr("Öle"), oils_row, 12).add_theme_color_override("font_color", UiTheme.HAVE)
+	UiUtil.label(tr("Öle"), oils_row, 14).add_theme_color_override("font_color", UiTheme.HAVE)
 	# Breite gleich mitgeben: ohne sie misst Godot umbrechende Labels im ersten Frame ein Zeichen breit
 	# und damit tausende Pixel hoch, die Auswahlkarte sprang dann kurz auf volle Bildschirmhöhe
 	info_sub = UiUtil.wrap_label("", info_left, INFO_W)
-	info_sub.add_theme_font_size_override("font_size", 12)
+	info_sub.add_theme_font_size_override("font_size", 14)
 	info_sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	info_tiles = GridContainer.new()
 	info_tiles.columns = 2
@@ -799,7 +802,7 @@ func _build_bottom() -> void:
 	for i in 4:
 		_tiles.append(_stat_tile())
 	info_body = UiUtil.wrap_label("", info_left, INFO_W)
-	info_body.add_theme_font_size_override("font_size", 13)
+	info_body.add_theme_font_size_override("font_size", 14)
 	info_body.add_theme_color_override("font_color", UiTheme.DIM)
 	# Fähigkeiten in einem eigenen Fenster rechts neben den Werten (mit den neuen Gems daneben darunter)
 	abil_panel = PanelContainer.new()
@@ -824,7 +827,7 @@ func _build_bottom() -> void:
 	used_col.add_child(used_head)
 	UiTheme.caption("Wird gebraucht für", used_head).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	used_prev = UiUtil.button("‹", used_head, func(): _turn_used_page(-1))
-	used_page_label = UiUtil.label("", used_head, 12)
+	used_page_label = UiUtil.label("", used_head, 14)
 	used_page_label.add_theme_color_override("font_color", UiTheme.MUTED)
 	used_next = UiUtil.button("›", used_head, func(): _turn_used_page(1))
 	for b in [used_prev, used_next]:
@@ -916,7 +919,7 @@ func _build_debug() -> void:
 	_button("Starten", row, func(): debug_wave_requested.emit(int(debug_wave.value)))
 	var hint := UiUtil.wrap_label("Läuft gerade eine Welle, wird sie abgebrochen und die gewählte startet sofort. In der Bau- und Wahlphase kommt sie als nächste.", v, 290)
 	debug_wave_hint = hint
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", UiTheme.MUTED)
 	debug_panel.hide()
 
@@ -977,6 +980,19 @@ func set_resources(wave: int, waves: int, lives: int, gold: int, score := false)
 	lives_value.add_theme_color_override("font_color", (UiTheme.CYAN if lives >= 0 else UiTheme.MISSING) if score else UiTheme.MISSING)
 	lives_value.get_parent().get_parent().tooltip_text = tr("Punkte-Modus: jeder Kill gibt Punkte, späte Wellen mehr als frühe. Ein Gegner, der durchkommt, kostet die Hälfte seines Werts.") if score else ""
 	gold_value.text = str(gold)
+	# Lebensverlust soll auffallen: die Leben-Kachel blinkt kurz rot auf (UI-Prüfung 2026-11-25, H1)
+	if not score and _last_lives >= 0 and lives < _last_lives:
+		var chip: Control = lives_value.get_parent().get_parent()
+		if _lives_tween != null:
+			_lives_tween.kill()
+		chip.modulate = Color(1.6, 0.55, 0.55)
+		_lives_tween = chip.create_tween()
+		_lives_tween.tween_property(chip, "modulate", Color.WHITE, 0.6)
+	_last_lives = -1 if score else lives
+
+
+var _last_lives := -1
+var _lives_tween: Tween
 
 
 ## Roguelike: Anzahl gewählter Boni in der Leiste oben, Tooltip mit allen Boni und der nächsten Wahl
@@ -1021,7 +1037,7 @@ func _chance_tooltip(level: int, next_wave: int) -> Control:
 	v.add_theme_constant_override("separation", 6)
 	v.custom_minimum_size.x = 330
 	UiTheme.title(UiUtil.label("◆ " + tr("Chance · Stufe %d") % level + " ◆", v, 18))
-	var sub := UiUtil.label("Steigt automatisch mit den Wellen.", v, 12)
+	var sub := UiUtil.label("Steigt automatisch mit den Wellen.", v, 14)
 	sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	_chance_rows(v, level, 1.0)
 	var divider := UiUtil.label("━━ " + (tr("Stufe %d ab Welle %d") % [level + 1, next_wave] if next_wave >= 0 else tr("Höchste Stufe erreicht")) + " ━━", v, 13)
@@ -1065,7 +1081,7 @@ func _chance_rows(parent: Node, level: int, alpha: float) -> void:
 			seg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			seg.color = UiTheme.CYAN if k < roundi(pct / 10.0) else UiTheme.BORDER
 			bar.add_child(seg)
-		var p := UiUtil.label("%3d %%" % pct, h, 13)
+		var p := UiUtil.label("%3d %%" % pct, h, 14)
 		p.add_theme_color_override("font_color", UiTheme.COIN)
 
 
@@ -1229,7 +1245,8 @@ func set_options(options: Array) -> void:
 		var big := _option_button(o, o.label, actions_col, func(): option_chosen.emit(main))
 		_main_button = big
 		big.tooltip_text = o.label + " " + tr("(Leertaste)")
-		big.clip_text = true
+		# Lange Gem-Namen umbrechen statt abschneiden (UI-Prüfung 2026-11-25, „Fehlerhafter Saphi“)
+		big.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		big.custom_minimum_size = Vector2(260, 56)
 		big.add_theme_font_size_override("font_size", 18)
 		if o.style == "oneshot":
@@ -1263,11 +1280,18 @@ func set_options(options: Array) -> void:
 
 
 ## Aktionsknopf; mit Vorschau (o.diff, o.preview_range) zeigt Hover die neuen Werte und die neue Reichweite.
+## Aktionen ohne Rückweg brauchen einen zweiten Klick (UiUtil.confirm_press).
+const CONFIRM_ACTIONS := ["sell", "rg_sell", "scrap"]
+
+
 func _option_button(o: Dictionary, text: String, parent: Node, on_pressed: Callable) -> Button:
 	var b := TooltipButton.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.pressed.connect(on_pressed)
+	if str(o.get("action", "")) in CONFIRM_ACTIONS:
+		UiUtil.confirm_press(b, on_pressed)
+	else:
+		b.pressed.connect(on_pressed)
 	parent.add_child(b)
 	if o.has("diff"):
 		b.make = _diff_tooltip.bind(o)
@@ -1318,7 +1342,7 @@ func _two_line(b: Button, title: String, sub: String, icon: Texture2D = null) ->
 	t.custom_minimum_size.x = 120
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.minimum_size_changed.connect(func(): b.custom_minimum_size.y = maxf(54.0, v.get_combined_minimum_size().y + 12.0))
-	var g := UiUtil.label(sub, v, 13)
+	var g := UiUtil.label(sub, v, 14)
 	g.add_theme_color_override("font_color", UiTheme.COIN)
 	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -1352,9 +1376,9 @@ func _show_stats(st: Dictionary) -> void:
 		w.host.tooltip_text = "\n".join((d.rows as Array).map(func(r): return "%s  %s" % [r[0], r[1]]))
 	if info_kills.visible:
 		var k: Dictionary = st.kills
-		info_kills_label.text = "✖ " + tr("%d Kills") % int(k.kills)
+		info_kills_label.text = "☠ " + tr("%d Kills") % int(k.kills)
 		if k.get("levels", false):
-			info_kills_label.text = tr("Lv %d") % int(k.level) + " · ✖ %d" % int(k.kills)
+			info_kills_label.text = tr("Lv %d") % int(k.level) + " · ☠ %d" % int(k.kills)
 		info_kills.tooltip_text = tr("Kills: %d   Schaden gesamt: %d") % [int(k.kills), int(k.total_damage)]
 	var key := [st.abilities, st.description]
 	if key == _abil_key:
@@ -1372,19 +1396,19 @@ func _show_stats(st: Dictionary) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		abil_box.add_child(row)
-		var dot := UiUtil.label("✦", row, 12)
+		var dot := UiUtil.label("✦", row, 14)
 		dot.add_theme_color_override("font_color", UiTheme.GOLD)
 		dot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		var l := UiUtil.wrap_label(text, row, 0)
-		l.add_theme_font_size_override("font_size", 12)
+		l.add_theme_font_size_override("font_size", 14)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if str(st.description) != "":
 		var d := UiUtil.wrap_label(st.description, abil_box, 0)
-		d.add_theme_font_size_override("font_size", 12)
+		d.add_theme_font_size_override("font_size", 14)
 		d.add_theme_color_override("font_color", UiTheme.MUTED)
 	if abils.is_empty() and str(st.description) == "":
 		var none := UiUtil.wrap_label(tr("Keine besonderen Fähigkeiten"), abil_box, 0)
-		none.add_theme_font_size_override("font_size", 12)
+		none.add_theme_font_size_override("font_size", 14)
 		none.add_theme_color_override("font_color", UiTheme.MUTED)
 	(abil_box.get_parent() as ScrollContainer).scroll_vertical = 0
 
@@ -1402,11 +1426,11 @@ func _tip_row(parent: Node, left: String, right: String, color := UiTheme.TEXT, 
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	parent.add_child(h)
-	var l := UiUtil.label(left, h, 13)
+	var l := UiUtil.label(left, h, 14)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.add_theme_color_override("font_color", left_color)
 	if right != "":
-		UiUtil.label(right, h, 13).add_theme_color_override("font_color", color)
+		UiUtil.label(right, h, 14).add_theme_color_override("font_color", color)
 	return h
 
 
@@ -1419,7 +1443,7 @@ func _tip_line(parent: Node) -> void:
 
 func _tip_note(parent: Node, text: String, width: float) -> void:
 	var l := UiUtil.wrap_label(text, parent, width)
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", UiTheme.MUTED)
 
 
@@ -1460,7 +1484,7 @@ func _kills_tooltip() -> Control:
 		return null
 	var k: Dictionary = _stats.kills
 	if not k.get("levels", false):
-		var w := _tip_box("✖ " + tr("%d Kills") % int(k.kills), 330)
+		var w := _tip_box("☠ " + tr("%d Kills") % int(k.kills), 330)
 		_tip_row(w, tr("Schaden gesamt"), "%d" % int(k.total_damage), UiTheme.COIN)
 		return w
 	var v := _tip_box(tr("Level %d") % int(k.level) + " / %d" % int(k.max_level), 330)
@@ -1481,11 +1505,11 @@ func _kills_tooltip() -> Control:
 		_tip_row(v, tr("Schadensbonus jetzt"), TowerStats.pct(k.bonus), UiTheme.HAVE)
 	for u in k.unlocked:
 		var l := UiUtil.wrap_label("✓ " + str(u), v, 330)
-		l.add_theme_font_size_override("font_size", 12)
+		l.add_theme_font_size_override("font_size", 14)
 		l.add_theme_color_override("font_color", UiTheme.HAVE)
 	if str(k.next_unlock) != "":
 		var h := _tip_row(v, tr("Ab Level %d") % int(k.next_unlock_level), "", UiTheme.TEXT, UiTheme.GOLD)
-		UiUtil.label(str(k.next_unlock), h, 13).add_theme_color_override("font_color", UiTheme.CYAN)
+		UiUtil.label(str(k.next_unlock), h, 14).add_theme_color_override("font_color", UiTheme.CYAN)
 	_tip_row(v, tr("Kills"), "%d" % int(k.kills), UiTheme.COIN)
 	_tip_row(v, tr("Schaden gesamt"), "%d" % int(k.total_damage), UiTheme.COIN)
 	if str(k.per_level) != "":
@@ -1502,9 +1526,9 @@ static func _ep(v: float) -> String:
 func _diff_tooltip(o: Dictionary) -> Control:
 	var v := _tip_box(str(o.label), 330)
 	if o.has("sub"):
-		UiUtil.label(str(o.sub), v, 12).add_theme_color_override("font_color", UiTheme.COIN)
+		UiUtil.label(str(o.sub), v, 14).add_theme_color_override("font_color", UiTheme.COIN)
 	elif o.has("tooltip"):
-		UiUtil.label(str(o.tooltip), v, 12).add_theme_color_override("font_color", UiTheme.MUTED)
+		UiUtil.label(str(o.tooltip), v, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	var rows: Array = o.diff
 	if rows.is_empty():
 		_tip_note(v, tr("Die Werte bleiben gleich."), 330)
@@ -1514,15 +1538,15 @@ func _diff_tooltip(o: Dictionary) -> Control:
 			# Fähigkeit: neu/weg in einer Zeile, geändert als alt (grau) und darunter → neu
 			if str(r.old) != "":
 				var was := UiUtil.wrap_label(str(r.old), v, 330)
-				was.add_theme_font_size_override("font_size", 12)
+				was.add_theme_font_size_override("font_size", 14)
 				was.add_theme_color_override("font_color", UiTheme.MUTED)
 			var l := UiUtil.wrap_label(("→ " if str(r.old) != "" else "") + str(r.new), v, 330)
-			l.add_theme_font_size_override("font_size", 12)
+			l.add_theme_font_size_override("font_size", 14)
 			l.add_theme_color_override("font_color", UiTheme.CYAN_TEXT if str(r.old) != "" else col)
 			continue
 		var h := _tip_row(v, str(r.label), str(r.old), UiTheme.MUTED)
-		UiUtil.label("→", h, 13).add_theme_color_override("font_color", UiTheme.MUTED)
-		UiUtil.label(str(r.new), h, 13).add_theme_color_override("font_color", col)
+		UiUtil.label("→", h, 14).add_theme_color_override("font_color", UiTheme.MUTED)
+		UiUtil.label(str(r.new), h, 14).add_theme_color_override("font_color", col)
 	_tip_line(v)
 	_tip_note(v, tr("Grundwerte, ohne Aura- und Kill-Bonus."), 330)
 	return v
@@ -1582,14 +1606,14 @@ func set_waves(waves: Array) -> void:
 		var t := UiUtil.label(tr(w.type), head, 14)
 		t.add_theme_color_override("font_color", WaveIcon.COLORS.get(w.type, UiTheme.TEXT))
 		if w.state != "":
-			var st := UiUtil.label(w.state, head, 12)
+			var st := UiUtil.label(w.state, head, 14)
 			st.add_theme_color_override("font_color", UiTheme.GOLD)
 			st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			st.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var d := UiUtil.label(w.detail, v, 12)
+		var d := UiUtil.label(w.detail, v, 14)
 		d.add_theme_color_override("font_color", UiTheme.MUTED)
 		if str(w.get("warn", "")) != "":
-			var warn := UiUtil.label(str(w.warn), v, 13)
+			var warn := UiUtil.label(str(w.warn), v, 14)
 			warn.add_theme_color_override("font_color", UiTheme.MISSING)
 	_has_waves = not waves.is_empty()
 	waves_panel.visible = _has_waves and not _waves_yield
@@ -1777,7 +1801,7 @@ func _build_leave_confirm() -> void:
 	_leave_status.add_theme_color_override("font_color", UiTheme.CYAN_TEXT)
 	_leave_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_leave_status.hide()
-	var hint := UiUtil.label("Esc: weiterspielen", v, 13)
+	var hint := UiUtil.label("Esc: weiterspielen", v, 14)
 	hint.add_theme_color_override("font_color", UiTheme.MUTED)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	leave_confirm.hide()
@@ -1862,7 +1886,7 @@ func _refresh_used_in() -> void:
 	used_page_label.visible = count > 1
 	used_page_label.text = "%d / %d" % [used_page + 1, count]
 	if count == 0:
-		UiUtil.label("Keine Rezepte brauchen diesen Tower.", used_row, 13).add_theme_color_override("font_color", UiTheme.MUTED)
+		UiUtil.label("Keine Rezepte brauchen diesen Tower.", used_row, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 		return
 	var c := RecipeBook.card(ids[used_page], owned, _on_pins_changed, true, owned_now)
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1912,7 +1936,7 @@ func _refresh_pinned() -> void:
 	pinned_box.add_child(head)
 	var t := _panel_title(UiUtil.label("Angepinnt", head, 15))
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiUtil.label("%d" % Session.pinned_recipes.size(), head, 12).add_theme_color_override("font_color", UiTheme.MUTED)
+	UiUtil.label("%d" % Session.pinned_recipes.size(), head, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	for id in Session.pinned_recipes:
 		if Database.towers.has(id):
 			pinned_box.add_child(RecipeBook.card(id, owned, _on_pins_changed, true, owned_now))

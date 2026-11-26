@@ -1,7 +1,7 @@
 class_name HdDev
 extends RefCounted
-## Dev-Texturen für Bollwerk (Etappe 1, wie bei Tower Survivors): Raster im Code erzeugt, triplanar in
-## Weltkoordinaten, ein Kästchen = 1 Einheit. Später durch echte Modelle und Texturen ersetzen.
+## Grundmaterialien und Formen für Bollwerk: Oberflächen (Mauer, Bruchstein, Putz, Holz) triplanar in
+## Weltkoordinaten, Metall, Leuchtendes. grid_texture() bleibt als Dev-Raster für Proben und Tests.
 
 static var _tex: Texture2D
 static var _mats: Dictionary = {}
@@ -28,13 +28,16 @@ static func grid_texture() -> Texture2D:
 	return _tex
 
 
-## Rastermaterial in Farbe c; scale = Kästchen je Einheit / 4.
-## Metall (Gadgets, Rüstungsteile): wie mat(), aber metallisch mit gemeinsamem Metall-Look.
+## Metall (Gadgets, Rüstungsteile): glatt, metallisch, mit gemeinsamem Metall-Look (Rauheitsflecken).
 static func metall(c: Color, scale := 0.25) -> StandardMaterial3D:
 	var key := "metall|%s|%s" % [c.to_html(), scale]
 	if _mats.has(key):
 		return _mats[key]
-	var m: StandardMaterial3D = mat(c, scale).duplicate()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale
 	m.metallic = 0.8
 	m.roughness = 0.4
 	Metall.veredeln(m)
@@ -42,22 +45,78 @@ static func metall(c: Color, scale := 0.25) -> StandardMaterial3D:
 	return m
 
 
-static func mat(c: Color, scale := 0.25, glow := 0.0) -> StandardMaterial3D:
-	var key := "%s|%s|%s" % [c.to_html(), scale, glow]
+## Oberflächen aus dem CC0-Paket Medieval Village MegaKit (Quaternius), gebaut mit
+## tools/heroes/bollwerk_oberflaechen.gd. Die Detailkarte ist grau (Mittel 0.82), die Farbe kommt aus dem Code.
+const SURFACES := ["mauer", "bruchstein", "putz", "holz"]
+const _DETAIL_MEAN := 0.82
+static var _surface_tex: Dictionary = {}
+
+
+static func _surface_texture(kind: String, part: String) -> Texture2D:
+	var key := kind + "_" + part
+	if not _surface_tex.has(key):
+		_surface_tex[key] = load("res://assets/textures/bollwerk/%s.jpg" % key)
+	return _surface_tex[key]
+
+
+## Oberflächenmaterial in Farbe c: kind aus SURFACES; scale = Kacheln je Einheit (0.5 = eine Kachel auf 2 m).
+static func surface(kind: String, c: Color, scale := 0.25, glow := 0.0) -> StandardMaterial3D:
+	var key := "%s|%s|%s|%s" % [kind, c.to_html(), scale, glow]
 	if _mats.has(key):
 		return _mats[key]
 	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.albedo_texture = grid_texture()
+	var k := 1.0 / _DETAIL_MEAN
+	m.albedo_color = Color(minf(c.r * k, 1.0), minf(c.g * k, 1.0), minf(c.b * k, 1.0), c.a)
+	m.albedo_texture = _surface_texture(kind, "detail")
+	m.normal_enabled = true
+	m.normal_texture = _surface_texture(kind, "normal")
+	m.normal_scale = 0.8
+	m.metallic_specular = 0.3  # matter Stein/Holz, keine Glitzerpunkte auf Kanten
+	if kind == "putz":
+		m.roughness = 0.88
+	else:
+		m.roughness_texture = _surface_texture(kind, "rough")
+		m.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		m.roughness = 1.0
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
+	m.uv1_triplanar_sharpness = 4.0
 	m.uv1_scale = Vector3.ONE * scale
-	m.roughness = 0.8
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	if glow > 0.0:
 		m.emission_enabled = true
 		m.emission = c
 		m.emission_energy_multiplier = glow
+	_mats[key] = m
+	return m
+
+
+## Passende Oberfläche zur Farbe, für Stellen ohne ausdrückliche Wahl: Braun = Holz,
+## Dunkles und Grau = Stein (dunkel Bruchstein, hell Mauer), sonst Putz.
+static func surface_for(c: Color) -> String:
+	if c.s > 0.3 and c.h > 0.03 and c.h < 0.14 and c.v < 0.85:
+		return "holz"
+	if c.v < 0.35 and c.s < 0.5:
+		return "bruchstein"
+	if c.s < 0.25:
+		return "bruchstein" if c.v < 0.45 else "mauer"
+	return "putz"
+
+
+## Standardmaterial in Farbe c (früher Dev-Raster). Leuchtendes bleibt glatt, alles andere bekommt
+## eine echte Oberfläche nach surface_for(); scale wie bei surface().
+static func mat(c: Color, scale := 0.25, glow := 0.0) -> StandardMaterial3D:
+	if glow <= 0.0:
+		return surface(surface_for(c), c, scale)
+	var key := "%s|%s|%s" % [c.to_html(), scale, glow]
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = 0.55
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = glow
 	_mats[key] = m
 	return m
 

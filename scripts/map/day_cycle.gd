@@ -1,5 +1,7 @@
 class_name DayCycle
 extends Node
+signal period_changed(night: bool)
+signal time_changed(hour: float)
 ## Tageszeit, die im Spiel langsam weiterläuft (eeveTD, YouTD; Lukas 2026-11-09, Vorbild Licht bei Sonnen- und
 ## Mondauf- und -untergang in WoW, nur das Prinzip): Abenddämmerung, Nacht, Morgendämmerung, Tag.
 ## Stützpunkte (KEYS) über 24 Stunden mit Himmel, Licht, Nebel und Bildfilter; dazwischen wird gemischt.
@@ -112,6 +114,9 @@ const SKY_DAY := {
 static var fixed_hour := -1.0
 
 var hour := START
+var lighting_style := ""
+## Optische Gebiets-Overrides; Uhr, Tagesphasen und Gameplay-Signale bleiben unverändert.
+var atmosphere: Dictionary = {}
 ## Stunden je Sekunde ergeben sich aus PACE; 0 = angehalten (Screenshots, Tests), sonst Faktor.
 var speed := 1.0
 var env: Environment
@@ -159,8 +164,42 @@ func attach(made: Dictionary, game: Node) -> void:
 
 
 func set_hour(h: float) -> void:
+	var before := is_night()
 	hour = fposmod(h, 24.0)
+	if before != is_night():
+		period_changed.emit(is_night())
+	time_changed.emit(hour)
 	apply()
+
+
+## Gameplay-Abfrage und Übergangssignal verwenden dieselben Grenzen wie Sonnenauf-/untergang.
+func is_night() -> bool:
+	return hour < SUNRISE or hour >= SUNSET
+
+
+func phase() -> String:
+	if hour >= 4.5 and hour < 7.5:
+		return "dawn"
+	if hour >= 18.0 and hour < 21.0:
+		return "dusk"
+	return "night" if is_night() else "day"
+
+
+## Manuell aus der autoritativen Simulation aufrufbar; läuft auch ohne Renderer.
+func advance(seconds: float) -> void:
+	var left := maxf(seconds * speed, 0.0)
+	while left > 0:
+		var dt := minf(left, 1.0)
+		var before := is_night()
+		hour = fposmod(hour + rate(hour) * dt, 24.0)
+		if before != is_night():
+			period_changed.emit(is_night())
+		left -= dt
+	time_changed.emit(hour)
+	_wait -= seconds
+	if _wait <= 0:
+		_wait = STEP
+		apply()
 
 
 ## Stunden je Sekunde Spielzeit zur Stunde h (aus PACE).
@@ -177,11 +216,7 @@ static func rate(h: float) -> float:
 func _process(delta: float) -> void:
 	if speed <= 0.0 or env == null:
 		return
-	hour = fposmod(hour + rate(hour) * delta * speed, 24.0)
-	_wait -= delta
-	if _wait <= 0.0:
-		_wait = STEP
-		apply()
+	advance(delta)
 
 
 ## Wie viel Nacht gerade ist (0 Tag, 1 Nacht).
@@ -192,9 +227,9 @@ func night_amount() -> float:
 func _build_keys() -> void:
 	var was := FieldStyle.night
 	FieldStyle.night = true
-	var night := _full()
+	var night := _full(lighting_style)
 	FieldStyle.night = false
-	var day := _full()
+	var day := _full(lighting_style)
 	FieldStyle.night = was
 	night.merge(SKY_NIGHT, true)
 	day.merge(SKY_DAY, true)
@@ -214,8 +249,8 @@ func _build_keys() -> void:
 
 ## Licht des aktiven Stils (Tag oder Nacht nach FieldStyle.night) mit den Werten des Bildfilters;
 ## dessen Sättigung heißt hier "saturation_grade" (die Sättigung des Lichts heißt schon "saturation").
-static func _full() -> Dictionary:
-	var v: Dictionary = FieldStyle.env()
+static func _full(style := "") -> Dictionary:
+	var v: Dictionary = FieldStyle.env(style)
 	var grade: Dictionary = StyleFilter.look().get("grade", {})
 	for k in grade:
 		v["saturation_grade" if k == "saturation" else k] = grade[k]
@@ -288,24 +323,24 @@ func apply() -> void:
 	var mp := moon_pos(hour)
 	var body := sp if sun_is_light(hour) else mp
 	sun.rotation = Vector3(deg_to_rad(-maxf(body.x, MIN_PITCH)), deg_to_rad(body.y), 0)
-	sun.light_color = v.sun * tint
-	sun.light_energy = v.sun_energy
+	sun.light_color = Color(str(atmosphere.sun_color)) if atmosphere.has("sun_color") else v.sun * tint
+	sun.light_energy = v.sun_energy * float(atmosphere.get("direct", 1.0))
 	sun.light_specular = v.sun_specular
 	sun.shadow_opacity = v.shadow_opacity
 	fill.rotation = Vector3(deg_to_rad(v.fill_pitch), deg_to_rad(body.y + 180.0), 0)
 	fill.light_color = v.fill * tint
-	fill.light_energy = v.fill_energy
+	fill.light_energy = v.fill_energy * float(atmosphere.get("direct", 1.0))
 	fill.visible = v.fill_energy > 0.01
-	env.ambient_light_color = v.ambient * tint
-	env.ambient_light_energy = v.ambient_energy
+	env.ambient_light_color = Color(str(atmosphere.ambient_color)) if atmosphere.has("ambient_color") else v.ambient * tint
+	env.ambient_light_energy = v.ambient_energy * float(atmosphere.get("ambient", 1.0))
 	env.tonemap_exposure = v.exposure
 	env.adjustment_enabled = true
 	env.adjustment_contrast = v.contrast
 	env.adjustment_saturation = v.saturation
 	env.glow_intensity = v.glow_intensity
 	env.glow_hdr_threshold = v.glow_threshold
-	env.fog_light_color = v.fog * tint
-	env.fog_density = v.fog_density
+	env.fog_light_color = Color(str(atmosphere.fog_color)) if atmosphere.has("fog_color") else v.fog * tint
+	env.fog_density = float(atmosphere.get("fog_density", v.fog_density))
 	env.fog_sun_scatter = v.fog_sun
 	if env.volumetric_fog_enabled:
 		env.volumetric_fog_albedo = v.fog

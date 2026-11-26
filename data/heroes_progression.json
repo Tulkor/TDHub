@@ -1,0 +1,5204 @@
+{
+	"max_rank": 7,
+	"per_rank": {
+		"damage": 0.12,
+		"duration": 0.08,
+		"range": 0.03,
+		"cooldown": -0.04
+	},
+	"damage_fields": [
+		"damage",
+		"burn",
+		"dps",
+		"bite",
+		"heal",
+		"end_heal",
+		"shield",
+		"hp",
+		"dmg_out",
+		"dmg_in",
+		"reflect",
+		"power"
+	],
+	"duration_fields": [
+		"duration",
+		"time",
+		"stun",
+		"burn_time",
+		"slow_time",
+		"shield_time",
+		"over_stun"
+	],
+	"range_fields": [
+		"range",
+		"reach",
+		"break_range",
+		"radius",
+		"area",
+		"blast"
+	],
+	"tags": {
+		"attack": "Angriff",
+		"spell": "Zauber",
+		"melee": "Nahkampf",
+		"projectile": "Projektil",
+		"area": "Fläche",
+		"fire": "Feuer",
+		"lightning": "Blitz",
+		"physical": "Physisch",
+		"poison": "Gift",
+		"dot": "Schaden über Zeit",
+		"control": "Kontrolle",
+		"buff": "Stärkung",
+		"debuff": "Schwächung",
+		"healing": "Heilung",
+		"shield": "Schild",
+		"minion": "Diener",
+		"construct": "Konstrukt",
+		"duration": "Dauer"
+	},
+	"milestones": [
+		10,
+		20,
+		30
+	],
+	"imprints": [
+		{
+			"id": "brandmal",
+			"name": "Brandmal",
+			"tags": [
+				"fire"
+			],
+			"mods": {
+				"damage": 0.3,
+				"duration": 0.15
+			}
+		},
+		{
+			"id": "sturmzeichen",
+			"name": "Sturmzeichen",
+			"tags": [
+				"lightning"
+			],
+			"mods": {
+				"damage": 0.25,
+				"cooldown": -0.12
+			}
+		},
+		{
+			"id": "flutzeichen",
+			"name": "Flutzeichen",
+			"tags": [
+				"area"
+			],
+			"mods": {
+				"range": 0.25,
+				"damage": 0.12
+			}
+		},
+		{
+			"id": "nachhall",
+			"name": "Nachhall",
+			"tags": [
+				"duration"
+			],
+			"mods": {
+				"duration": 0.35
+			}
+		},
+		{
+			"id": "schmerzspur",
+			"name": "Schmerzspur",
+			"tags": [
+				"dot"
+			],
+			"mods": {
+				"damage": 0.3
+			}
+		},
+		{
+			"id": "fesselmal",
+			"name": "Fesselmal",
+			"tags": [
+				"control"
+			],
+			"mods": {
+				"duration": 0.25,
+				"cooldown": -0.1
+			}
+		},
+		{
+			"id": "hüterzeichen",
+			"name": "Hüterzeichen",
+			"tags": [
+				"healing"
+			],
+			"mods": {
+				"damage": 0.3,
+				"cooldown": -0.1
+			}
+		},
+		{
+			"id": "schildzeichen",
+			"name": "Schildzeichen",
+			"tags": [
+				"shield"
+			],
+			"mods": {
+				"damage": 0.3,
+				"duration": 0.2
+			}
+		},
+		{
+			"id": "werkmeister",
+			"name": "Werkmeister",
+			"tags": [
+				"construct"
+			],
+			"mods": {
+				"damage": 0.25,
+				"range": 0.2
+			}
+		},
+		{
+			"id": "schusszeichen",
+			"name": "Schusszeichen",
+			"tags": [
+				"projectile"
+			],
+			"mods": {
+				"damage": 0.2,
+				"range": 0.25
+			}
+		},
+		{
+			"id": "arkanmal",
+			"name": "Arkanmal",
+			"tags": [
+				"spell"
+			],
+			"mods": {
+				"damage": 0.15,
+				"cooldown": -0.1
+			}
+		}
+	],
+	"hero_imprints": {
+		"torvik": [
+			{
+				"id": "torvik_10_offense",
+				"hero": "torvik",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Elementarkrieger: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "stun",
+						"add": 0.2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Donnerhieb: +0.2 Betäubungsdauer (s)."
+			},
+			{
+				"id": "torvik_10_defense",
+				"hero": "torvik",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Elementarkrieger: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Windaufstieg: +2 Dauer (s)."
+			},
+			{
+				"id": "torvik_10_utility",
+				"hero": "torvik",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Elementarkrieger: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Erdschock: +3 Reichweite (m)."
+			},
+			{
+				"id": "torvik_20_offense",
+				"hero": "torvik",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Elementarkrieger: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "stun",
+						"add": 0.2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Donnerhieb: +0.2 Betäubungsdauer (s)."
+			},
+			{
+				"id": "torvik_20_defense",
+				"hero": "torvik",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Elementarkrieger: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Windaufstieg: +2 Dauer (s)."
+			},
+			{
+				"id": "torvik_20_utility",
+				"hero": "torvik",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Elementarkrieger: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Erdschock: +3 Reichweite (m)."
+			},
+			{
+				"id": "torvik_30_offense",
+				"hero": "torvik",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Elementarkrieger: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "stun",
+						"add": 0.2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Donnerhieb: +0.2 Betäubungsdauer (s)."
+			},
+			{
+				"id": "torvik_30_defense",
+				"hero": "torvik",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Elementarkrieger: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Windaufstieg: +2 Dauer (s)."
+			},
+			{
+				"id": "torvik_30_utility",
+				"hero": "torvik",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Elementarkrieger: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Erdschock: +3 Reichweite (m)."
+			}
+		],
+		"unrat": [
+			{
+				"id": "unrat_10_offense",
+				"hero": "unrat",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Rattenkönig: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "blasts",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schrottbombe: +1 Explosionen."
+			},
+			{
+				"id": "unrat_10_defense",
+				"hero": "unrat",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Rattenkönig: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.06
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Königsgewand: +0.06 Schildanteil."
+			},
+			{
+				"id": "unrat_10_utility",
+				"hero": "unrat",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Rattenkönig: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rattenbanner: +1.5 Radius (m)."
+			},
+			{
+				"id": "unrat_20_offense",
+				"hero": "unrat",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Rattenkönig: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "blasts",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schrottbombe: +1 Explosionen."
+			},
+			{
+				"id": "unrat_20_defense",
+				"hero": "unrat",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Rattenkönig: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.06
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Königsgewand: +0.06 Schildanteil."
+			},
+			{
+				"id": "unrat_20_utility",
+				"hero": "unrat",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Rattenkönig: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rattenbanner: +1.5 Radius (m)."
+			},
+			{
+				"id": "unrat_30_offense",
+				"hero": "unrat",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Rattenkönig: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "blasts",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schrottbombe: +1 Explosionen."
+			},
+			{
+				"id": "unrat_30_defense",
+				"hero": "unrat",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Rattenkönig: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.06
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Königsgewand: +0.06 Schildanteil."
+			},
+			{
+				"id": "unrat_30_utility",
+				"hero": "unrat",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Rattenkönig: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rattenbanner: +1.5 Radius (m)."
+			}
+		],
+		"vesna": [
+			{
+				"id": "vesna_10_offense",
+				"hero": "vesna",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Feldärztin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 30
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Betäubungspfeil: +30 Schaden."
+			},
+			{
+				"id": "vesna_10_defense",
+				"hero": "vesna",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Feldärztin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Notfallkapsel: +0.08 Schildanteil."
+			},
+			{
+				"id": "vesna_10_utility",
+				"hero": "vesna",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Feldärztin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "break_range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Aderlass: +3 Bandreichweite (m)."
+			},
+			{
+				"id": "vesna_20_offense",
+				"hero": "vesna",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Feldärztin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 30
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Betäubungspfeil: +30 Schaden."
+			},
+			{
+				"id": "vesna_20_defense",
+				"hero": "vesna",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Feldärztin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Notfallkapsel: +0.08 Schildanteil."
+			},
+			{
+				"id": "vesna_20_utility",
+				"hero": "vesna",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Feldärztin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "break_range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Aderlass: +3 Bandreichweite (m)."
+			},
+			{
+				"id": "vesna_30_offense",
+				"hero": "vesna",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Feldärztin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 30
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Betäubungspfeil: +30 Schaden."
+			},
+			{
+				"id": "vesna_30_defense",
+				"hero": "vesna",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Feldärztin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Notfallkapsel: +0.08 Schildanteil."
+			},
+			{
+				"id": "vesna_30_utility",
+				"hero": "vesna",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Feldärztin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "break_range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Aderlass: +3 Bandreichweite (m)."
+			}
+		],
+		"zix": [
+			{
+				"id": "zix_10_offense",
+				"hero": "zix",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Mechagoblin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Überspannung: +2 Dauer (s)."
+			},
+			{
+				"id": "zix_10_defense",
+				"hero": "zix",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Mechagoblin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "gadget_stats.hp",
+						"add": 150
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Baukasten: +150 Konstruktleben."
+			},
+			{
+				"id": "zix_10_utility",
+				"hero": "zix",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Mechagoblin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "cooldown",
+						"add": -6
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Überspannung: -6 Abklingzeit (s)."
+			},
+			{
+				"id": "zix_20_offense",
+				"hero": "zix",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Mechagoblin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Überspannung: +2 Dauer (s)."
+			},
+			{
+				"id": "zix_20_defense",
+				"hero": "zix",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Mechagoblin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "gadget_stats.hp",
+						"add": 150
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Baukasten: +150 Konstruktleben."
+			},
+			{
+				"id": "zix_20_utility",
+				"hero": "zix",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Mechagoblin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "cooldown",
+						"add": -6
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Überspannung: -6 Abklingzeit (s)."
+			},
+			{
+				"id": "zix_30_offense",
+				"hero": "zix",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Mechagoblin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "duration",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Überspannung: +2 Dauer (s)."
+			},
+			{
+				"id": "zix_30_defense",
+				"hero": "zix",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Mechagoblin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "gadget_stats.hp",
+						"add": 150
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Baukasten: +150 Konstruktleben."
+			},
+			{
+				"id": "zix_30_utility",
+				"hero": "zix",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Mechagoblin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "cooldown",
+						"add": -6
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Überspannung: -6 Abklingzeit (s)."
+			}
+		],
+		"brennholt": [
+			{
+				"id": "brennholt_10_offense",
+				"hero": "brennholt",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Schildträger: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schildstoß: +1.5 Rückstoß (m)."
+			},
+			{
+				"id": "brennholt_10_defense",
+				"hero": "brennholt",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Schildträger: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schildwall: +650 Leben."
+			},
+			{
+				"id": "brennholt_10_utility",
+				"hero": "brennholt",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Schildträger: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Hornruf: +2 Radius (m)."
+			},
+			{
+				"id": "brennholt_20_offense",
+				"hero": "brennholt",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Schildträger: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schildstoß: +1.5 Rückstoß (m)."
+			},
+			{
+				"id": "brennholt_20_defense",
+				"hero": "brennholt",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Schildträger: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schildwall: +650 Leben."
+			},
+			{
+				"id": "brennholt_20_utility",
+				"hero": "brennholt",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Schildträger: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Hornruf: +2 Radius (m)."
+			},
+			{
+				"id": "brennholt_30_offense",
+				"hero": "brennholt",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Schildträger: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Schildstoß: +1.5 Rückstoß (m)."
+			},
+			{
+				"id": "brennholt_30_defense",
+				"hero": "brennholt",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Schildträger: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schildwall: +650 Leben."
+			},
+			{
+				"id": "brennholt_30_utility",
+				"hero": "brennholt",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Schildträger: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Hornruf: +2 Radius (m)."
+			}
+		],
+		"mira": [
+			{
+				"id": "mira_10_offense",
+				"hero": "mira",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Felsenwächterin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Bergsturz: +1 Anzahl."
+			},
+			{
+				"id": "mira_10_defense",
+				"hero": "mira",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Felsenwächterin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Versteinern: +100 Heilung."
+			},
+			{
+				"id": "mira_10_utility",
+				"hero": "mira",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Felsenwächterin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "width",
+						"add": 0.8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Bodenwelle: +0.8 Breite (m)."
+			},
+			{
+				"id": "mira_20_offense",
+				"hero": "mira",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Felsenwächterin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Bergsturz: +1 Anzahl."
+			},
+			{
+				"id": "mira_20_defense",
+				"hero": "mira",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Felsenwächterin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Versteinern: +100 Heilung."
+			},
+			{
+				"id": "mira_20_utility",
+				"hero": "mira",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Felsenwächterin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "width",
+						"add": 0.8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Bodenwelle: +0.8 Breite (m)."
+			},
+			{
+				"id": "mira_30_offense",
+				"hero": "mira",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Felsenwächterin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Bergsturz: +1 Anzahl."
+			},
+			{
+				"id": "mira_30_defense",
+				"hero": "mira",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Felsenwächterin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Versteinern: +100 Heilung."
+			},
+			{
+				"id": "mira_30_utility",
+				"hero": "mira",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Felsenwächterin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "width",
+						"add": 0.8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Bodenwelle: +0.8 Breite (m)."
+			}
+		],
+		"grauhirte": [
+			{
+				"id": "grauhirte_10_offense",
+				"hero": "grauhirte",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Rudelführer: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ruf der Wölfe: +12 Schaden."
+			},
+			{
+				"id": "grauhirte_10_defense",
+				"hero": "grauhirte",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Rudelführer: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "hp",
+						"add": 180
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Ruf der Wölfe: +180 Leben."
+			},
+			{
+				"id": "grauhirte_10_utility",
+				"hero": "grauhirte",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Rudelführer: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Ruf der Wölfe: +1 Höchstzahl."
+			},
+			{
+				"id": "grauhirte_20_offense",
+				"hero": "grauhirte",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Rudelführer: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ruf der Wölfe: +12 Schaden."
+			},
+			{
+				"id": "grauhirte_20_defense",
+				"hero": "grauhirte",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Rudelführer: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "hp",
+						"add": 180
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Ruf der Wölfe: +180 Leben."
+			},
+			{
+				"id": "grauhirte_20_utility",
+				"hero": "grauhirte",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Rudelführer: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Ruf der Wölfe: +1 Höchstzahl."
+			},
+			{
+				"id": "grauhirte_30_offense",
+				"hero": "grauhirte",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Rudelführer: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ruf der Wölfe: +12 Schaden."
+			},
+			{
+				"id": "grauhirte_30_defense",
+				"hero": "grauhirte",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Rudelführer: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "hp",
+						"add": 180
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Ruf der Wölfe: +180 Leben."
+			},
+			{
+				"id": "grauhirte_30_utility",
+				"hero": "grauhirte",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Rudelführer: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Ruf der Wölfe: +1 Höchstzahl."
+			}
+		],
+		"sirra": [
+			{
+				"id": "sirra_10_offense",
+				"hero": "sirra",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Giftklinge: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "poison",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Klingenwurf: +1 Giftstapel."
+			},
+			{
+				"id": "sirra_10_defense",
+				"hero": "sirra",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Giftklinge: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Rauchbombe: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "sirra_10_utility",
+				"hero": "sirra",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Giftklinge: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schattensprung: +2 Reichweite (m)."
+			},
+			{
+				"id": "sirra_20_offense",
+				"hero": "sirra",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Giftklinge: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "poison",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Klingenwurf: +1 Giftstapel."
+			},
+			{
+				"id": "sirra_20_defense",
+				"hero": "sirra",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Giftklinge: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Rauchbombe: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "sirra_20_utility",
+				"hero": "sirra",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Giftklinge: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schattensprung: +2 Reichweite (m)."
+			},
+			{
+				"id": "sirra_30_offense",
+				"hero": "sirra",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Giftklinge: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "poison",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Klingenwurf: +1 Giftstapel."
+			},
+			{
+				"id": "sirra_30_defense",
+				"hero": "sirra",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Giftklinge: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Rauchbombe: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "sirra_30_utility",
+				"hero": "sirra",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Giftklinge: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schattensprung: +2 Reichweite (m)."
+			}
+		],
+		"kaspar": [
+			{
+				"id": "kaspar_10_offense",
+				"hero": "kaspar",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Tüftler: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Geschütz: +15 Schaden."
+			},
+			{
+				"id": "kaspar_10_defense",
+				"hero": "kaspar",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Tüftler: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Sprungfeder: +0.1 Schildanteil."
+			},
+			{
+				"id": "kaspar_10_utility",
+				"hero": "kaspar",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Tüftler: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Geschütz: +8 Dauer (s)."
+			},
+			{
+				"id": "kaspar_20_offense",
+				"hero": "kaspar",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Tüftler: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Geschütz: +15 Schaden."
+			},
+			{
+				"id": "kaspar_20_defense",
+				"hero": "kaspar",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Tüftler: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Sprungfeder: +0.1 Schildanteil."
+			},
+			{
+				"id": "kaspar_20_utility",
+				"hero": "kaspar",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Tüftler: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Geschütz: +8 Dauer (s)."
+			},
+			{
+				"id": "kaspar_30_offense",
+				"hero": "kaspar",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Tüftler: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Geschütz: +15 Schaden."
+			},
+			{
+				"id": "kaspar_30_defense",
+				"hero": "kaspar",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Tüftler: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Sprungfeder: +0.1 Schildanteil."
+			},
+			{
+				"id": "kaspar_30_utility",
+				"hero": "kaspar",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Tüftler: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 8
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Geschütz: +8 Dauer (s)."
+			}
+		],
+		"yuna": [
+			{
+				"id": "yuna_10_offense",
+				"hero": "yuna",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Klingentänzerin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Tausend Schnitte: +2 Anzahl."
+			},
+			{
+				"id": "yuna_10_defense",
+				"hero": "yuna",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Klingentänzerin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 0.3
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Konter: +0.3 Dauer (s)."
+			},
+			{
+				"id": "yuna_10_utility",
+				"hero": "yuna",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Klingentänzerin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Windschnitt: +2 Reichweite (m)."
+			},
+			{
+				"id": "yuna_20_offense",
+				"hero": "yuna",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Klingentänzerin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Tausend Schnitte: +2 Anzahl."
+			},
+			{
+				"id": "yuna_20_defense",
+				"hero": "yuna",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Klingentänzerin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 0.3
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Konter: +0.3 Dauer (s)."
+			},
+			{
+				"id": "yuna_20_utility",
+				"hero": "yuna",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Klingentänzerin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Windschnitt: +2 Reichweite (m)."
+			},
+			{
+				"id": "yuna_30_offense",
+				"hero": "yuna",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Klingentänzerin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Tausend Schnitte: +2 Anzahl."
+			},
+			{
+				"id": "yuna_30_defense",
+				"hero": "yuna",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Klingentänzerin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 0.3
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Konter: +0.3 Dauer (s)."
+			},
+			{
+				"id": "yuna_30_utility",
+				"hero": "yuna",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Klingentänzerin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Windschnitt: +2 Reichweite (m)."
+			}
+		],
+		"orrin": [
+			{
+				"id": "orrin_10_offense",
+				"hero": "orrin",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Feuermagier: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Meteor: +100 Schaden."
+			},
+			{
+				"id": "orrin_10_defense",
+				"hero": "orrin",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Feuermagier: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Flammenschritt: +0.1 Schildanteil."
+			},
+			{
+				"id": "orrin_10_utility",
+				"hero": "orrin",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Feuermagier: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Feuerwand: +1.5 Dauer (s)."
+			},
+			{
+				"id": "orrin_20_offense",
+				"hero": "orrin",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Feuermagier: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Meteor: +100 Schaden."
+			},
+			{
+				"id": "orrin_20_defense",
+				"hero": "orrin",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Feuermagier: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Flammenschritt: +0.1 Schildanteil."
+			},
+			{
+				"id": "orrin_20_utility",
+				"hero": "orrin",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Feuermagier: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Feuerwand: +1.5 Dauer (s)."
+			},
+			{
+				"id": "orrin_30_offense",
+				"hero": "orrin",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Feuermagier: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 100
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Meteor: +100 Schaden."
+			},
+			{
+				"id": "orrin_30_defense",
+				"hero": "orrin",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Feuermagier: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Flammenschritt: +0.1 Schildanteil."
+			},
+			{
+				"id": "orrin_30_utility",
+				"hero": "orrin",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Feuermagier: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Feuerwand: +1.5 Dauer (s)."
+			}
+		],
+		"ilsabet": [
+			{
+				"id": "ilsabet_10_offense",
+				"hero": "ilsabet",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Frostmagierin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Eislanze: +40 Schaden."
+			},
+			{
+				"id": "ilsabet_10_defense",
+				"hero": "ilsabet",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Frostmagierin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 80
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Eisblock: +80 Heilung."
+			},
+			{
+				"id": "ilsabet_10_utility",
+				"hero": "ilsabet",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Frostmagierin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Frostfeld: +1.5 Radius (m)."
+			},
+			{
+				"id": "ilsabet_20_offense",
+				"hero": "ilsabet",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Frostmagierin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Eislanze: +40 Schaden."
+			},
+			{
+				"id": "ilsabet_20_defense",
+				"hero": "ilsabet",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Frostmagierin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 80
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Eisblock: +80 Heilung."
+			},
+			{
+				"id": "ilsabet_20_utility",
+				"hero": "ilsabet",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Frostmagierin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Frostfeld: +1.5 Radius (m)."
+			},
+			{
+				"id": "ilsabet_30_offense",
+				"hero": "ilsabet",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Frostmagierin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Eislanze: +40 Schaden."
+			},
+			{
+				"id": "ilsabet_30_defense",
+				"hero": "ilsabet",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Frostmagierin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 80
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Eisblock: +80 Heilung."
+			},
+			{
+				"id": "ilsabet_30_utility",
+				"hero": "ilsabet",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Frostmagierin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Frostfeld: +1.5 Radius (m)."
+			}
+		],
+		"tamo": [
+			{
+				"id": "tamo_10_offense",
+				"hero": "tamo",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Gewitterbauer: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Blitzkette: +1 Anzahl."
+			},
+			{
+				"id": "tamo_10_defense",
+				"hero": "tamo",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Gewitterbauer: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Donnerschlag: +0.1 Schildanteil."
+			},
+			{
+				"id": "tamo_10_utility",
+				"hero": "tamo",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Gewitterbauer: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Gewitterfront: +1.5 Radius (m)."
+			},
+			{
+				"id": "tamo_20_offense",
+				"hero": "tamo",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Gewitterbauer: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Blitzkette: +1 Anzahl."
+			},
+			{
+				"id": "tamo_20_defense",
+				"hero": "tamo",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Gewitterbauer: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Donnerschlag: +0.1 Schildanteil."
+			},
+			{
+				"id": "tamo_20_utility",
+				"hero": "tamo",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Gewitterbauer: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Gewitterfront: +1.5 Radius (m)."
+			},
+			{
+				"id": "tamo_30_offense",
+				"hero": "tamo",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Gewitterbauer: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Blitzkette: +1 Anzahl."
+			},
+			{
+				"id": "tamo_30_defense",
+				"hero": "tamo",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Gewitterbauer: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Donnerschlag: +0.1 Schildanteil."
+			},
+			{
+				"id": "tamo_30_utility",
+				"hero": "tamo",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Gewitterbauer: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Gewitterfront: +1.5 Radius (m)."
+			}
+		],
+		"albe": [
+			{
+				"id": "albe_10_offense",
+				"hero": "albe",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Lichtheilerin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Lichtstrahl: +40 Schaden."
+			},
+			{
+				"id": "albe_10_defense",
+				"hero": "albe",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Lichtheilerin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schutzkreis: +15 Heilung."
+			},
+			{
+				"id": "albe_10_utility",
+				"hero": "albe",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Lichtheilerin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rettungsgriff: +3 Reichweite (m)."
+			},
+			{
+				"id": "albe_20_offense",
+				"hero": "albe",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Lichtheilerin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Lichtstrahl: +40 Schaden."
+			},
+			{
+				"id": "albe_20_defense",
+				"hero": "albe",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Lichtheilerin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schutzkreis: +15 Heilung."
+			},
+			{
+				"id": "albe_20_utility",
+				"hero": "albe",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Lichtheilerin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rettungsgriff: +3 Reichweite (m)."
+			},
+			{
+				"id": "albe_30_offense",
+				"hero": "albe",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Lichtheilerin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Lichtstrahl: +40 Schaden."
+			},
+			{
+				"id": "albe_30_defense",
+				"hero": "albe",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Lichtheilerin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "heal",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Schutzkreis: +15 Heilung."
+			},
+			{
+				"id": "albe_30_utility",
+				"hero": "albe",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Lichtheilerin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rettungsgriff: +3 Reichweite (m)."
+			}
+		],
+		"fenn": [
+			{
+				"id": "fenn_10_offense",
+				"hero": "fenn",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Pfadfinder: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Leuchtpfeil: +40 Schaden."
+			},
+			{
+				"id": "fenn_10_defense",
+				"hero": "fenn",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Pfadfinder: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "heal",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Laterne setzen: +12 Heilung."
+			},
+			{
+				"id": "fenn_10_utility",
+				"hero": "fenn",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Pfadfinder: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Laterne setzen: +1 Höchstzahl."
+			},
+			{
+				"id": "fenn_20_offense",
+				"hero": "fenn",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Pfadfinder: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Leuchtpfeil: +40 Schaden."
+			},
+			{
+				"id": "fenn_20_defense",
+				"hero": "fenn",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Pfadfinder: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "heal",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Laterne setzen: +12 Heilung."
+			},
+			{
+				"id": "fenn_20_utility",
+				"hero": "fenn",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Pfadfinder: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Laterne setzen: +1 Höchstzahl."
+			},
+			{
+				"id": "fenn_30_offense",
+				"hero": "fenn",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Pfadfinder: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 40
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Leuchtpfeil: +40 Schaden."
+			},
+			{
+				"id": "fenn_30_defense",
+				"hero": "fenn",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Pfadfinder: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "heal",
+						"add": 12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Laterne setzen: +12 Heilung."
+			},
+			{
+				"id": "fenn_30_utility",
+				"hero": "fenn",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Pfadfinder: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "limit",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Laterne setzen: +1 Höchstzahl."
+			}
+		],
+		"ralda": [
+			{
+				"id": "ralda_10_offense",
+				"hero": "ralda",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Runenwächterin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 45
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Runenhammer: +45 Schaden."
+			},
+			{
+				"id": "ralda_10_defense",
+				"hero": "ralda",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Runenwächterin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Barrikade: +650 Leben."
+			},
+			{
+				"id": "ralda_10_utility",
+				"hero": "ralda",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Runenwächterin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Waffe schärfen: +3 Dauer (s)."
+			},
+			{
+				"id": "ralda_20_offense",
+				"hero": "ralda",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Runenwächterin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 45
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Runenhammer: +45 Schaden."
+			},
+			{
+				"id": "ralda_20_defense",
+				"hero": "ralda",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Runenwächterin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Barrikade: +650 Leben."
+			},
+			{
+				"id": "ralda_20_utility",
+				"hero": "ralda",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Runenwächterin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Waffe schärfen: +3 Dauer (s)."
+			},
+			{
+				"id": "ralda_30_offense",
+				"hero": "ralda",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Runenwächterin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "damage",
+						"add": 45
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Runenhammer: +45 Schaden."
+			},
+			{
+				"id": "ralda_30_defense",
+				"hero": "ralda",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Runenwächterin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 650
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Barrikade: +650 Leben."
+			},
+			{
+				"id": "ralda_30_utility",
+				"hero": "ralda",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Runenwächterin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "duration",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Waffe schärfen: +3 Dauer (s)."
+			}
+		],
+		"varg": [
+			{
+				"id": "varg_10_offense",
+				"hero": "varg",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Berserker: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "dmg_out",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Letztes Aufbäumen: +0.15 Schadensbonus."
+			},
+			{
+				"id": "varg_10_defense",
+				"hero": "varg",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Berserker: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "shield",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Letztes Aufbäumen: +0.15 Schildanteil."
+			},
+			{
+				"id": "varg_10_utility",
+				"hero": "varg",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Berserker: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Eisenbrecher: +2 Reichweite (m)."
+			},
+			{
+				"id": "varg_20_offense",
+				"hero": "varg",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Berserker: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "dmg_out",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Letztes Aufbäumen: +0.15 Schadensbonus."
+			},
+			{
+				"id": "varg_20_defense",
+				"hero": "varg",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Berserker: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "shield",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Letztes Aufbäumen: +0.15 Schildanteil."
+			},
+			{
+				"id": "varg_20_utility",
+				"hero": "varg",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Berserker: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Eisenbrecher: +2 Reichweite (m)."
+			},
+			{
+				"id": "varg_30_offense",
+				"hero": "varg",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Berserker: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "dmg_out",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Letztes Aufbäumen: +0.15 Schadensbonus."
+			},
+			{
+				"id": "varg_30_defense",
+				"hero": "varg",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Berserker: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "shield",
+						"add": 0.15
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Letztes Aufbäumen: +0.15 Schildanteil."
+			},
+			{
+				"id": "varg_30_utility",
+				"hero": "varg",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Berserker: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "range",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Eisenbrecher: +2 Reichweite (m)."
+			}
+		],
+		"lior": [
+			{
+				"id": "lior_10_offense",
+				"hero": "lior",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Trugbildmagier: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Spiegelkabinett: +20 Schaden."
+			},
+			{
+				"id": "lior_10_defense",
+				"hero": "lior",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Trugbildmagier: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 200
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Trugbilder: +200 Leben."
+			},
+			{
+				"id": "lior_10_utility",
+				"hero": "lior",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Trugbildmagier: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 4
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Trugbilder: +4 Dauer (s)."
+			},
+			{
+				"id": "lior_20_offense",
+				"hero": "lior",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Trugbildmagier: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Spiegelkabinett: +20 Schaden."
+			},
+			{
+				"id": "lior_20_defense",
+				"hero": "lior",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Trugbildmagier: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 200
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Trugbilder: +200 Leben."
+			},
+			{
+				"id": "lior_20_utility",
+				"hero": "lior",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Trugbildmagier: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 4
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Trugbilder: +4 Dauer (s)."
+			},
+			{
+				"id": "lior_30_offense",
+				"hero": "lior",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Trugbildmagier: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Spiegelkabinett: +20 Schaden."
+			},
+			{
+				"id": "lior_30_defense",
+				"hero": "lior",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Trugbildmagier: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "hp",
+						"add": 200
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Trugbilder: +200 Leben."
+			},
+			{
+				"id": "lior_30_utility",
+				"hero": "lior",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Trugbildmagier: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 4
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Trugbilder: +4 Dauer (s)."
+			}
+		],
+		"kraehenfrau": [
+			{
+				"id": "kraehenfrau_10_offense",
+				"hero": "kraehenfrau",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Fluchweberin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "expose",
+						"add": 0.05
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Fluchfeder: +0.05 Verwundbarkeit."
+			},
+			{
+				"id": "kraehenfrau_10_defense",
+				"hero": "kraehenfrau",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Fluchweberin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Krähenschwarm: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "kraehenfrau_10_utility",
+				"hero": "kraehenfrau",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Fluchweberin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schwarzer Himmel: +1.5 Radius (m)."
+			},
+			{
+				"id": "kraehenfrau_20_offense",
+				"hero": "kraehenfrau",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Fluchweberin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "expose",
+						"add": 0.05
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Fluchfeder: +0.05 Verwundbarkeit."
+			},
+			{
+				"id": "kraehenfrau_20_defense",
+				"hero": "kraehenfrau",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Fluchweberin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Krähenschwarm: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "kraehenfrau_20_utility",
+				"hero": "kraehenfrau",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Fluchweberin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schwarzer Himmel: +1.5 Radius (m)."
+			},
+			{
+				"id": "kraehenfrau_30_offense",
+				"hero": "kraehenfrau",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Fluchweberin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "expose",
+						"add": 0.05
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Fluchfeder: +0.05 Verwundbarkeit."
+			},
+			{
+				"id": "kraehenfrau_30_defense",
+				"hero": "kraehenfrau",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Fluchweberin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "weaken",
+						"add": 0.08
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Krähenschwarm: +0.08 Schadenssenkung."
+			},
+			{
+				"id": "kraehenfrau_30_utility",
+				"hero": "kraehenfrau",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Fluchweberin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Schwarzer Himmel: +1.5 Radius (m)."
+			}
+		],
+		"bruno": [
+			{
+				"id": "bruno_10_offense",
+				"hero": "bruno",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Kellerwächter: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Große Fassflut: +1 Anzahl."
+			},
+			{
+				"id": "bruno_10_defense",
+				"hero": "bruno",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Kellerwächter: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Malzschild: +0.12 Schildanteil."
+			},
+			{
+				"id": "bruno_10_utility",
+				"hero": "bruno",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Kellerwächter: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rollendes Fass: +3 Reichweite (m)."
+			},
+			{
+				"id": "bruno_20_offense",
+				"hero": "bruno",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Kellerwächter: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Große Fassflut: +1 Anzahl."
+			},
+			{
+				"id": "bruno_20_defense",
+				"hero": "bruno",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Kellerwächter: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Malzschild: +0.12 Schildanteil."
+			},
+			{
+				"id": "bruno_20_utility",
+				"hero": "bruno",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Kellerwächter: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rollendes Fass: +3 Reichweite (m)."
+			},
+			{
+				"id": "bruno_30_offense",
+				"hero": "bruno",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Kellerwächter: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "count",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Große Fassflut: +1 Anzahl."
+			},
+			{
+				"id": "bruno_30_defense",
+				"hero": "bruno",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Kellerwächter: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Malzschild: +0.12 Schildanteil."
+			},
+			{
+				"id": "bruno_30_utility",
+				"hero": "bruno",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Kellerwächter: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "range",
+						"add": 3
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Rollendes Fass: +3 Reichweite (m)."
+			}
+		],
+		"tessa": [
+			{
+				"id": "tessa_10_offense",
+				"hero": "tessa",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Windschützin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Windbolzen: +1 Rückstoß (m)."
+			},
+			{
+				"id": "tessa_10_defense",
+				"hero": "tessa",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Windschützin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Segelsprung: +0.1 Schildanteil."
+			},
+			{
+				"id": "tessa_10_utility",
+				"hero": "tessa",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Windschützin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Orkan: +1.5 Radius (m)."
+			},
+			{
+				"id": "tessa_20_offense",
+				"hero": "tessa",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Windschützin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Windbolzen: +1 Rückstoß (m)."
+			},
+			{
+				"id": "tessa_20_defense",
+				"hero": "tessa",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Windschützin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Segelsprung: +0.1 Schildanteil."
+			},
+			{
+				"id": "tessa_20_utility",
+				"hero": "tessa",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Windschützin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Orkan: +1.5 Radius (m)."
+			},
+			{
+				"id": "tessa_30_offense",
+				"hero": "tessa",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Windschützin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "knockback",
+						"add": 1
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Windbolzen: +1 Rückstoß (m)."
+			},
+			{
+				"id": "tessa_30_defense",
+				"hero": "tessa",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Windschützin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "shield",
+						"add": 0.1
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Segelsprung: +0.1 Schildanteil."
+			},
+			{
+				"id": "tessa_30_utility",
+				"hero": "tessa",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Windschützin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Orkan: +1.5 Radius (m)."
+			}
+		],
+		"totengraeber": [
+			{
+				"id": "totengraeber_10_offense",
+				"hero": "totengraeber",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Seelenhüter: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Grabhelfer: +15 Schaden."
+			},
+			{
+				"id": "totengraeber_10_defense",
+				"hero": "totengraeber",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Seelenhüter: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 18
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Totenwache: +18 Heilung."
+			},
+			{
+				"id": "totengraeber_10_utility",
+				"hero": "totengraeber",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Seelenhüter: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Grabhelfer: +5 Dauer (s)."
+			},
+			{
+				"id": "totengraeber_20_offense",
+				"hero": "totengraeber",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Seelenhüter: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Grabhelfer: +15 Schaden."
+			},
+			{
+				"id": "totengraeber_20_defense",
+				"hero": "totengraeber",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Seelenhüter: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 18
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Totenwache: +18 Heilung."
+			},
+			{
+				"id": "totengraeber_20_utility",
+				"hero": "totengraeber",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Seelenhüter: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Grabhelfer: +5 Dauer (s)."
+			},
+			{
+				"id": "totengraeber_30_offense",
+				"hero": "totengraeber",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Seelenhüter: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "damage",
+						"add": 15
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Grabhelfer: +15 Schaden."
+			},
+			{
+				"id": "totengraeber_30_defense",
+				"hero": "totengraeber",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Seelenhüter: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "heal",
+						"add": 18
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Totenwache: +18 Heilung."
+			},
+			{
+				"id": "totengraeber_30_utility",
+				"hero": "totengraeber",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Seelenhüter: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "duration",
+						"add": 5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Grabhelfer: +5 Dauer (s)."
+			}
+		],
+		"ada": [
+			{
+				"id": "ada_10_offense",
+				"hero": "ada",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Glockenritterin: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Abendglocke: +20 Schaden."
+			},
+			{
+				"id": "ada_10_defense",
+				"hero": "ada",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Glockenritterin: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Nachhallpanzer: +0.12 Schildanteil."
+			},
+			{
+				"id": "ada_10_utility",
+				"hero": "ada",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Glockenritterin: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Wachtgeläut: +2 Radius (m)."
+			},
+			{
+				"id": "ada_20_offense",
+				"hero": "ada",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Glockenritterin: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Abendglocke: +20 Schaden."
+			},
+			{
+				"id": "ada_20_defense",
+				"hero": "ada",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Glockenritterin: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Nachhallpanzer: +0.12 Schildanteil."
+			},
+			{
+				"id": "ada_20_utility",
+				"hero": "ada",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Glockenritterin: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Wachtgeläut: +2 Radius (m)."
+			},
+			{
+				"id": "ada_30_offense",
+				"hero": "ada",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Glockenritterin: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "damage",
+						"add": 20
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Abendglocke: +20 Schaden."
+			},
+			{
+				"id": "ada_30_defense",
+				"hero": "ada",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Glockenritterin: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "shield",
+						"add": 0.12
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Nachhallpanzer: +0.12 Schildanteil."
+			},
+			{
+				"id": "ada_30_utility",
+				"hero": "ada",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Glockenritterin: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 2,
+						"field": "radius",
+						"add": 2
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Wachtgeläut: +2 Radius (m)."
+			}
+		],
+		"sorek": [
+			{
+				"id": "sorek_10_offense",
+				"hero": "sorek",
+				"milestone": 10,
+				"category": "offense",
+				"name": "Kettenwächter: Offensive 10",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "pull",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ankerwurf: +1.5 Zugweite (m)."
+			},
+			{
+				"id": "sorek_10_defense",
+				"hero": "sorek",
+				"milestone": 10,
+				"category": "defense",
+				"name": "Kettenwächter: Defensive 10",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 800
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Hafenbollwerk: +800 Leben."
+			},
+			{
+				"id": "sorek_10_utility",
+				"hero": "sorek",
+				"milestone": 10,
+				"category": "utility",
+				"name": "Kettenwächter: Utility 10",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Kettenkreis: +1.5 Radius (m)."
+			},
+			{
+				"id": "sorek_20_offense",
+				"hero": "sorek",
+				"milestone": 20,
+				"category": "offense",
+				"name": "Kettenwächter: Offensive 20",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "pull",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ankerwurf: +1.5 Zugweite (m)."
+			},
+			{
+				"id": "sorek_20_defense",
+				"hero": "sorek",
+				"milestone": 20,
+				"category": "defense",
+				"name": "Kettenwächter: Defensive 20",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 800
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Hafenbollwerk: +800 Leben."
+			},
+			{
+				"id": "sorek_20_utility",
+				"hero": "sorek",
+				"milestone": 20,
+				"category": "utility",
+				"name": "Kettenwächter: Utility 20",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Kettenkreis: +1.5 Radius (m)."
+			},
+			{
+				"id": "sorek_30_offense",
+				"hero": "sorek",
+				"milestone": 30,
+				"category": "offense",
+				"name": "Kettenwächter: Offensive 30",
+				"tags": [],
+				"mods": {
+					"damage": 0.22
+				},
+				"stats": {
+					"damage": 0.1
+				},
+				"skill_changes": [
+					{
+						"slot": 0,
+						"field": "pull",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Schaden für Angriffe und Fähigkeiten. Ankerwurf: +1.5 Zugweite (m)."
+			},
+			{
+				"id": "sorek_30_defense",
+				"hero": "sorek",
+				"milestone": 30,
+				"category": "defense",
+				"name": "Kettenwächter: Defensive 30",
+				"tags": [],
+				"mods": {
+					"protection": 0.3
+				},
+				"stats": {
+					"hp": 0.12,
+					"armor": 2
+				},
+				"skill_changes": [
+					{
+						"slot": 3,
+						"field": "hp",
+						"add": 800
+					}
+				],
+				"desc": "Mehr Leben und Rüstung; stärkere Heilung und Schilde. Hafenbollwerk: +800 Leben."
+			},
+			{
+				"id": "sorek_30_utility",
+				"hero": "sorek",
+				"milestone": 30,
+				"category": "utility",
+				"name": "Kettenwächter: Utility 30",
+				"tags": [],
+				"mods": {
+					"range": 0.15,
+					"duration": 0.15,
+					"cooldown": -0.08
+				},
+				"stats": {
+					"speed": 0.06
+				},
+				"skill_changes": [
+					{
+						"slot": 1,
+						"field": "radius",
+						"add": 1.5
+					}
+				],
+				"desc": "Mehr Tempo, Reichweite und Dauer; kürzere Abklingzeiten. Kettenkreis: +1.5 Radius (m)."
+			}
+		]
+	}
+}

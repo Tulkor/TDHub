@@ -69,6 +69,20 @@ def waves():
     return sorted(json.loads(p.read_text(encoding="utf-8")).get("id", p.stem) for p in (ROOT / "data/waves").glob("*.json"))
 
 
+def invoke_catalog():
+    """Real Bollwerk IDs; references only, execution remains in the game's bridge."""
+    kits = json.loads((ROOT / "data/heroes_helden.json").read_text(encoding="utf-8"))
+    cfg = json.loads((ROOT / "data/heroes.json").read_text(encoding="utf-8"))
+    refs = []
+    for hero in kits.get("heroes", []):
+        refs.extend({"id": a["id"], "name": a.get("name", a["id"]), "group": "Eigener Held: " + hero.get("name", hero["id"])}
+                    for a in hero.get("abilities", []) if a.get("id"))
+    for group, definitions in (("Gadgets (eigenes Kit)", kits.get("gadgets", {})),
+                               ("Gegnerfähigkeiten (freundlicher Einsatz)", cfg.get("abilities", {}))):
+        refs.extend({"id": key, "name": value.get("name", key), "group": group} for key, value in definitions.items())
+    return refs
+
+
 def stand():
     try:
         rev = subprocess.run(["git", "log", "-1", "--format=%h %cd", "--date=format:%d.%m.%Y %H:%M"],
@@ -99,11 +113,16 @@ def main():
     hit_fx, shot_fx = fx_ids()
     data = {"stand": stand(), "maps": texts("maps"), "towers": texts("towers"), "waves": waves(), "modes": modes(),
             "hit_fx": hit_fx, "shot_fx": shot_fx, "schema": schema, "labels": labels,
-            "damage_types": damage_types, "tier_names": tier_names}
+            "damage_types": damage_types, "tier_names": tier_names,
+            "items": (ROOT / "data/heroes_items.json").read_text(encoding="utf-8"),
+            "invoke_catalog": invoke_catalog(),
+            "effect_catalog": json.loads((ROOT / "scripts/systems/effect_script/catalog.json").read_text(encoding="utf-8"))}
     html = (HERE / "editor.html").read_text(encoding="utf-8")
     # </ im JSON würde das <script> beenden
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = html.replace("/*DATEN*/null/*ENDE*/", blob, 1).replace("/*FONTS*/", font_css(), 1)
+    for filename, marker in (("effect_script.js", "/*EFFECT_SCRIPT*/"), ("item_editor.js", "/*ITEM_EDITOR*/")):
+        html = html.replace(marker, (HERE / filename).read_text(encoding="utf-8"), 1)
     ziel.parent.mkdir(parents=True, exist_ok=True)
     ziel.write_text(html, encoding="utf-8")
     print(f"TD-Editor: {ziel} ({ziel.stat().st_size // 1024} KB, {len(data['maps'])} Maps, "

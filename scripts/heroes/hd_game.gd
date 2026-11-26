@@ -9,6 +9,18 @@ extends Node3D
 ## Ablauf: setup → play → over. Logik läuft in step(dt), damit Tests und Bilder sie ohne Eingabe treiben.
 
 signal changed
+var imprints: Array = []
+var event_arena: HdEventArena
+var _enemy_cells := {}
+var _spatial_ready := false
+var _previous_accumulation := true
+var arena_layout: HdArena
+var persist_settings := true
+var lane_ids: Array = []
+var imprint_choices: Array = []
+var imprint_pending: Dictionary = {}  ## Spieler → drei eigene Prägungen; Pause bis alle gewählt haben.
+var imprint_claimed: Array[int] = []
+var _imprint_was_paused := false
 signal message(text: String)
 signal floated(pos: Vector3, text: String, color: Color)
 signal ended(victory: bool)
@@ -59,9 +71,11 @@ var result_news: Dictionary = {}
 
 var roads: Array = []           ## HdRoad, alle aktiven Straßen (Spielerzahl, Einstellung)
 var players := 1                ## Etappe 2a: Einzelspieler; bestimmt Straßen und Gegnerleben (players)
-var road_choice := 0            ## 0 = nach Spielerzahl, 4 = immer alle vier Straßen (Einstellung)
+var road_choice := 0            ## 0 = nach Spielerzahl, 4 = alle acht Straßen (Einstellung)
 var fortress_pos := Vector3.ZERO
 var stones: Array = []          ## Teleport-Steine {pos, to, road}
+var _road_surfaces := {}        ## Gemeinsame Lane-Segmente nur einmal zeichnen.
+var _portal_fx: Array = []      ## Aktive Spawn-Portale: {road, node, pos, surge} für den Plasma-Wirbel.
 var shop: HdShop
 var _road_root: Node3D
 var _tp_cd := 0.0
@@ -74,6 +88,7 @@ var road_len: float:
 
 var hero: HdHero
 var fx: HdFx
+var health_orbs
 var camera: Camera3D
 var hud  ## HdHud
 var cam_dist := 24.0
@@ -87,6 +102,7 @@ var _wave_damage0 := 0.0
 var rng := RandomNumberGenerator.new()
 ## Etappe 3: Sonderzonen (HdZones), Ereignisse (HdEvents), Fraktionen, Elite-Eigenschaften, Bosse
 var zones: HdZones
+var exploration: HdExploration
 var events: HdEvents
 var wave_limit := 0             ## Tests/Sim: Lauf nach dieser Welle beenden (0 = alle)
 var blasts: Array = []          ## Warnflächen ohne Gegner (Glut-Todesexplosion, Prüfung): {tele, t, windup, dmg, on_hit}
@@ -101,6 +117,12 @@ var _boss_marker: Node3D
 ## Ereignisse alle 5 Minuten (System timed_events) und Endgebiet (System challenges, HdFinal)
 var event_buffs: Array = []     ## Werte auf Zeit aus Ereignissen {name, stats, until}
 var event_mods: Array = []      ## Gegner-/Gold-/EP-Faktoren auf Zeit {name, foes, gold, xp, until}
+var _party_reward := false
+var _script_actions: Array = []
+var coop: HdCoop
+var _coop_info := {}
+var day_cycle: DayCycle
+var _previous_skin := UiTheme.ARCADE
 var final: HdFinal
 
 
@@ -113,7 +135,14 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	UiTheme.use_skin(UiTheme.ARCADE)
+	_coop_info = Session.coop.duplicate(true)
+	Session.coop = {}
+	if not _coop_info.is_empty():
+		players = _coop_info.get("names", []).size()
+	_previous_accumulation = Input.use_accumulated_input
+	Input.use_accumulated_input = false
+	_previous_skin = UiTheme.skin
+	UiTheme.use_skin(UiTheme.BOLLWERK)
 	cfg = Database.load_json(DATA)
 	HdBossCatalog.install(cfg)
 	var hd: Dictionary = Database.load_json(HEROES)
@@ -131,24 +160,45 @@ func _ready() -> void:
 		hero_id = force_hero
 	var f: Array = cfg.arena.fortress
 	fortress_pos = Vector3(float(f[0]), 0, float(f[1]))
+	arena_layout = HdArena.new(self)
 	_build_world()
+	health_orbs = load("res://scripts/heroes/hd_health_orbs.gd").new()
+	health_orbs.setup(self)
 	_build_roads()
 	shop = HdShop.new(self)
 	zones = HdZones.new(self)
 	zones.add_stones()
+	event_arena = HdEventArena.new(self)
 	events = HdEvents.new(self)
 	final = HdFinal.new(self)
+	exploration = HdExploration.new()
+	exploration.setup(self)
+	var atmosphere := HdAtmosphere.new()
+	atmosphere.name = "Atmosphere"
+	add_child(atmosphere)
 	hero.set_bonus(shop.bonus())
 	hud = load("res://scripts/heroes/hd_hud.gd").new()
 	hud.game = self
 	add_child(hud)
-	if Session.skip_setup:
+	if not _coop_info.is_empty():
+		coop = HdCoop.new()
+		add_child(coop)
+		coop.setup(self, _coop_info)
+	if Session.skip_setup and (coop == null or coop.host):
 		start(clampi(Session.difficulty, 0, cfg.difficulties.size() - 1))
 	else:
 		hud.show_setup()
 
 
 func _exit_tree() -> void:
+	if coop:
+		Net.set_status({"in_game":false})
+		if coop.host:
+			Net.end_coop()
+	if Net.game == self:
+		Net.game = null
+	Input.use_accumulated_input = _previous_accumulation
+	UiTheme.use_skin(_previous_skin)
 	Engine.time_scale = 1.0
 
 
@@ -158,6 +208,7 @@ func _load_settings() -> void:
 		control = str(c.get_value("steuerung", "modus", "wasd"))
 		quickcast = bool(c.get_value("steuerung", "schnellzauber", false))
 		road_choice = int(c.get_value("spiel", "strassen", 0))
+		lane_ids = Array(c.get_value("spiel", "lanes", []))
 		HdTelegraph.palette = int(c.get_value("warnflaechen", "farbe", 0))
 		HdTelegraph.outline = int(c.get_value("warnflaechen", "umriss", 0))
 		hero_id = str(c.get_value("held", "id", hero_id))
@@ -170,10 +221,13 @@ func _load_settings() -> void:
 
 
 func save_settings() -> void:
+	if not persist_settings:
+		return
 	var c := ConfigFile.new()
 	c.set_value("steuerung", "modus", control)
 	c.set_value("steuerung", "schnellzauber", quickcast)
 	c.set_value("spiel", "strassen", road_choice)
+	c.set_value("spiel", "lanes", lane_ids)
 	c.set_value("warnflaechen", "farbe", HdTelegraph.palette)
 	c.set_value("warnflaechen", "umriss", HdTelegraph.outline)
 	c.set_value("held", "id", hero_id)
@@ -194,6 +248,8 @@ func _check_kit() -> void:
 
 ## Helden wechseln (Startfenster, Tests). Der alte Held verschwindet, der neue steht am Start.
 func set_hero(id: String) -> void:
+	if coop and not coop.host and not coop.applying:
+		coop.command({"kind":"hero", "id":id})
 	if not hero_defs.has(id):
 		return
 	hero_id = id
@@ -206,6 +262,8 @@ func set_hero(id: String) -> void:
 	add_child(hero)
 	if shop:
 		hero.set_bonus(shop.bonus())
+	if coop and not coop.executing and not coop.applying and coop.context_depth == 0:
+		coop.slots[0 if coop.host else coop.player].hero = hero
 
 
 ## Zix' Baukasten ändern (nur zwischen den Wellen bzw. im Startfenster).
@@ -237,7 +295,11 @@ func scaling() -> Dictionary:
 
 
 func active_road_ids() -> Array:
-	if road_choice == 4:
+	var available: Array = cfg.arena.roads.map(func(r): return str(r.id))
+	var selected := lane_ids.filter(func(id): return available.has(id))
+	if not selected.is_empty():
+		return selected
+	if road_choice >= 4:
 		var all: Array = []
 		for rd in cfg.arena.roads:
 			all.append(str(rd.id))
@@ -247,6 +309,22 @@ func active_road_ids() -> Array:
 
 func key_name(slot: int) -> String:
 	return OS.get_keycode_string(KEYS[control][slot])
+
+
+func set_lane_enabled(id: String, enabled: bool) -> bool:
+	if state != "setup" or not cfg.arena.roads.any(func(r): return str(r.id) == id):
+		return false
+	var selected := active_road_ids().duplicate()
+	if enabled and not selected.has(id):
+		selected.append(id)
+	elif not enabled:
+		selected.erase(id)
+	if selected.is_empty():
+		return false
+	lane_ids = selected
+	_build_roads()
+	save_settings()
+	return true
 
 
 # ---------------------------------------------------------------- Straßen
@@ -263,15 +341,22 @@ func _build_roads() -> void:
 	add_child(_road_root)
 	roads.clear()
 	stones.clear()
+	_road_surfaces.clear()
+	_portal_fx.clear()
 	var fast := {}
 	for gd in cfg.arena.gates:
 		fast[str(gd.kind)] = float(gd.get("fast", 1.0))
 	var ids := active_road_ids()
 	var rw := float(cfg.arena.road_width)
+	var detailed_roads: Array = []
 	for rd in cfg.arena.roads:
-		var r := HdRoad.new(rd, fast)
+		detailed_roads.append(HdRoad.new(rd,fast))
+	# Gemeinsames Pflaster wird zuerst von einer aktiven Lane gezeichnet.
+	for active in [true,false]:
+		for r: HdRoad in detailed_roads:
+			if ids.has(r.id)==active:_draw_road(r,active)
+	for r: HdRoad in detailed_roads:
 		var on := ids.has(r.id)
-		_draw_road(r, on)
 		if not on:
 			continue
 		roads.append(r)
@@ -281,18 +366,32 @@ func _build_roads() -> void:
 			add_child(bl)
 			buildings.append(bl)
 			r.gates.append(bl)
-		# Teleport-Steine: an der Feste zur Straße hinaus (vor das Vorwerk), beim Vorwerk zurück
+		# Ein Rückstein direkt neben dem ersten Turm jeder Lane; getrennte Heimsteine auch bei gemeinsamen Wegen.
 		var tp: Dictionary = cfg.arena.teleport
-		var vs: float = r.length * float(r.gate("vorwerk").def.at)
+		var first_gate: HdBuilding = r.gates[0]
+		for gate: HdBuilding in r.gates:
+			if float(gate.def.at) < float(first_gate.def.at):
+				first_gate = gate
+		var vs: float = r.length * float(first_gate.def.at)
 		var off := rw * 0.5 + float(tp.offset)
-		var home := r.point(r.length - 5.0) + r.side(r.length - 5.0) * off
+		var home: Vector3 = fortress_pos + (r.points[0] - fortress_pos).normalized() * 12.0
 		var out := r.point(vs + 4.0)
-		var back := r.point(vs + 2.0) - r.side(vs + 2.0) * off
+		var back := r.point(vs) + r.side(vs) * float(first_gate.def.get("side", 1)) * r.gate_side * off
 		stones.append({"pos": home, "to": out, "road": r, "out": true})
 		stones.append({"pos": back, "to": hero_spawn(), "road": r, "out": false})
 		for st in [home, back]:
-			_road_root.add_child(HdDev.cyl(1.0, 1.2, 0.3, HdDev.mat(Color("3a3f55"), 0.5), st + Vector3(0, 0.15, 0), 12))
-			_road_root.add_child(HdDev.cyl(0.7, 0.7, 0.06, HdDev.mat(UiTheme.PURPLE_LIGHT, 0.5, 1.6), st + Vector3(0, 0.34, 0), 12))
+			var shrine := HdGothic.waystone(UiTheme.PURPLE_LIGHT)
+			shrine.position = st
+			# Der Bogen steht quer zum Weg von der Feste, man läuft hindurch auf die Scheibe.
+			shrine.rotation.y = atan2(st.x - fortress_pos.x, st.z - fortress_pos.z)
+			_road_root.add_child(shrine)
+	HdRoadDetails.build(_road_root, detailed_roads, rw, fortress_pos, HdTerrain.plaza_radius(self) if str(cfg.arena.get("theme",""))=="cathedral" else 0.0)
+	var service_paths: Array = []
+	for building: HdBuilding in buildings:
+		if building.road != null:
+			var route: Vector3 = building.road.point(building.road.length*float(building.def.at))
+			service_paths.append([route,building.position])
+	preload("res://scripts/map/ground_wear.gd").add_paths(_road_root,service_paths,1.3,"heroes")
 	_fly_roads.clear()
 	if zones:
 		zones.add_stones()
@@ -300,31 +399,45 @@ func _build_roads() -> void:
 
 func _draw_road(r: HdRoad, on: bool) -> void:
 	var rw := float(cfg.arena.road_width)
-	var road_mat := HdDev.mat(Color("8a7356") if on else Color("5d5546"))
+	var road_mat: Material = HdCathedral.path_material(on) if str(cfg.arena.get("theme", "")) == "cathedral" else HdDev.mat(Color("8a7356") if on else Color("5d5546"))
+	var paving := SurfaceTool.new()
+	paving.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var cap := CylinderMesh.new()
+	cap.top_radius=rw*.5
+	cap.bottom_radius=rw*.5
+	cap.height=.01
+	cap.radial_segments=20
+	var count := 0
 	for i in r.points.size() - 1:
 		var a: Vector3 = r.points[i]
 		var c: Vector3 = r.points[i + 1]
-		var seg := MeshInstance3D.new()
+		var key := hash([a, c])
+		if _road_surfaces.has(key):
+			continue
 		var sm := PlaneMesh.new()
 		sm.size = Vector2(rw, a.distance_to(c))
-		seg.mesh = sm
-		seg.material_override = road_mat
-		seg.position = (a + c) * 0.5 + Vector3(0, 0.005, 0)
-		seg.rotation.y = atan2(c.x - a.x, c.z - a.z)
-		_road_root.add_child(seg)
-		_road_root.add_child(HdDev.cyl(rw * 0.5, rw * 0.5, 0.01, road_mat, a + Vector3(0, 0.006, 0), 20))
+		paving.append_from(sm,0,Transform3D(Basis(Vector3.UP,atan2(c.x-a.x,c.z-a.z)),(a+c)*.5+Vector3.UP*.005))
+		paving.append_from(cap,0,Transform3D(Basis.IDENTITY,a+Vector3.UP*.006))
+		_road_surfaces[key] = true
+		count+=1
+	if count>0:
+		var surface := MeshInstance3D.new()
+		surface.name="CurvedLanePaving"
+		surface.mesh=paving.commit()
+		surface.material_override=road_mat
+		_road_root.add_child(surface)
 	# Spawn-Tor, quer zur Straße; gesperrte Straßen haben einen Balken davor
 	var sp: Vector3 = r.points[0]
 	var sd := r.side(0.0)
-	var gate_mat := HdDev.mat(Color("5d4a6a") if on else Color("4a4a4a"), 0.5)
-	for side in [-1.0, 1.0]:
-		_road_root.add_child(HdDev.box(Vector3(0.8, 4.0, 0.8), gate_mat, sp + sd * side * (rw * 0.5 + 0.6) + Vector3(0, 2.0, 0)))
-	var top := HdDev.box(Vector3(rw + 2.0, 0.6, 0.8), gate_mat, sp + Vector3(0, 4.2, 0))
-	top.rotation.y = atan2(sd.x, sd.z) + PI * 0.5
-	_road_root.add_child(top)
+	var portal := HdGothic.portal(rw, on)
+	portal.position = sp
+	portal.rotation.y = atan2(sd.x, sd.z) + PI * 0.5
+	_road_root.add_child(portal)
+	if on:
+		_portal_fx.append({"road": r, "node": portal, "pos": sp, "surge": 0.0})
 	if not on:
-		var bar := HdDev.box(Vector3(rw + 1.0, 1.0, 0.6), HdDev.mat(Color("6b4a2a"), 0.5), r.point(3.0) + Vector3(0, 0.8, 0))
-		bar.rotation.y = top.rotation.y
+		var bar := HdDev.box(Vector3(rw + 1.0, 1.0, 0.6), HdGothic.iron(), r.point(3.0) + Vector3(0, 0.8, 0))
+		bar.rotation.y = portal.rotation.y
 		_road_root.add_child(bar)
 
 
@@ -364,6 +477,8 @@ func gate_by_name(label: String):
 
 ## Neben der Feste, zwischen den Straßen (diagonal).
 func hero_spawn() -> Vector3:
+	if event_arena and event_arena.active:
+		return event_arena.center
 	if final and final.active:
 		return final.start_pos()
 	return fortress_pos + Vector3(6.5, 0, 6.5)
@@ -390,14 +505,26 @@ func _build_world() -> void:
 	sun.light_energy = 1.1
 	sun.shadow_enabled = Display.quality > 0
 	add_child(sun)
+	day_cycle = DayCycle.new()
+	day_cycle.lighting_style = FieldStyle.DRUID
+	day_cycle.atmosphere = {"direct": .64, "ambient": .68, "ambient_color": "68758a", "fog_color": "252b38", "fog_density": .008}
+	add_child(day_cycle)
+	day_cycle.set_process(false)
+	day_cycle.attach({"env": e, "sun": sun}, self)
+	day_cycle.set_hour(float(cfg.get("day_cycle", {}).get("start", DayCycle.START)))
+	day_cycle.speed = float(cfg.get("day_cycle", {}).get("speed", 1.0))
+	day_cycle.period_changed.connect(_day_changed)
 
 	var b: Array = cfg.arena.bounds
 	var ground := MeshInstance3D.new()
+	ground.name="MainTerrainGround"
+	ground.set_meta("vegetation_ground",true)
 	var gm := PlaneMesh.new()
 	gm.size = Vector2(float(b[2]) - float(b[0]) + 30.0, float(b[3]) - float(b[1]) + 30.0)
 	ground.mesh = gm
 	ground.position = Vector3((float(b[0]) + float(b[2])) * 0.5, -0.02, (float(b[1]) + float(b[3])) * 0.5)
-	ground.material_override = HdDev.mat(Color("4b5a44"))
+	var cathedral := str(cfg.arena.get("theme", "")) == "cathedral"
+	ground.material_override = HdTerrain.material("rock")
 	add_child(ground)
 	# Felsen (Hindernisse)
 	for o in cfg.arena.obstacles:
@@ -408,14 +535,19 @@ func _build_world() -> void:
 		rock.rotation.y = fmod(p.x * 1.7 + p.z, TAU)
 		add_child(rock)
 	# Feste
-	var fr := float(cfg.arena.fortress_radius)
-	var wall := HdDev.mat(Color("9a9aa4"), 0.5)
-	add_child(HdDev.cyl(fr, fr * 1.05, 3.0, wall, fortress_pos + Vector3(0, 1.5, 0), 8))
-	add_child(HdDev.cyl(fr * 0.45, fr * 0.5, 7.0, wall, fortress_pos + Vector3(0, 3.5, 0), 8))
-	add_child(HdDev.box(Vector3(1.6, 1.6, 1.6), HdDev.mat(UiTheme.CYAN, 0.5, 1.4), fortress_pos + Vector3(0, 7.8, 0)))
-	for k in 6:
-		var a := k * TAU / 6.0
-		add_child(HdDev.box(Vector3(1.2, 1.4, 1.2), wall, fortress_pos + Vector3(cos(a) * fr * 0.92, 3.5, sin(a) * fr * 0.92)))
+	if bool(cfg.arena.get("walls", false)):
+		arena_layout.build(self)
+	if cathedral:
+		HdCathedral.build(self, self)
+	else:
+		var fr := float(cfg.arena.fortress_radius)
+		var wall := HdDev.mat(Color("9a9aa4"), 0.5)
+		add_child(HdDev.cyl(fr, fr * 1.05, 3.0, wall, fortress_pos + Vector3(0, 1.5, 0), 8))
+		add_child(HdDev.cyl(fr * 0.45, fr * 0.5, 7.0, wall, fortress_pos + Vector3(0, 3.5, 0), 8))
+		add_child(HdDev.box(Vector3(1.6, 1.6, 1.6), HdDev.mat(UiTheme.CYAN, 0.5, 1.4), fortress_pos + Vector3(0, 7.8, 0)))
+		for k in 6:
+			var a := k * TAU / 6.0
+			add_child(HdDev.box(Vector3(1.2, 1.4, 1.2), wall, fortress_pos + Vector3(cos(a) * fr * 0.92, 3.5, sin(a) * fr * 0.92)))
 	_build_district()
 	fx = HdFx.new()
 	add_child(fx)
@@ -425,6 +557,9 @@ func _build_world() -> void:
 	add_child(camera)
 	cam_pos = hero.position
 	_place_camera()
+	var soundscape := HdSoundscape.new()
+	soundscape.name = "Soundscape"
+	add_child(soundscape)
 
 
 ## Bezirks-Baukasten außerhalb der Arena (rein optisch, außerhalb von bounds, also ohne Kollision).
@@ -457,6 +592,8 @@ func mouse_ground() -> Vector3:
 
 
 func _unhandled_input(ev: InputEvent) -> void:
+	if not imprint_choices.is_empty():
+		return
 	if bot:
 		return
 	if ev is InputEventMouseButton and ev.pressed:
@@ -488,6 +625,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if state != "play":
 		return
 	if key == KEY_P:
+		if coop and not coop.host:
+			coop.command({"kind":"pause", "value":not paused})
+			return
 		paused = not paused
 		changed.emit()
 		return
@@ -501,6 +641,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 		call_early()
 		return
 	if paused:
+		return
+	if key >= KEY_F1 and key <= KEY_F6:
+		var why := shop.act({"kind":"use", "i":key - KEY_F1})
+		if why != "" and why != "?":
+			message.emit(why)
 		return
 	if key == KEY_SPACE:
 		var dir := hero.move_dir if control == "wasd" else mouse_ground() - hero.position
@@ -566,12 +711,66 @@ func _update_preview() -> void:
 	if bool(a.get("at_point", false)):
 		var at := hero.clamp_point(mouse_ground(), float(a.get("range", 10.0)))
 		_preview.position = Vector3(at.x, 0.04, at.z)
+		_preview.aim(mouse_ground() - hero.position)
 		return
 	_preview.position = Vector3(hero.position.x, 0.04, hero.position.z)
 	_preview.aim(mouse_ground() - hero.position)
 
 
 func _process(dt: float) -> void:
+	if arena_layout:
+		for actor: HdHero in playing_heroes():
+			if is_instance_valid(actor) and actor._body:
+				actor._body.position.y = HdArenaMountains.ground_height(arena_layout,actor.position) if not final.active and not event_arena.active else 0.0
+	if state == "play" and not paused:
+		_update_preview()
+	_step_portal_fx(dt)
+	if cam_follow or bot:
+		cam_pos = cam_pos.lerp(hero.position, clampf(dt * 6.0, 0.0, 1.0))
+	elif not bot:
+		var pan := Vector3.ZERO
+		if Input.is_key_pressed(KEY_UP):
+			pan.z -= 1
+		if Input.is_key_pressed(KEY_DOWN):
+			pan.z += 1
+		if Input.is_key_pressed(KEY_LEFT):
+			pan.x -= 1
+		if Input.is_key_pressed(KEY_RIGHT):
+			pan.x += 1
+		cam_pos += pan * dt * 25.0
+	_place_camera()
+
+
+## Spawn-Portale öffnen ihren Wirbel kurz vor einem Spawn auf ihrer Straße und solange frisch
+## gespawnte Gegner noch im Bogen stehen (letzteres sehen auch Koop-Clients ohne Spawn-Liste).
+func _step_portal_fx(dt: float) -> void:
+	for fx_entry: Dictionary in _portal_fx:
+		var node: Node3D = fx_entry.node
+		if not is_instance_valid(node):
+			continue
+		var road: HdRoad = fx_entry.road
+		var at: Vector3 = fx_entry.pos
+		var open := false
+		if state == "play":
+			for q: Dictionary in spawn_queue:
+				if float(q.t) - play_time > 1.6:
+					break
+				var qr = q.get("road")
+				if qr == road or (qr is HdRoad and qr.id == road.id):
+					open = true
+					break
+			if not open:
+				for e in enemies:
+					if is_instance_valid(e) and Vector2(e.position.x - at.x, e.position.z - at.z).length_squared() < 16.0:
+						open = true
+						break
+		var target := 1.0 if open else 0.0
+		var rate := 2.5 if open else 0.9
+		fx_entry.surge = move_toward(float(fx_entry.surge), target, dt * rate)
+		HdGothic.set_portal_surge(node, fx_entry.surge)
+
+
+func _sample_input() -> void:
 	if state == "play" and not bot and not paused:
 		var aim := mouse_ground()
 		hero.aim = aim
@@ -594,31 +793,20 @@ func _process(dt: float) -> void:
 			hero.auto_attack = true
 			if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and hero.order.get("kind", "") == "move" and preview_slot < 0:
 				hero.order.point = aim
-		_update_preview()
-	if cam_follow or bot:
-		cam_pos = cam_pos.lerp(hero.position, clampf(dt * 6.0, 0.0, 1.0))
-	elif not bot:
-		var pan := Vector3.ZERO
-		if Input.is_key_pressed(KEY_UP):
-			pan.z -= 1
-		if Input.is_key_pressed(KEY_DOWN):
-			pan.z += 1
-		if Input.is_key_pressed(KEY_LEFT):
-			pan.x -= 1
-		if Input.is_key_pressed(KEY_RIGHT):
-			pan.x += 1
-		cam_pos += pan * dt * 25.0
-	_place_camera()
 
 
 func _physics_process(dt: float) -> void:
 	if state == "play" and not paused:
-		step(dt)
+		_sample_input()
+		if coop == null or coop.host:
+			step(dt)
 
 
 # ---------------------------------------------------------------- Ablauf
 
 func start(diff_index: int) -> void:
+	if coop and not coop.host:
+		return
 	final_boss_id = ""
 	difficulty = diff_index
 	Session.difficulty = diff_index
@@ -656,6 +844,16 @@ func faction_of(n: int) -> Dictionary:
 
 
 func start_wave(n: int) -> void:
+	if n > wave and _exploration_checkpoint_pending():
+		return
+	if event_arena and event_arena.active:
+		if events.busy() and not (str(events.active.get("id", "")) == "gefangener" and events.active.has("ally")):
+			return
+		event_arena.leave()
+	if wave > 0 and n > wave and _imprint_due():
+		if wave_enemies() == 0 and spawn_queue.is_empty():
+			offer_imprint()
+		return
 	if wave > 0:
 		_wave_reward(wave)
 		wave_log.append({"wave": wave, "kills": _wave_kills, "leaks": _wave_leaks, "damage": roundi(hero.damage_done - _wave_damage0)})
@@ -786,7 +984,27 @@ func _step_boss_warning() -> void:
 
 
 func can_call_early() -> bool:
-	return state == "play" and spawn_queue.is_empty() and wave < wave_count() and not boss_alive()
+	if state != "play" or paused or _imprint_due() or event_arena.active or final.active:
+		return false
+	if exploration.active:
+		return true
+	return not _exploration_checkpoint_pending() and spawn_queue.is_empty() and wave < wave_count() and not boss_alive()
+
+
+## Ein Zehnerblock endet erst nach allen Gegnern und der anschließenden Erkundung.
+func _exploration_checkpoint_pending() -> bool:
+	return exploration != null and wave_limit == 0 and not final.active and wave > 0 and wave % 10 == 0 and exploration.completed < wave
+
+
+func _step_exploration_break(dt: float) -> void:
+	if exploration == null or event_arena.active or final.active:
+		return
+	if exploration.active:
+		exploration.tick_break(dt)
+		if not exploration.active:
+			wave_time = wave_len(wave)
+	elif _exploration_checkpoint_pending() and spawn_queue.is_empty() and wave_enemies() == 0 and not _imprint_due():
+		exploration.begin(wave)
 
 
 func _boss_queued() -> bool:
@@ -813,7 +1031,18 @@ func wave_enemies() -> int:
 
 
 func call_early() -> void:
+	if coop and not coop.host:
+		coop.command({"kind":"early"})
+		return
 	if can_call_early():
+		if exploration.active:
+			exploration.tick_break(exploration.remaining)
+			wave_time = wave_len(wave)
+			if wave < wave_count():
+				start_wave(wave + 1)
+			else:
+				step(0.0)
+			return
 		var bonus := roundi(maxf(0.0, wave_len(wave) - wave_time) * float(cfg.economy.early_gold))
 		if bonus > 0:
 			shop.add_gold(bonus)
@@ -823,6 +1052,12 @@ func call_early() -> void:
 
 ## Belohnung für eine überstandene Welle (beim Start der nächsten bzw. beim Sieg).
 func _wave_reward(n: int) -> void:
+	if coop and not _party_reward:
+		_party_reward = true
+		for index in coop.slots:
+			coop.with_player(index, func(): _wave_reward(n))
+		_party_reward = false
+		return
 	shop.add_gold(roundi(shop.wave_gold(n) * (float(events.blood().get("reward", 2.0)) if blood_wave == n else 1.0)))
 	var w: Dictionary = cfg.waves.list[n - 1]
 	var wd := int(cfg.economy.boss_wood) if bool(w.get("boss", false)) else int(cfg.economy.wave_wood)
@@ -830,48 +1065,75 @@ func _wave_reward(n: int) -> void:
 
 
 func step(dt: float) -> void:
+	if paused:
+		return
 	if state != "play":
 		return
 	play_time += dt
-	wave_time += dt
+	day_cycle.advance(dt)
+	_step_script_actions(dt)
 	var now := play_time
-	while not spawn_queue.is_empty() and spawn_queue[0].t <= now:
-		var s: Dictionary = spawn_queue.pop_front()
-		_spawn_queued(s)
-	_step_boss_warning()
-	# Rast: Kriegsherr gefallen → höchstens noch rest Sekunden bis zur nächsten Welle
-	if is_boss_wave(wave) and not rest_given and not boss_alive() and not _boss_queued():
-		rest_given = true
-		var rest := float(cfg.waves.get("rest", 45.0))
-		if wave < wave_count() and wave_len(wave) - wave_time > rest:
-			wave_time = wave_len(wave) - rest
-			message.emit(tr("Rast: %d s bis zur nächsten Welle") % roundi(rest))
-	if wave < wave_count() and wave_time >= wave_len(wave):
-		start_wave(wave + 1)
+	_step_exploration_break(dt)
+	if event_arena.active or exploration.active:
+		for queued in spawn_queue:
+			queued.t += dt
+	else:
+		if not exploration.active:
+			wave_time += dt
+		while not spawn_queue.is_empty() and spawn_queue[0].t <= now:
+			var s: Dictionary = spawn_queue.pop_front()
+			_spawn_queued(s)
+		if not exploration.active:
+			_step_boss_warning()
+		# Rast: Kriegsherr gefallen → höchstens noch rest Sekunden bis zur nächsten Welle
+		if is_boss_wave(wave) and not _exploration_checkpoint_pending() and not rest_given and not boss_alive() and not _boss_queued():
+			rest_given = true
+			var rest := float(cfg.waves.get("rest", 45.0))
+			if wave < wave_count() and wave_len(wave) - wave_time > rest:
+				wave_time = wave_len(wave) - rest
+				message.emit(tr("Rast: %d s bis zur nächsten Welle") % roundi(rest))
+		if wave < wave_count() and wave_time >= wave_len(wave):
+			start_wave(wave + 1)
+	_rebuild_spatial()
 	hero.step(dt, now)
-	_step_stones(dt)
+	if coop:
+		coop.step_others(dt, now)
+	health_orbs.step(now)
+	if not event_arena.active:
+		_step_stones(dt)
 	for e in enemies:
-		if e.dead:
+		if e.dead or event_arena.frozen(e):
 			continue
-		e.step(dt, now)
+		if coop:
+			coop.enemy_step(e, dt, now)
+		else:
+			e.step(dt, now)
 		if not e.dead:
 			e.step_debuffs(dt, now)
 		if not e.dead and now < e.burn_until:
 			hero_hit(e, e.burn_dps * dt, "burn", true)
 	for b in buildings.duplicate():
-		b.step(dt)
+		if not event_arena.frozen(b):
+			b.step(dt)
 	_step_projectiles(dt)
 	_step_pools(dt, now)
 	_step_blasts(dt)
-	zones.step(dt)
+	if not event_arena.active:
+		zones.step(dt)
+		if not final.active:
+			exploration.step(dt)
 	events.step(dt)
+	event_arena.step(dt)
 	_step_event_buffs()
 	if systems.has("timed_events"):
 		systems.timed_events.tick(dt)
 	final.step(dt)
 	enemies = enemies.filter(func(e): return not e.dead)
-	if state == "play" and not final.active and wave >= wave_count() and spawn_queue.is_empty() and wave_enemies() == 0:
+	if not event_arena.active and _imprint_due() and wave_enemies() == 0 and spawn_queue.is_empty():
+		offer_imprint()
+	if state == "play" and not event_arena.active and not final.active and not _exploration_checkpoint_pending() and wave >= wave_count() and spawn_queue.is_empty() and wave_enemies() == 0:
 		if systems.has("challenges") and wave_limit == 0:
+			exploration.close_encounters()
 			final.enter()
 		else:
 			_finish(true)
@@ -880,7 +1142,7 @@ func step(dt: float) -> void:
 ## Teleport-Steine: Held steht kurz drauf (teleport.hold) → zur anderen Seite (Feste ↔ vor das Vorwerk).
 func _step_stones(dt: float) -> void:
 	_tp_cd = maxf(0.0, _tp_cd - dt)
-	if _tp_cd > 0.0 or not hero.alive() or hero.dodging():
+	if _tp_cd > 0.0 or not hero.alive() or hero.dodge_invulnerable():
 		return
 	var tp: Dictionary = cfg.arena.teleport
 	for st in stones:
@@ -907,7 +1169,7 @@ func teleport_hero(to: Vector3) -> void:
 	_tp_cd = float(cfg.arena.teleport.cooldown)
 	tp_hold = 0.0
 	tp_stone = {}
-	if not bot:
+	if not bot and (not coop or int(hero.get_meta("player",0))==coop.player):
 		cam_pos = hero.position
 
 
@@ -932,6 +1194,7 @@ func spawn(id: String, at = null, road_s := 0.0, rd = null) -> HdEnemy:
 	_apply_foe_mods(e)
 	add_child(e)
 	enemies.append(e)
+	_spatial_ready = false
 	return e
 
 
@@ -981,6 +1244,8 @@ func _spawn_queued(s: Dictionary) -> HdEnemy:
 
 ## Gerade Fluglinie vom Spawn-Tor der Straße bis vor die Feste (Flieger ignorieren Torwerke und Felsen).
 func fly_road(r: HdRoad) -> HdRoad:
+	if bool(cfg.arena.get("walls", false)):
+		return r
 	if not _fly_roads.has(r):
 		var a: Vector3 = r.points[0]
 		var b: Vector3 = fortress_pos + (a - fortress_pos).normalized() * (float(cfg.arena.fortress_radius) + 2.0)
@@ -990,6 +1255,17 @@ func fly_road(r: HdRoad) -> HdRoad:
 
 ## Beschwörerkreis: neue Gegner um den Beschwörer, sie laufen ab seiner Stelle die Straße weiter.
 func summon(src: HdEnemy, id: String, count: int, r: float) -> void:
+	if src is HdScriptCaster:
+		var previous := buildings.duplicate()
+		var result = effect_script_action("Summon", [id, count, 15.0], src.script_owner, src.script_owner)
+		if result is String:
+			EffectScript.report_errors(src.script_owner, [result])
+		else:
+			var added: Array = buildings.filter(func(b): return not previous.has(b))
+			for index in added.size():
+				var angle := TAU * index / maxf(added.size(), 1)
+				added[index].position = free_point(src.position + Vector3(cos(angle), 0, sin(angle)) * r * 0.7, added[index].radius)
+		return
 	if src.boss_brain != null:
 		count = mini(count, src.boss_brain.remaining_adds())
 		for k in count:
@@ -1015,6 +1291,10 @@ func leak(e: HdEnemy) -> void:
 	_remove(e)
 	if e.event_tag != "":
 		events.kinds.on_leak(e)
+		if lives <= 0:
+			lives = 0
+			_finish(false)
+		return
 	leaks += 1
 	_wave_leaks += 1
 	lives -= int(e.def.get("lives", 1))
@@ -1041,20 +1321,32 @@ func _remove(e: HdEnemy) -> void:
 func _kill(e: HdEnemy) -> void:
 	if e.dead:
 		return
+	health_orbs.drop_for(e)
 	e.leave_corpse()
 	_remove(e)
 	if e.plagued():
 		_spread_plague(e)
 	kills += 1
 	hero.kills += 1
-	hero.add_xp(float(e.def.get("xp", 10)) * event_xp_mult())
-	if zones.on_kill(e) or events.on_kill(e) or final.on_kill(e):
+	hero.script_event(e, "kill")
+	if coop:
+		for index in coop.slots:
+			coop.with_player(index, func(): hero.add_xp(float(e.def.get("xp", 10)) * event_xp_mult()))
+	else:
+		hero.add_xp(float(e.def.get("xp", 10)) * event_xp_mult())
+	if exploration.on_kill(e) or zones.on_kill(e) or events.on_kill(e) or final.on_kill(e) or event_arena.active:
 		changed.emit()
 		return
 	_wave_kills += 1
 	var g := roundi(shop.kill_gold(e) * e.reward * event_gold_mult())
+	if playing_heroes().any(func(h): return h is HdHeroRoster and h.lantern_lights(e.position)):
+		g = roundi(g * 1.2)
 	if g > 0 and not e.gold_free:
-		shop.add_gold(g)
+		if coop:
+			for slot in coop.slots.values():
+				slot.shop.add_gold(g)
+		else:
+			shop.add_gold(g)
 		floater(e.position + Vector3(0, e.height() + 1.0, 0), "+%d" % g, UiTheme.COIN)
 	_on_death_traits(e)
 	if e.rank == "boss":
@@ -1139,14 +1431,14 @@ func _step_blasts(dt: float) -> void:
 		t.progress = b.t / maxf(float(b.windup), 0.01)
 		if b.t >= b.windup:
 			blasts.remove_at(i)
-			var inside := t.contains(hero.position, hero.radius) and hero.alive()
-			if inside and hero.dodging():
-				floater(hero.position + Vector3(0, 2.4, 0), tr("Ausgewichen"), UiTheme.CYAN)
-			elif inside:
-				if b.on_hit.is_valid():
-					b.on_hit.call()
-				if float(b.dmg) > 0.0:
-					damage_hero(float(b.dmg), null)
+			for actor: HdHero in playing_heroes():
+				if actor.alive() and not actor.dodge_invulnerable() and t.contains(actor.position, actor.radius):
+					call_as_hero(actor, func():
+						if b.on_hit.is_valid():
+							b.on_hit.call()
+						if float(b.dmg) > 0:
+							damage_hero(float(b.dmg), null))
+
 			for bl in buildings:
 				if float(b.dmg) > 0.0 and bl.alive() and t.contains(bl.position, bl.radius):
 					damage_building(bl, float(b.dmg) * 0.5)
@@ -1173,17 +1465,80 @@ func on_level_up() -> void:
 	changed.emit()
 
 
+func _imprint_due() -> bool:
+	return wave_limit == 0 and not final.active and wave in hero.skills.cfg.milestones and not imprint_claimed.has(wave)
+
+
+func offer_imprint() -> void:
+	if not imprint_pending.is_empty() or imprint_claimed.has(wave):
+		return
+	for actor in playing_heroes():
+		var choices: Array = actor.skills.cfg.get("hero_imprints", {}).get(str(actor.def.id), []).filter(func(p): return int(p.milestone) == wave)
+		imprint_pending[hero_slot(actor)] = choices.duplicate(true)
+		actor.attack_held = false
+	imprint_choices = imprint_pending.get(hero_slot(hero), [])
+	if imprint_choices.is_empty():
+		imprint_claimed.append(wave)
+		imprint_pending.clear()
+		return
+	_imprint_was_paused = paused
+	paused = true
+	hero.attack_held = false
+	if bot:
+		for index in imprint_pending.keys():
+			if coop:
+				coop.with_player(index, func(): choose_imprint(0))
+			else:
+				choose_imprint(0)
+	changed.emit()
+
+
+func choose_imprint(index: int) -> bool:
+	if coop and not coop.host:
+		coop.command({"kind":"imprint", "index":index})
+		return true
+	var player := hero_slot(hero)
+	var choices: Array = imprint_pending.get(player, [])
+	if index < 0 or index >= choices.size():
+		return false
+	var selected: Dictionary = choices[index].duplicate(true)
+	selected.owner = player
+	imprints.append(selected)
+	hero._apply_level()
+	hero.skills.refresh_constructs()
+	imprint_pending.erase(player)
+	imprint_choices = imprint_pending.get(0, [])
+	if imprint_pending.is_empty():
+		imprint_claimed.append(wave)
+		paused = _imprint_was_paused
+	changed.emit()
+	return true
+
+
+func withdraw_imprint(player: int) -> void:
+	if not imprint_pending.has(player):
+		return
+	imprint_pending.erase(player)
+	imprint_choices = imprint_pending.get(0, [])
+	if imprint_pending.is_empty():
+		imprint_claimed.append(wave)
+		paused = _imprint_was_paused
+	changed.emit()
+
+
 # ---------------------------------------------------------------- Bewegung
 
 ## Bewegt eine Einheit (Held oder Gegner) mit Ausweichen: Gegner halten Abstand zueinander und zum
 ## Helden und lenken vor Felsen/Gebäuden seitlich weg. Danach werden Überlappungen aufgelöst, damit
 ## niemand in einem Hindernis landet. direct = ohne Lenken (Ansturm, Rückstoß, Ausweichen).
 func move_unit(u: Node3D, dir: Vector3, spd: float, dt: float, direct := false) -> void:
+	if not direct and play_time < float(u.get_meta("root_until", -1)):
+		return
 	dir.y = 0.0
 	var v := dir * spd
 	if u is HdEnemy and not direct:
 		var push := Vector3.ZERO
-		for o in enemies:
+		for o in nearby_enemies(u.position, float(u.radius) + 3.5):
 			if o == u or o.dead:
 				continue
 			push += _sep(u, o.position, o.radius)
@@ -1203,8 +1558,10 @@ func move_unit(u: Node3D, dir: Vector3, spd: float, dt: float, direct := false) 
 				v += lat * side * spd * (clear + 2.5 - dist) / 2.5 * 1.3
 		if v.length() > spd * 1.3:
 			v = v.normalized() * spd * 1.3
-	u.position += v * dt
-	_resolve(u)
+	var steps := maxi(ceili(v.length() * dt / maxf(float(u.radius) * 0.5, 0.2)), 1)
+	for _i in mini(steps, 128):
+		u.position += v * dt / mini(steps, 128)
+		_resolve(u)
 
 
 func _sep(u: Node3D, p: Vector3, r: float) -> Vector3:
@@ -1242,14 +1599,40 @@ func free_point(p: Vector3, r: float) -> Vector3:
 			var min_d: float = ob[1] + r
 			if d.length() < min_d:
 				p += (d.normalized() if d.length() > 0.001 else Vector3.RIGHT) * (min_d - d.length())
+	var area: Array = _movement_bounds(p)
+	p.x = clampf(p.x, float(area[0]) + r, float(area[2]) - r)
+	p.z = clampf(p.z, float(area[1]) + r, float(area[3]) - r)
+	if final != null and final.active and final.layout != null:
+		p = final.layout.constrain(p, r)
+	if arena_layout and not final.active and not event_arena.active and bool(cfg.arena.get("walls", false)):
+		p = arena_layout.constrain(p, r)
 	return p
 
 
 ## Spielfeld [x0, z0, x1, z1]: die Karte oder das Endgebiet.
 func bounds() -> Array:
+	if event_arena and event_arena.active:
+		return event_arena.bounds()
 	if final and final.active:
 		return final.bounds()
 	return cfg.arena.bounds
+
+
+## Höhlen liegen räumlich getrennt; eine Einheit bleibt in ihrem eigenen Gebiet.
+func _movement_bounds(p: Vector3) -> Array:
+	if p.x < -400.0 and not final.active and not event_arena.active:
+		var nearest: Dictionary = {}
+		var distance := INF
+		for room: Dictionary in HdExplorationLayout.rooms():
+			var d: float = p.distance_squared_to(room.center)
+			if d < distance:
+				distance = d
+				nearest = room
+		if not nearest.is_empty():
+			var c: Vector3 = nearest.center
+			var r: float = nearest.radius
+			return [c.x - r, c.z - r, c.x + r, c.z + r]
+	return bounds()
 
 
 ## Aus Hindernissen herausschieben und im Spielfeld halten.
@@ -1267,9 +1650,13 @@ func _resolve(u: Node3D) -> void:
 				d = Vector3(1, 0, 0)
 				l = 1.0
 			u.position += d / l * (min_d - l)
-	var b: Array = bounds()
+	var b: Array = _movement_bounds(u.position)
 	u.position.x = clampf(u.position.x, float(b[0]), float(b[2]))
 	u.position.z = clampf(u.position.z, float(b[1]), float(b[3]))
+	if final.active and final.layout != null:
+		u.position = final.layout.constrain(u.position, float(u.radius))
+	if arena_layout != null and not final.active and not (event_arena and event_arena.active) and bool(cfg.arena.get("walls", false)):
+		u.position = arena_layout.constrain_hero(u.position,float(u.radius)) if u is HdHero else arena_layout.constrain(u.position,float(u.radius))
 	u.position.y = 0.0
 
 
@@ -1277,7 +1664,16 @@ func _resolve(u: Node3D) -> void:
 
 ## Weiterleitung → System  targeting
 func nearest_enemy(at: Vector3, r: float, skip: Array = []) -> HdEnemy:
-	return systems.targeting.nearest(Vector2(at.x, at.z), r, skip)
+	var best: HdEnemy = null
+	var distance := INF
+	for enemy in nearby_enemies(at, r + 4.0):
+		if enemy.dead or event_arena.frozen(enemy) or skip.has(enemy):
+			continue
+		var d: float = at.distance_to(enemy.position) - enemy.radius
+		if d <= r and d < distance:
+			best = enemy
+			distance = d
+	return best
 
 
 func enemy_at(at: Vector3) -> HdEnemy:
@@ -1302,7 +1698,7 @@ func enemy_in_arc(at: Vector3, dir: Vector3, r: float, arc: float) -> HdEnemy:
 func enemies_in(kind: int, origin: Vector3, dir: Vector3, r: float, r_in: float, deg: float, l: float, w: float) -> Array:
 	var out: Array = []
 	for e in enemies:
-		if not e.dead and HdTelegraph.in_shape(kind, origin, dir, r, r_in, deg, l, w, e.position, e.radius):
+		if not e.dead and not event_arena.frozen(e) and HdTelegraph.in_shape(kind, origin, dir, r, r_in, deg, l, w, e.position, e.radius):
 			out.append(e)
 	return out
 
@@ -1311,10 +1707,11 @@ func enemies_in(kind: int, origin: Vector3, dir: Vector3, r: float, r_in: float,
 ## Einzelspieler gibt es keine anderen Helden).
 func allies() -> Array:
 	var out: Array = []
-	if hero.alive():
-		out.append(hero)
+	for actor in playing_heroes():
+		if actor.alive():
+			out.append(actor)
 	for b in buildings:
-		if b.alive():
+		if b.alive() and not event_arena.frozen(b):
 			out.append(b)
 	return out
 
@@ -1354,12 +1751,20 @@ static func armor_factor(a: float) -> float:
 
 
 ## Schaden des Helden an einem Gegner (zieht dessen Aufmerksamkeit auf den Helden).
-func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
-	if e.dead:
+func hero_hit(e: HdEnemy, amount: float, kind: String, quiet := false) -> void:
+	if e.dead or event_arena.frozen(e):
 		return
+	if amount > 0.0:
+		hero.mark_combat()
 	var dmg := amount * hero.out_mult() * armor_factor(e.armor - e.cc.armor_reduction(play_time))
+	var exposed: Dictionary = e.get_meta("roster_expose", {})
+	if play_time < float(exposed.get("until", -1)):
+		dmg *= 1.0 + float(exposed.get("value", 0))
 	e.take(dmg)
 	e.hit_flash = 0.12
+	if play_time >= float(e.get_meta("impact_at", -1.0)):
+		e.set_meta("impact_at", play_time + 0.12)
+		fx.impact(e.position + Vector3.UP * e.height() * 0.6, damage_element(kind), (e.position - hero.position).normalized())
 	hero.damage_done += dmg
 	if hero.b("lifesteal") > 0.0 and hero.alive():
 		hero.hp = minf(hero.max_hp, hero.hp + dmg * hero.b("lifesteal"))
@@ -1370,9 +1775,14 @@ func hero_hit(e: HdEnemy, amount: float, _kind: String, quiet := false) -> void:
 		floater(e.position + Vector3(0, e.height() + 0.4, 0), str(roundi(dmg)), UiTheme.TEXT)
 	if e.hp <= 0.0:
 		_kill(e)
+	if kind not in ["burn", "rat", "rats", "plague", "dot", "drain"]:
+		hero.script_event(e, "hit")
 
 
 func building_hit(e: HdEnemy, amount: float, b: HdBuilding) -> void:
+	if coop and b is HdGadget and b.zix != hero:
+		call_as_hero(b.zix, func(): building_hit(e, amount, b))
+		return
 	if e.dead:
 		return
 	var dmg := amount * armor_factor(e.armor - e.cc.armor_reduction(play_time))
@@ -1380,6 +1790,14 @@ func building_hit(e: HdEnemy, amount: float, b: HdBuilding) -> void:
 	e.hit_flash = 0.12
 	if b is HdGadget:
 		hero.damage_done += dmg
+	if play_time >= float(e.get_meta("impact_at", -1)):
+		e.set_meta("impact_at", play_time + 0.12)
+		var element := "physical"
+		for tag in ["fire", "cold", "lightning", "poison"]:
+			if (b.def.get("tags", []) as Array).has(tag):
+				element = tag
+				break
+		fx.impact(e.position + Vector3.UP * e.height() * 0.6, element, (e.position - b.position).normalized())
 	e.provoke(b)
 	if e.hp <= 0.0:
 		_kill(e)
@@ -1399,18 +1817,22 @@ func stun(e: HdEnemy, duration: float) -> float:
 func damage_hero(amount: float, _src, quiet := false) -> void:
 	if not hero.alive():
 		return
-	if hero.dodging():
+	if hero.dodge_invulnerable():
 		return
+	if hero is HdHeroRoster:
+		hero.set_meta("damage_origin", _src.position if is_instance_valid(_src) and _src is Node3D else Vector3.INF)
 	var dmg := hero.incoming(amount * armor_factor(hero.armor - hero.cc.armor_reduction(play_time)))
 	if play_time < hero.ward_until:
 		dmg *= 1.0 - hero.ward
 	hero.hp -= dmg
 	hero.damage_taken += dmg
+	hero.script_event(_src, "hurt")
 	if not quiet:
 		floater(hero.position + Vector3(0, 2.4, 0), str(roundi(dmg)), UiTheme.MISSING)
 	if hero.hp <= 0.0:
 		hero.hp = 0.0
 		hero.die()
+		hero.script_event(_src, "death")
 		changed.emit()
 
 
@@ -1433,20 +1855,31 @@ func damage_building(b: HdBuilding, amount: float) -> void:
 
 ## Ausgelöste Warnfläche: trifft den Helden (wenn er nicht ausweicht) und Gebäude darin.
 func tele_hit(src: HdEnemy, t: HdTelegraph, dmg: float, knockdown: float) -> void:
-	area_hit(src, t.contains(hero.position, hero.radius), dmg, knockdown)
+	if src is HdScriptCaster:
+		for enemy in enemies:
+			if not enemy.dead and not event_arena.frozen(enemy) and t.contains(enemy.position, enemy.radius):
+				_friendly_spell_hit(src.script_owner, enemy, dmg, knockdown)
+		return
+	for actor: HdHero in playing_heroes():
+		call_as_hero(actor, func(): area_hit(src, t.contains(hero.position, hero.radius), dmg, knockdown))
 	for b in buildings:
 		if b.alive() and t.contains(b.position, b.radius):
 			damage_building(b, dmg * 0.5)
 
 
 func ability_hit_area(src: HdEnemy, kind: int, origin: Vector3, dir: Vector3, r: float, r_in: float, deg: float, l: float, w: float, dmg: float, knockdown: float) -> void:
-	area_hit(src, HdTelegraph.in_shape(kind, origin, dir, r, r_in, deg, l, w, hero.position, hero.radius), dmg, knockdown)
+	if src is HdScriptCaster:
+		for enemy in enemies_in(kind, origin, dir, r, r_in, deg, l, w):
+			_friendly_spell_hit(src.script_owner, enemy, dmg, knockdown)
+		return
+	for actor: HdHero in playing_heroes():
+		call_as_hero(actor, func(): area_hit(src, HdTelegraph.in_shape(kind, origin, dir, r, r_in, deg, l, w, hero.position, hero.radius), dmg, knockdown))
 
 
 func area_hit(src: HdEnemy, inside: bool, dmg: float, knockdown: float) -> void:
 	if not inside or not hero.alive():
 		return
-	if hero.dodging():
+	if hero.dodge_invulnerable():
 		floater(hero.position + Vector3(0, 2.4, 0), tr("Ausgewichen"), UiTheme.CYAN)
 		return
 	damage_hero(dmg, src)
@@ -1457,6 +1890,12 @@ func area_hit(src: HdEnemy, inside: bool, dmg: float, knockdown: float) -> void:
 func add_tele(t: HdTelegraph) -> void:
 	t.position.y = (0.085 if final.active else 0.03) + rng.randf() * 0.01
 	add_child(t)
+	conform_ground_effect(t)
+
+
+func conform_ground_effect(node: Node3D) -> void:
+	var on_main := not (final and final.active) and not (event_arena and event_arena.active)
+	HdArenaMountains.conform_effect(node,arena_layout if on_main else null)
 
 
 func add_pool(at: Vector3, r: float, dps: float, time: float, _src) -> void:
@@ -1465,6 +1904,7 @@ func add_pool(at: Vector3, r: float, dps: float, time: float, _src) -> void:
 	t.progress = 1.0
 	t.position = Vector3(at.x, 0.08 if final.active else 0.025, at.z)
 	add_child(t)
+	conform_ground_effect(t)
 	var owner_id: int = _src.get_instance_id() if _src is HdEnemy and _src.boss_brain != null else 0
 	if owner_id != 0:
 		var owned: Array = pools.filter(func(p): return int(p.get("owner_id", 0)) == owner_id)
@@ -1472,7 +1912,13 @@ func add_pool(at: Vector3, r: float, dps: float, time: float, _src) -> void:
 			if is_instance_valid(owned[0].tele):
 				owned[0].tele.queue_free()
 			pools.erase(owned[0])
-	pools.append({"pos": at, "r": r, "dps": dps, "until": play_time + time, "tele": t, "owner_id": owner_id})
+	var pool := {"pos": at, "r": r, "dps": dps, "until": play_time + time, "tele": t, "owner_id": owner_id}
+	if _src is HdScriptCaster:
+		pool.actor = _src.script_owner
+		t.color = UiTheme.CYAN
+		if t._mat:
+			t._mat.set_shader_parameter("color", UiTheme.CYAN)
+	pools.append(pool)
 
 
 func _step_pools(dt: float, now: float) -> void:
@@ -1483,42 +1929,63 @@ func _step_pools(dt: float, now: float) -> void:
 				p.tele.trigger(0.3)
 			pools.remove_at(i)
 			continue
-		if hero.alive() and Vector2(hero.position.x - p.pos.x, hero.position.z - p.pos.z).length() <= float(p.r) + hero.radius:
-			damage_hero(float(p.dps) * dt, null, true)
+		if p.has("actor"):
+			for enemy in enemies_in(HdTelegraph.CIRCLE, p.pos, Vector3.FORWARD, float(p.r), 0, 0, 0, 0):
+				_friendly_spell_hit(p.actor, enemy, float(p.dps) * dt, 0)
+			continue
+		for actor: HdHero in playing_heroes():
+			if actor.alive() and Vector2(actor.position.x - p.pos.x, actor.position.z - p.pos.z).length() <= actor.radius + float(p.r):
+				call_as_hero(actor, func(): damage_hero(float(p.dps) * dt, null, true))
 
 
 func enemy_projectile(src: HdEnemy, from: Vector3, dir: Vector3, spd: float, length: float, width: float, dmg: float) -> void:
+	if src is HdScriptCaster:
+		call_as_hero(src.script_owner, func(): shoot(from, dir, spd, length, width, dmg, {"color":UiTheme.CYAN, "actor":src.script_owner, "no_proc":true}))
+		return
 	if src.boss_brain != null:
 		var active := projectiles.filter(func(p): return p.get("src") == src).size()
 		if active >= int(src.def.encounter.get("max_projectiles", 72)):
 			return
 	var shot_color := Color(str(src.def.visual.accent)) if src.boss_brain != null else Color("e0b060")
-	var n := HdDev.box(Vector3(0.12, 0.12, 1.4), HdDev.flat(shot_color))
+	var look := "boss_"+str(src.def.visual.theme) if src.boss_brain != null else "enemy_bolt"
+	var n := HdFxParts.shot(look,shot_color,.28)
+	n.position = Vector3(from.x,1.0,from.z)
+	n.rotation.y = atan2(dir.x,dir.z)
 	add_child(n)
+	fx.follow_light(n,shot_color)
 	projectiles.append({"pos": Vector3(from.x, 1.0, from.z), "dir": dir.normalized(), "speed": spd, "left": length,
-		"width": width, "dmg": dmg, "node": n, "from_hero": false, "src": src})
+		"width": width, "dmg": dmg, "node": n, "from_hero": false, "src": src, "look":look, "color":shot_color, "size":.28})
 
 
 func hero_projectile(from: Vector3, dir: Vector3, a: Dictionary, pw: float) -> void:
 	shoot(from, dir, float(a.speed), float(a.range), float(a.width), float(a.damage) * pw,
-		{"slow": float(a.slow), "slow_time": float(a.slow_time), "color": Color("a07850"), "size": 0.4})
+		{"slow": float(a.slow), "slow_time": float(a.slow_time), "color": Color("a07850"), "size": 0.4, "look": "rock"})
 
 
 ## Geschoss des Helden. opt: hit (Callable(e) statt Standardschaden), ally (Callable(ziel) → true =
 ## verbraucht, trifft eigene Gebäude), slow/slow_time, color, size, pierce (durchschlägt).
 func shoot(from: Vector3, dir: Vector3, spd: float, length: float, width: float, dmg: float, opt := {}) -> void:
 	var sz := float(opt.get("size", 0.25))
-	var n := HdDev.sphere(sz, HdDev.mat(opt.get("color", Color("a07850")), 0.5, 0.6))
+	var n: Node3D = HdFxParts.shot(str(opt.get("look", "orb")), opt.get("color", Color("a07850")), sz)
+	if not opt.has("look"):
+		opt = opt.merged({"look": "orb"})
 	add_child(n)
+	n.position = Vector3(from.x, 1.0, from.z)
+	fx.follow_light(n,opt.get("color",Color("a07850")))
+	if absf(dir.x) + absf(dir.z) > 0.0:
+		n.rotation.y = atan2(dir.x, dir.z)
 	var p := {"pos": Vector3(from.x, 1.0, from.z), "dir": dir.normalized(), "speed": spd, "left": length,
 		"width": width, "dmg": dmg, "node": n, "from_hero": true, "done_hits": []}
 	p.merge(opt)
+	p.actor = hero
 	projectiles.append(p)
 
 
 ## Fliegt ein gegnerisches Geschoss in eine Schildkuppel?
 func _blocked(pos: Vector3) -> bool:
 	for b in buildings:
+		if b is HdRosterConstruct and b.blocks(pos):
+			return true
 		if b is HdGadget and b.blocks(pos):
 			return true
 	return false
@@ -1540,6 +2007,17 @@ func _step_projectiles(dt: float) -> void:
 		if absf(p.dir.x) + absf(p.dir.z) > 0.0:
 			n.rotation.y = atan2(p.dir.x, p.dir.z)
 		var done := float(p.left) <= 0.0
+		if not final.active and not event_arena.active and bool(cfg.arena.get("walls", false)):
+			for sample in maxi(ceili(mv / 1.0), 1):
+				var at: Vector3 = p.pos - p.dir * mv * float(sample) / maxi(ceili(mv), 1)
+				at.y = 0
+				if not arena_layout.inside(at):
+					done = true
+					break
+		if done:
+			n.queue_free()
+			projectiles.remove_at(i)
+			continue
 		if p.from_hero:
 			if p.has("ally"):
 				for b in buildings:
@@ -1549,31 +2027,33 @@ func _step_projectiles(dt: float) -> void:
 							break
 			if not done:
 				for e in enemies:
-					if e.dead or p.done_hits.has(e):
+					if e.dead or event_arena.frozen(e) or p.done_hits.has(e):
 						continue
 					if Vector2(e.position.x - p.pos.x, e.position.z - p.pos.z).length() <= e.radius + float(p.width) * 0.5:
 						if p.has("hit"):
-							p.hit.call(e)
+							call_as_hero(p.get("actor", hero), func(): p.hit.call(e))
 						else:
-							hero_hit(e, float(p.dmg), "e")
+							if bool(p.get("no_proc", false)):
+								_friendly_spell_hit(p.get("actor", hero), e, float(p.dmg), 0)
+							else:
+								call_as_hero(p.get("actor", hero), func(): hero_hit(e, float(p.dmg), "e"))
 							if not e.dead and float(p.get("slow", 0.0)) > 0.0:
 								e.cc.slow("erdschock", float(p.slow), float(p.slow_time), play_time)
 								floater(e.position + Vector3(0, e.height() + 0.9, 0), tr("Verlangsamt"), UiTheme.CYAN)
 						if bool(p.get("pierce", false)):
 							p.done_hits.append(e)
+							if int(p.get("max_hits", 0)) > 0 and p.done_hits.size() >= int(p.max_hits):
+								p.left = 0
+								done = true
+								break
 						else:
 							done = true
 						break
 		elif _blocked(p.pos):
 			done = true
-		elif hero.alive() and Vector2(hero.position.x - p.pos.x, hero.position.z - p.pos.z).length() <= hero.radius + float(p.width) * 0.5:
-			if hero.dodging():
-				floater(hero.position + Vector3(0, 2.4, 0), tr("Ausgewichen"), UiTheme.CYAN)
-			elif _reflect(p):
-				pass
-			else:
-				damage_hero(float(p.dmg), p.get("src"))
-				done = true
+		else:
+			done = _projectile_heroes(p)
+
 		if done:
 			n.queue_free()
 			projectiles.remove_at(i)
@@ -1652,7 +2132,12 @@ func final_boss_start(mods: Dictionary, reason: String) -> void:
 ## Werte auf Zeit (Ereignis-Segen, Endkampf-Belohnungen), zählen in HdShop.bonus().
 func add_event_buff(name: String, stats: Dictionary, time: float) -> void:
 	event_buffs.append({"name": name, "stats": stats, "until": play_time + time})
-	shop._changed()
+	_refresh_party_bonuses()
+
+
+func _refresh_party_bonuses() -> void:
+	for actor: HdHero in playing_heroes():
+		call_as_hero(actor, func(): shop._changed())
 
 
 func _step_event_buffs() -> void:
@@ -1660,7 +2145,7 @@ func _step_event_buffs() -> void:
 	event_buffs = event_buffs.filter(func(b): return play_time < float(b.until))
 	event_mods = event_mods.filter(func(b): return play_time < float(b.until))
 	if event_buffs.size() + event_mods.size() != n:
-		shop._changed()
+		_refresh_party_bonuses()
 
 
 func event_gold_mult() -> float:
@@ -1731,6 +2216,9 @@ func leave() -> void:
 
 
 func restart() -> void:
+	if coop:
+		leave()
+		return
 	Engine.time_scale = 1.0
 	Session.skip_setup = true
 	get_tree().reload_current_scene()
@@ -1747,6 +2235,13 @@ var _bot_road: HdRoad
 
 
 func bot_turn() -> void:
+	if not imprint_choices.is_empty():
+		choose_imprint(0)
+	if hero.skills.points > 0:
+		for slot in 4:
+			if hero.skills.can_upgrade(slot):
+				hero.skills.upgrade(slot)
+				break
 	var h := hero
 	if h.dead:
 		return
@@ -1908,3 +2403,209 @@ func _danger(at: Vector3, r: float) -> Dictionary:
 		if away.length() <= float(p.r) + r:
 			out += away.normalized() if away.length() > 0.01 else Vector3.RIGHT
 	return {"dir": out.normalized() if out.length() > 0.01 else Vector3.ZERO, "urgent": urgent}
+
+
+## Einmal pro Simulationsschritt statt einer vollständigen Gegnersuche für jede Bewegung.
+func _rebuild_spatial() -> void:
+	for enemy in enemies:
+		if not enemy.dead and not event_arena.frozen(enemy) and play_time >= float(enemy.get_meta("history_at", 0)):
+			var history: Array = enemy.get_meta("script_position_history", [])
+			history.append(enemy.position)
+			if history.size() > 6:
+				history.pop_front()
+			enemy.set_meta("script_position_history", history)
+			enemy.set_meta("history_at", play_time + 0.5)
+	_enemy_cells.clear()
+	# Bei kleinen Wellen ist ein kurzer linearer Durchlauf billiger als Zell-Lookups.
+	if enemies.size() < 64:
+		_spatial_ready = false
+		return
+	for enemy in enemies:
+		if enemy.dead or event_arena.frozen(enemy):
+			continue
+		var cell := Vector2i(floori(enemy.position.x / 8.0), floori(enemy.position.z / 8.0))
+		if not _enemy_cells.has(cell):
+			_enemy_cells[cell] = []
+		_enemy_cells[cell].append(enemy)
+	_spatial_ready = true
+
+
+func nearby_enemies(at: Vector3, radius: float) -> Array:
+	if not _spatial_ready:
+		return enemies
+	var result: Array = []
+	# Eine zusätzliche Zelle deckt Bewegung innerhalb desselben Ticks und große Gegner ab.
+	var span := ceili(radius / 8.0) + 1
+	var cell := Vector2i(floori(at.x / 8.0), floori(at.z / 8.0))
+	for x in range(-span, span + 1):
+		for z in range(-span, span + 1):
+			result.append_array(_enemy_cells.get(cell + Vector2i(x, z), []))
+	return result
+
+
+func damage_element(kind: String) -> String:
+	if kind in ["wind", "fire", "cold", "lightning", "poison", "arcane", "physical"]:
+		return kind
+	if kind == "burn":
+		return "fire"
+	if kind in ["rat", "rats", "plague"]:
+		return "poison"
+	var slot := ["q", "w", "e", "r"].find(kind)
+	var tags: Array = hero.ability(slot).get("tags", []) if slot >= 0 else []
+	for element in ["fire", "cold", "lightning", "poison", "physical"]:
+		if tags.has(element):
+			return element
+	return str(hero.def.attack.get("element", "physical"))
+
+
+func is_night() -> bool:
+	return day_cycle != null and day_cycle.is_night()
+
+
+func time_of_day() -> float:
+	return day_cycle.hour if day_cycle else DayCycle.START
+
+
+func playing_heroes() -> Array:
+	return coop.heroes() if coop else [hero]
+
+
+func hero_slot(actor: HdHero) -> int:
+	if coop:
+		for index in coop.slots:
+			if coop.slots[index].hero == actor:
+				return index
+	return 0
+
+
+func call_as_hero(actor: HdHero, action: Callable):
+	return coop.with_player(hero_slot(actor), action) if coop else action.call()
+
+
+func _projectile_heroes(projectile: Dictionary) -> bool:
+	for actor: HdHero in playing_heroes():
+		if not actor.alive() or Vector2(actor.position.x - projectile.pos.x, actor.position.z - projectile.pos.z).length() > actor.radius + float(projectile.width) * 0.5:
+			continue
+		if actor.dodge_invulnerable():
+			continue
+		var reflected: bool = bool(call_as_hero(actor, func(): return _reflect(projectile)))
+		if reflected:
+			return false
+		call_as_hero(actor, func(): damage_hero(float(projectile.dmg), projectile.get("src")))
+		return true
+	return false
+
+
+func set_paused(value: bool) -> void:
+	if not value and (not imprint_choices.is_empty() or not imprint_pending.is_empty()):
+		return
+	paused = value
+	if coop and not coop.host:
+		coop.command({"kind":"pause", "value":value})
+	changed.emit()
+
+
+func _day_changed(night: bool) -> void:
+	if coop and not coop.host:
+		return
+	for actor: HdHero in playing_heroes():
+		call_as_hero(actor, func(): actor.script_event(actor, "night" if night else "day"))
+
+
+## Brücke der gemeinsamen Effektsprache zu den vorhandenen Bollwerk-Fähigkeiten.
+func effect_script_target_allowed(target) -> bool:
+	return event_arena == null or not event_arena.frozen(target)
+
+
+func effect_script_action(action: String, args: Array, source, target):
+	if not source is HdHero:
+		return "Bollwerk-Effektquelle muss ein Held sein"
+	if action == "Gold":
+		call_as_hero(source, func(): shop.add_gold(int(args[0])))
+		return true
+	if action == "Root":
+		if not is_instance_valid(target):
+			return "Root benötigt ein Ziel"
+		var duration := float(args[0]) * (0.5 if target is HdEnemy and target.rank == "boss" else 1.0)
+		target.set_meta("root_until", maxf(float(target.get_meta("root_until", -1)), play_time + duration))
+		return true
+	if action == "Knockback":
+		if not is_instance_valid(target):
+			return "Knockback benötigt ein Ziel"
+		var direction: Vector3 = (target.position - source.position).normalized()
+		if target is HdEnemy:
+			target.knock = direction * float(args[0]) / maxf(float(args[1]), 0.01)
+			target.knock_t = float(args[1])
+		else:
+			move_unit(target, direction, float(args[0]), 1.0, true)
+		return true
+	if action == "Summon":
+		var id := str(args[0])
+		if not enemy_defs.has(id):
+			return "Unbekannte Beschwörung: " + id
+		var definition: Dictionary = enemy_defs[id]
+		var count := int(args[1])
+		if count < 1 or count > 64 or buildings.filter(func(b): return int(b.get_meta("script_owner", -1)) == source.get_instance_id()).size() + count > 64:
+			return "Beschwörungsgrenze erreicht (64 je Held)"
+		var dimensions = definition.get("size", [1, 1, 1])
+		var summon_radius := float(dimensions[0]) * 0.4 if dimensions is Array else float(dimensions) * 0.4
+		for i in count:
+			var ally := HdAlly.new()
+			var attack: Dictionary = definition.get("attack", {})
+			ally.setup_ally(self, {"name":str(definition.name), "hp":float(definition.hp), "armor":float(definition.get("armor", 0)), "radius":summon_radius, "speed":float(definition.speed), "range":float(attack.get("range", 2)), "damage":float(attack.get("damage", 10)), "interval":float(attack.get("interval", 1))}, "fighter", free_point(source.position + Vector3(cos(i * TAU / count), 0, sin(i * TAU / count)) * 3, 0.6))
+			ally.set_meta("script_until", play_time + float(args[2]))
+			ally.set_meta("script_owner", source.get_instance_id())
+			add_child(ally)
+			buildings.append(ally)
+		return true
+	for slot in 4:
+		var ability: Dictionary = source.ability(slot)
+		if action == str(ability.get("id", "")) or action == str(ability.get("gadget", "")):
+			if not args.is_empty() and args[0] is Dictionary and not args[0].is_empty():
+				return "Heldenfähigkeiten verwenden ihre Rangwerte; Parameter gehören in den Effektbaum"
+			var at: Vector3 = target.position if is_instance_valid(target) else source.aim
+			return bool(call_as_hero(source, func(): return source.cast(slot, at)))
+	if ability_defs.has(action):
+		if _script_actions.size() >= 128:
+			return "Zu viele aktive Skriptfähigkeiten"
+		var overrides: Dictionary = args[0] if not args.is_empty() and args[0] is Dictionary else {}
+		var caster := HdScriptCaster.new()
+		add_child(caster)
+		var at: Vector3 = target.position if is_instance_valid(target) else source.aim
+		var error := caster.begin(self, source, action, at, target, overrides)
+		if error != "":
+			caster.queue_free()
+			return error
+		_script_actions.append({"caster":caster})
+		return true
+
+	return "Unbekannte Fähigkeit oder Effekt: " + action
+
+
+func _step_script_actions(dt: float) -> void:
+	for building in buildings.duplicate():
+		if not event_arena.frozen(building) and building.has_meta("script_until") and play_time >= float(building.get_meta("script_until")):
+			buildings.erase(building)
+			building.queue_free()
+	for index in range(_script_actions.size() - 1, -1, -1):
+		var caster: HdScriptCaster = _script_actions[index].caster
+		if not is_instance_valid(caster):
+			_script_actions.remove_at(index)
+			continue
+		var running: bool = bool(call_as_hero(caster.script_owner, func(): return caster.advance(dt, play_time)))
+		if not running:
+			caster.queue_free()
+			_script_actions.remove_at(index)
+
+
+
+
+
+func _friendly_spell_hit(owner_actor: HdHero, enemy: HdEnemy, damage: float, knockdown: float) -> void:
+	var was_busy := bool(owner_actor.get_meta("native_script_busy", false))
+	owner_actor.set_meta("native_script_busy", true)
+	call_as_hero(owner_actor, func():
+		hero_hit(enemy, damage, "arcane", true)
+		if not enemy.dead and knockdown > 0:
+			stun(enemy, knockdown))
+	owner_actor.set_meta("native_script_busy", was_busy)

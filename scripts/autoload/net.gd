@@ -22,6 +22,7 @@ signal coop_command(peer: int, cmd: Dictionary)
 signal coop_ready(peer: int)
 signal coop_state(data: Dictionary)
 signal coop_enemies(data: Dictionary)
+signal hero_input(peer: int, frame: Dictionary)
 
 const DEFAULT_PORT := 24565
 ## Relay-Server, der im Feld „Server“ der Lobby steht, solange der Spieler nichts anderes einträgt
@@ -913,6 +914,29 @@ func send_coop_enemies(data: Dictionary) -> void:
 		_coop_enemies.rpc_id(p, data)
 
 
+func send_hero_input(frame: Dictionary) -> void:
+	if is_active() and group_host() > 0 and not _i_host_group():
+		_hero_input.rpc_id(group_host(), frame)
+
+
+func send_hero_frame(chunk: Dictionary) -> void:
+	for peer in _coop_peers():
+		_hero_frame.rpc_id(peer, chunk)
+
+
+@rpc("any_peer", "call_remote", "unreliable", 3)
+func _hero_frame(chunk: Dictionary) -> void:
+	if _from_group_host():
+		coop_enemies.emit(chunk)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered", 2)
+func _hero_input(frame: Dictionary) -> void:
+	var peer := multiplayer.get_remote_sender_id()
+	if _i_host_group() and coop_player_of(peer) > 0:
+		hero_input.emit(peer, frame)
+
+
 func _coop_peers() -> Array:
 	if not _i_host_group():
 		return []
@@ -1043,7 +1067,7 @@ func _coop_state(data: Dictionary) -> void:
 		coop_state.emit(data)
 
 
-@rpc("any_peer", "unreliable_ordered")
+@rpc("any_peer", "call_remote", "unreliable_ordered", 1)
 func _coop_enemies(data: Dictionary) -> void:
 	if _from_group_host():
 		coop_enemies.emit(data)

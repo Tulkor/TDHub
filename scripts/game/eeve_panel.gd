@@ -35,7 +35,7 @@ func _ready() -> void:
 	var t := UiUtil.label("Elemente", head, 15)
 	UiTheme.heading(t)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_points = UiUtil.label("", head, 13)
+	_points = UiUtil.label("", head, 14)
 	_points.add_theme_color_override("font_color", UiTheme.COIN)
 
 	for e in game.rules.get("elements", []):
@@ -51,7 +51,7 @@ func _ready() -> void:
 		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		sw.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(sw)
-		var name := UiUtil.label(str(e.name), row, 13)
+		var name := UiUtil.label(str(e.name), row, 14)
 		name.custom_minimum_size.x = 64
 		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var pips := HBoxContainer.new()
@@ -85,7 +85,7 @@ func _ready() -> void:
 	_next.tooltip_text = tr("Pause überspringen (Taste N)")
 	UiTheme.accent_button(_next, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	_log = UiUtil.wrap_label("", v, 256)
-	_log.add_theme_font_size_override("font_size", 12)
+	_log.add_theme_font_size_override("font_size", 14)
 	_log.add_theme_color_override("font_color", UiTheme.MUTED)
 	refresh()
 
@@ -95,7 +95,7 @@ func _value(caption: String, parent: Node, color: Color) -> Label:
 	h.add_theme_constant_override("separation", 6)
 	h.mouse_filter = Control.MOUSE_FILTER_PASS
 	parent.add_child(h)
-	UiUtil.label(caption, h, 12).add_theme_color_override("font_color", UiTheme.MUTED)
+	UiUtil.label(caption, h, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	var l := UiUtil.label("", h, 16)
 	l.add_theme_color_override("font_color", color)
 	return l
@@ -165,7 +165,7 @@ func _refresh_traps() -> void:
 		c.queue_free()
 	if list.is_empty():
 		var hint := UiUtil.wrap_label(tr("Fallen gibt es ab Elementstufe 4."), _traps, 256)
-		hint.add_theme_font_size_override("font_size", 12)
+		hint.add_theme_font_size_override("font_size", 14)
 		hint.add_theme_color_override("font_color", UiTheme.MUTED)
 		return
 	for entry in list:
@@ -177,7 +177,7 @@ func _refresh_traps() -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
 		b.custom_minimum_size = Vector2(256, 30)
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", 14)
 		b.disabled = entry[1] != "" and game.placing_trap != id
 		b.tooltip_text = Database.tower_label(id, 0) + "\n" + "\n".join(
 				(Database.tower_tier(id, 0).get("abilities", []) as Array).map(func(ab): return Abilities.describe(ab)))

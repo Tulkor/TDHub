@@ -64,7 +64,7 @@ func _part(id: String, v: VBoxContainer) -> VBoxContainer:
 	var b := UiUtil.button("–", head, func(): toggle(id))
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(26, 22)
-	b.add_theme_font_size_override("font_size", 13)
+	b.add_theme_font_size_override("font_size", 14)
 	# Knöpfe des Lagers in eigener Zeile unter dem Titel (das Lager ist nur 4 Felder breit)
 	var tools := HBoxContainer.new()
 	tools.add_theme_constant_override("separation", 4)
@@ -81,7 +81,7 @@ func _head_button(id: String, text: String, on_pressed: Callable) -> Button:
 	var b := UiUtil.button(text, _parts[id].tools, on_pressed)
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size.y = 24
-	b.add_theme_font_size_override("font_size", 12)
+	b.add_theme_font_size_override("font_size", 14)
 	return b
 
 
@@ -146,7 +146,7 @@ func _refresh_towers() -> void:
 	if list.is_empty():
 		var hint := UiUtil.wrap_label(tr("Erforsche zuerst ein Element.") if not game.any_element()
 				else tr("Nach jeder Welle kommen neue Tower dazu."), _towers, COLS * SLOT)
-		hint.add_theme_font_size_override("font_size", 12)
+		hint.add_theme_font_size_override("font_size", 14)
 		hint.add_theme_color_override("font_color", UiTheme.MUTED)
 		return
 	for entry in list:

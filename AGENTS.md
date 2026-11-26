@@ -9,9 +9,12 @@
 
 ## Vorhandene Werkzeuge und Tests zuerst
 - Godot ist vom Nutzer generell freigegeben und darf für Projektaufgaben ohne erneute Rückfrage verwendet werden, insbesondere für Import, Tests, Rendern und Vorschauen (2026-11-09).
+- Godot bei Tests, Aufnahmen und Vorschauen immer stumm starten (`--audio-driver Dummy`, Nutzerwunsch 2026-11-10); der Windows-Aufnahme-Wrapper setzt dies automatisch.
+- Windows-GPU-Tests und Aufnahmen immer über `tools/render_windows.ps1`: Nutzer spielt auf Bildschirm 1. Testfenster automatisch auf Bildschirm 2, im Fenstermodus und von der Erzeugung an ohne Fokusübernahme. Keine Testfenster auf Bildschirm 1 öffnen oder dorthin aktivieren (Nutzerwunsch 2026-11-18).
 - Einstieg: `tools/lage.sh`; Werkzeugübersicht und weitere Regeln: `CLAUDE.md`, Details: `docs/claude/werkzeuge.md`.
 - Code gezielt lesen: `tools/gliederung.py`; Daten lesen/ändern: `tools/daten.py`, `tools/werte_setzen.py`.
 - Passende vorhandene Tests nutzen: `tools/run_tests.sh geaendert` oder gezielte Testnamen. Auswahl erklärt `tools/test_auswahl.py --erklaeren`; Zuordnung in `tests/bereiche.json` und den Testköpfen.
+- Grundregel (Lukas, 2026-11-11): Nur geänderte Bereiche und ihre unmittelbar betroffenen Abhängigkeiten testen. Bei gemeinsamen Systemen die tatsächlich betroffenen Modi einbeziehen. Keine vollständigen oder fachfremden Testläufe ohne konkreten Anlass; breitere Prüfungen nur bei ausdrücklichem Auftrag, verbindlicher Release-Prüfung oder einem bereichsübergreifenden Fehlerverdacht. Bereits grüne Prüfungen nur nach relevanten weiteren Änderungen oder neuen Fehlerhinweisen wiederholen.
 - Bei Fehlern `tools/log_auszug.sh <test>` verwenden. Tests nur bei neuem Verhalten oder fehlender Abdeckung ergänzen.
 - Vor PR/Merge den vorhandenen Ablauf `tools/vor_pr.sh` verwenden; lange Befehle über `tools/kurz.sh` ausführen.
 - Scripts sind überwiegend für Bash/Linux ausgelegt. Unter Windows die verfügbare Laufzeit prüfen; fehlende Voraussetzungen oder nicht ausgeführte Checks offen nennen.
@@ -23,3 +26,18 @@
 - Gemeinsame Mechanik im gemeinsamen System implementieren und vorhandene Modus-Hooks/Konfiguration nutzen; keine Kopien derselben Mechanik je Modus anlegen.
 - Vor Änderungen `docs/claude/systeme.md` und die passende Modus-Notiz lesen. Vorhandene Werkzeuge und Tests: `tools/systeme.py`, `tests/systems/`, insbesondere `systeme_test.gd` für die Kaskade.
 - Änderungen an gemeinsamen Systemen für die betroffenen Modi prüfen; Modus-Ausnahmen gezielt im jeweiligen Modus halten.
+
+## Zusammenarbeit mit Claude (Lukas, 2026-11-25)
+Claude (Claude Code) und Codex arbeiten im selben Repo. Fachregeln stehen nur einmal, in `CLAUDE.md` und `docs/claude/`; hier nur die Absprachen.
+- Während aktiver Arbeit `AGENTS.md` zu Beginn, vor neuen Teilaufgaben und nach längeren Arbeitsschritten (Richtwert: alle fünf Minuten) auf neue Hilfsanfragen von Claude prüfen. Arbeitet Claude über GitHub, auch den aktuellen Stand auf `main` und gegebenenfalls seinem bekannten Arbeitsbranch lesen; lokale Änderungen dabei nicht überschreiben. Passende Aufgaben im Rahmen von Lukas' Auftrag übernehmen und die Übernahme sowie das Ergebnis im vereinbarten Austauschkanal festhalten. Keine Hintergrundüberwachung zwischen aktiven Chats voraussetzen.
+- Eigene Branches: Codex `codex/<thema>`, Claude `claude/<thema>`. Nie auf den Branch der anderen KI pushen, force-pushen oder rebasen. Aufbauen geht über einen eigenen Branch ab deren Stand.
+- Auf `main` nur per PR, gemergt wird nur auf Lukas' Wort. Vorher `tools/vor_pr.sh`; offene PRs und Überschneidungen zeigt `tools/prs.sh offen`.
+- PR-Text endet mit einer kurzen Übergabe: `Übergabe: Was – Warum – Geprüft (Tests/Screenshot) – Offen`. Die andere KI liest sie, bevor sie auf dem PR aufbaut.
+- Gegenseitige Reviews: Wer einen PR der anderen KI prüft, kommentiert im PR (Befund mit Datei:Zeile) und ändert nichts auf deren Branch. Lukas entscheidet bei Uneinigkeit.
+- Gleiche Dateien nicht parallel bearbeiten: Vor dem Start `tools/prs.sh offen` prüfen; überschneidet sich ein offener PR, darauf aufbauen oder Lukas fragen.
+- Lokaler Klon auf Lukas' PC: Nicht gleichzeitig mit Claude im selben Arbeitsordner arbeiten; Arbeit committen, bevor die andere KI übernimmt, statt unkommittete Stände liegen zu lassen.
+- Dauerhaftes Wissen kommt in `docs/claude/<bereich>.md` (gilt für beide), nicht in private Notizen.
+
+## Offene Anfragen zwischen Claude und Codex
+Hier tragen beide KIs Bitten an die andere ein; erledigte Einträge mit Ergebnis abhaken.
+- [ ] Claude → Codex (2026-11-26; von Lukas hier ausdrücklich bestätigt): Den gesamten lokalen Stand in `TDHub` auf `codex/bollwerk-gegner-items-vielfalt` committen und pushen, danach mit Commit-Hash abhaken. Claude baut anschließend auf eigenem Branch seinen Leistungsstand aus PR #145 darauf auf.

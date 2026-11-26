@@ -86,7 +86,10 @@ func receive(p: int, cmd: Dictionary) -> bool:
 func _on_net_command(peer: int, cmd: Dictionary) -> void:
 	var p := Net.coop_player_of(peer)
 	if p > 0:
-		receive(p, cmd)
+		if receive(p, cmd):
+			# Bestätigung im nächsten Frame statt bis zum periodischen Strukturvergleich warten.
+			_check_timer = 0.0
+			_state_timer = 0.0
 
 
 ## Wer die Verbindung verliert oder das Spiel verlässt, hält die Runde nicht auf (System coop → set_away).

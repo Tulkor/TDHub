@@ -46,7 +46,7 @@ func _ready() -> void:
 	head.add_theme_constant_override("separation", 8)
 	v.add_child(head)
 	_title = UiTheme.heading(UiUtil.label("Maze", head))
-	_summary = UiUtil.label("", head, 12)
+	_summary = UiUtil.label("", head, 14)
 	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_summary.clip_text = true
 	_summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -59,7 +59,7 @@ func _ready() -> void:
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 8)
 	v.add_child(_body)
-	_sub = UiUtil.label("", _body, 12)
+	_sub = UiUtil.label("", _body, 14)
 	_sub.add_theme_color_override("font_color", UiTheme.MUTED)
 	_build_show(_body)
 	_build_plan(_body)
@@ -90,15 +90,15 @@ func _build_show(parent: Node) -> void:
 	_show_box.add_child(_bar)
 	var h := HBoxContainer.new()
 	_show_box.add_child(h)
-	_progress = UiUtil.label("", h, 13)
+	_progress = UiUtil.label("", h, 14)
 	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_conflicts = UiUtil.label("", h, 13)
+	_conflicts = UiUtil.label("", h, 14)
 	_conflicts.add_theme_color_override("font_color", UiTheme.MISSING)
 	UiTheme.caption("Anzeige", _show_box)
 	var o := HBoxContainer.new()
 	o.add_theme_constant_override("separation", 8)
 	_show_box.add_child(o)
-	UiUtil.label("Deckkraft", o, 13)
+	UiUtil.label("Deckkraft", o, 14)
 	var slider := HSlider.new()
 	slider.min_value = 10
 	slider.max_value = 100
@@ -112,7 +112,7 @@ func _build_show(parent: Node) -> void:
 		_opacity_val.text = "%d %%" % int(val))
 	slider.drag_ended.connect(func(_c): mazes.save_prefs())
 	o.add_child(slider)
-	_opacity_val = UiUtil.label("%d %%" % int(mazes.opacity * 100.0), o, 13)
+	_opacity_val = UiUtil.label("%d %%" % int(mazes.opacity * 100.0), o, 14)
 	_opacity_val.custom_minimum_size.x = 48
 	_check("Gebaute Blöcke grün zeigen", mazes.show_done, func(on):
 		mazes.show_done = on
@@ -140,14 +140,14 @@ func _build_plan(parent: Node) -> void:
 	parent.add_child(_plan_box)
 	_plan_hint = UiUtil.wrap_label(tr("Klick setzt einen Block, Klick auf einen Block entfernt ihn. Auf einen Stein geklickt übernimmt ihn."), _plan_box, 300)
 	_plan_hint.add_theme_color_override("font_color", UiTheme.COIN)
-	_plan_hint.add_theme_font_size_override("font_size", 13)
+	_plan_hint.add_theme_font_size_override("font_size", 14)
 	UiTheme.caption("Name", _plan_box)
 	_name_edit = LineEdit.new()
 	_name_edit.max_length = 40
 	_name_edit.text_changed.connect(func(_t): mazes.dirty = true; _refresh_buttons())
 	_plan_box.add_child(_name_edit)
 	UiTheme.caption("Entwurf", _plan_box)
-	_plan_stats = UiUtil.label("", _plan_box, 13)
+	_plan_stats = UiUtil.label("", _plan_box, 14)
 	var b1 := HFlowContainer.new()
 	b1.add_theme_constant_override("h_separation", 8)
 	b1.add_theme_constant_override("v_separation", 8)
@@ -177,7 +177,7 @@ func _check(text: String, on: bool, f: Callable) -> CheckBox:
 	c.text = text
 	c.button_pressed = on
 	c.focus_mode = Control.FOCUS_NONE
-	c.add_theme_font_size_override("font_size", 13)
+	c.add_theme_font_size_override("font_size", 14)
 	c.toggled.connect(f)
 	_show_box.add_child(c)
 	return c
@@ -254,7 +254,7 @@ func _refresh_list() -> void:
 	if list.is_empty():
 		var l := UiUtil.wrap_label(tr("Für diese Map gibt es noch keine Vorlagen. Speichere dein Maze oder plane eines."), _list, 300)
 		l.add_theme_color_override("font_color", UiTheme.MUTED)
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 14)
 	for t in list:
 		_list.add_child(_row(t))
 	# Liste so hoch wie ihr Inhalt, ab LIST_ROWS Vorlagen scrollt sie
@@ -281,7 +281,7 @@ func _row(t: Dictionary) -> Control:
 		len = mazes.template_length(t)
 		_lengths[t.id] = len
 	b.text = "%s\n%s" % [tr(str(t.name)), tr("%d Blöcke · Weg %d") % [t.blocks.size(), len]]
-	b.add_theme_font_size_override("font_size", 13)
+	b.add_theme_font_size_override("font_size", 14)
 	b.tooltip_text = (tr("Mitgeliefert") if t.get("builtin", false) else tr("Eigene Vorlage")) + \
 			("\n" + tr(str(t.note)) if str(t.get("note", "")) != "" else "")
 	if sel:
@@ -297,7 +297,7 @@ func _row(t: Dictionary) -> Control:
 			mazes.show_template(tmpl))
 	h.add_child(b)
 	if t.get("builtin", false):
-		var tag := UiUtil.label(tr("MITGELIEFERT"), h, 10)
+		var tag := UiUtil.label(tr("MITGELIEFERT"), h, 13)
 		tag.add_theme_color_override("font_color", UiTheme.PURPLE_LIGHT)
 	else:
 		var edit := _btn("✎", h, func():

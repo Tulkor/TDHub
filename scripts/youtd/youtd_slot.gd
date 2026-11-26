@@ -44,7 +44,7 @@ func _corner_label(h: HorizontalAlignment, v: VerticalAlignment, color: Color) -
 	l.horizontal_alignment = h
 	l.vertical_alignment = v
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 4)
@@ -160,7 +160,7 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	l.text = for_text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 420.0 if for_text.length() > 60 else 0.0
-	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_font_size_override("font_size", 14)
 	return l
 
 

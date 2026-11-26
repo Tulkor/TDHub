@@ -76,7 +76,7 @@ func _ready() -> void:
 	_bar_title = UiUtil.label("", texts, 16)
 	_bar_title.add_theme_color_override("font_color", UiTheme.GOLD)
 	_bar_info = UiUtil.label("", texts, 14)
-	_own_info = UiUtil.label("", texts, 12)
+	_own_info = UiUtil.label("", texts, 14)
 	_own_info.add_theme_color_override("font_color", UiTheme.MUTED)
 	var back := UiUtil.button("Zurück zum eigenen Feld (Esc)", h, stop)
 	back.focus_mode = Control.FOCUS_NONE
@@ -225,7 +225,7 @@ func _rebuild_list() -> void:
 	var ids := Net.players.keys()
 	ids.sort()
 	if ids.is_empty():
-		UiUtil.label("Niemand verbunden", _list, 13).add_theme_color_override("font_color", UiTheme.MUTED)
+		UiUtil.label("Niemand verbunden", _list, 14).add_theme_color_override("font_color", UiTheme.MUTED)
 	for id in ids:
 		var s := Net.player_status(id)
 		var row := HBoxContainer.new()
@@ -236,7 +236,7 @@ func _rebuild_list() -> void:
 		texts.add_theme_constant_override("separation", 0)
 		row.add_child(texts)
 		UiUtil.label(Net.player_name(id), texts, 14)
-		var info := UiUtil.label(status_text(s), texts, 12)
+		var info := UiUtil.label(status_text(s), texts, 14)
 		info.add_theme_color_override("font_color", UiTheme.MUTED)
 		var peer: int = id
 		var b: Button

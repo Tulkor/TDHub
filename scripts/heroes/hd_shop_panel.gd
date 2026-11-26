@@ -1,6 +1,6 @@
 class_name HdShopUi
 extends Control
-## Wirtschafts-Oberfläche von Bollwerk im Arcade-Stil (UiTheme), Teil von HdHud:
+## Wirtschafts-Oberfläche von Bollwerk in Eisenliturgie (UiTheme), Teil von HdHud:
 ## - Inventarleiste unten rechts: Gold, Holz, 6 Heldenplätze (gemeinsames Inventar InvSlot: ziehen =
 ##   tauschen, Klick auf Trank = benutzen), Knopf Shop (B).
 ## - Straßenleiste oben links: aktive Straßen mit Vorwerk/Innentor und Gegnerzahl, Teleport-Fortschritt.
@@ -20,7 +20,10 @@ var _gold: Label
 var _wood: Label
 var _where: Label
 var _roads: VBoxContainer
-var _road_rows: Array = []       ## {road, label}
+var _road_rows: Array = []       ## {road, row, name, outer, inner, count}
+var _roads_open := false         ## Straßenleiste standardmäßig eingeklappt (Lukas 2026-11-25)
+var _roads_toggle: Button
+var _roads_summary: Label
 var _tp: Label
 var _window: PanelContainer
 var _tabs: HBoxContainer
@@ -28,6 +31,10 @@ var _list: VBoxContainer
 var _detail: VBoxContainer
 var _note: Label
 var _sig := ""
+var _resource_panel: PanelContainer
+var _inventory_panel: PanelContainer
+var _roads_panel: PanelContainer
+var _clock: Label
 
 
 func _init(g) -> void:
@@ -63,20 +70,25 @@ func _label(text: String, parent: Node, size := 14, color := UiTheme.TEXT, bold 
 
 func _build_bar() -> void:
 	var p := _panel(self, 10)
-	p.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	p.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	p.offset_right = -14
-	p.offset_bottom = -14
+	_inventory_panel = p
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
+	UiTheme.caption("Inventar", v).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_resource_panel = _panel(self, 9)
+	var resources := VBoxContainer.new()
+	resources.add_theme_constant_override("separation", 5)
+	_resource_panel.add_child(resources)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
-	v.add_child(row)
-	_gold = _label("", row, 16, UiTheme.COIN, true)
-	_wood = _label("", row, 16, UiTheme.HAVE, true)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	resources.add_child(row)
+	_gold = _label("", row, 14, UiTheme.COIN, true)
+	_wood = _label("", row, 14, UiTheme.HAVE, true)
+	_clock = _label("", resources, 12, UiTheme.MUTED)
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var grid := GridContainer.new()
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
@@ -89,12 +101,14 @@ func _build_bar() -> void:
 		s.clicked.connect(func(btn): _slot_clicked("hero", k, btn))
 		s.on_drop = func(data): _drop(data, "hero", k)
 	_where = _label("", v, 11, UiTheme.MUTED)
+	_where.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var b := UiUtil.button("Shop [B]", v, toggle)
 	UiTheme.accent_button(b, UiTheme.GOLD, UiTheme.GOLD_DARK)
 
 
 func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 	for c in s.get_children():
+		if c.has_meta("bollwerk_metal_layer"):continue
 		c.queue_free()
 	s.icon_node = null
 	s.texture = null
@@ -109,7 +123,7 @@ func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 		s.tooltip_text = ""
 		s.queue_redraw()
 		return
-	s.show_abbr(tr(str(shop.item(entry.id).name)), shop.tier_color(entry.id))
+	s.show_item(preload("res://scripts/heroes/hd_item_icons.gd").texture(str(entry.id)), shop.tier_color(entry.id),shop.item(entry.id).get("consumable",false))
 	s.consumable = shop.consumable(entry.id)
 	if shop.item(entry.id).has("stack"):
 		s.set_count(str(int(entry.n)))
@@ -117,8 +131,14 @@ func _paint(s: InvSlot, entry, where: String, i: int) -> void:
 	var tip := shop.tooltip(entry.id, entry)
 	if int(entry.get("up", 0)) > 0:
 		s.set_count("+%d" % int(entry.up))
-	if where == "hero" and s.consumable:
-		tip += "\n" + tr("Klick: benutzen")
+	if where == "hero" and shop.usable(entry.id):
+		tip += "\n" + tr("F%d oder Klick: benutzen") % (i + 1)
+		if shop.item(entry.id).has("active"):
+			var remaining: float = game.hero.ITEM_EFFECTS.active_left(game.hero, shop.item(entry.id))
+			s.dimmed = remaining > 0
+			if remaining > 0:
+				s.set_count(str(ceili(remaining)))
+				tip += "\n" + tr("Item-Abklingzeit: %d s") % ceili(remaining)
 	s.tooltip_text = tip
 
 
@@ -126,7 +146,7 @@ func _slot_clicked(where: String, i: int, btn: int) -> void:
 	var x = shop.at(where, i)
 	if x == null:
 		return
-	if btn == MOUSE_BUTTON_LEFT and where == "hero" and shop.consumable(x.id):
+	if btn == MOUSE_BUTTON_LEFT and where == "hero" and shop.usable(x.id):
 		_say(shop.act({"kind": "use", "i": i}))
 	elif btn == MOUSE_BUTTON_LEFT and shop.item(x.id).size() > 0:
 		picked = x.id
@@ -147,14 +167,59 @@ func _say(why: String) -> void:
 
 func _build_roads() -> void:
 	var p := _panel(self, 8)
-	p.position = Vector2(12, 92)
+	_roads_panel = p
+	p.position = Vector2(16, 190)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	p.add_child(box)
+	# Kopf zum Auf- und Zuklappen; eingeklappt steht nur eine Zusammenfassung da.
+	_roads_toggle = Button.new()
+	_roads_toggle.focus_mode = Control.FOCUS_NONE
+	_roads_toggle.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		_roads_toggle.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	_roads_toggle.add_theme_font_override("font", UiTheme.font(true))
+	_roads_toggle.add_theme_font_size_override("font_size", 12)
+	_roads_toggle.pressed.connect(func():
+		_roads_open = not _roads_open
+		_update_roads()
+		_roads_panel.reset_size.call_deferred())
+	box.add_child(_roads_toggle)
+	_roads_summary = _label("", box, 11, UiTheme.MUTED)
+	_roads_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_roads = VBoxContainer.new()
-	_roads.add_theme_constant_override("separation", 2)
-	p.add_child(_roads)
-	UiTheme.caption("Straßen", _roads)
-	for r in game.roads:
-		_road_rows.append({"road": r, "label": _label("", _roads, 12, UiTheme.TEXT)})
-	_tp = _label("", _roads, 12, UiTheme.PURPLE_LIGHT, true)
+	_roads.add_theme_constant_override("separation", 3)
+	box.add_child(_roads)
+	_tp = _label("", box, 12, UiTheme.PURPLE_LIGHT, true)
+	_tp.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tp.custom_minimum_size.x = 200
+
+
+## Eine Straßenzeile: Name, zwei kleine Torbalken (Vorwerk, Innentor) und die Zahl der Gegner.
+func _road_row(r: HdRoad) -> Dictionary:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	_roads.add_child(row)
+	var name_label := _label("", row, 11, UiTheme.TEXT)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.clip_text = true
+	var bars: Array = []
+	for i in 2:
+		var bar := ProgressBar.new()
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(38, 8)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.max_value = 1.0
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		HdUiStyle.bar_styles(bar, UiTheme.HAVE)
+		row.add_child(bar)
+		bars.append(bar)
+	var count := _label("", row, 11, UiTheme.MUTED, true)
+	count.custom_minimum_size.x = 20
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	return {"road": r, "row": row, "name": name_label, "outer": bars[0], "inner": bars[1], "count": count}
 
 
 func _gate_text(g) -> String:
@@ -166,25 +231,43 @@ func _gate_text(g) -> String:
 
 
 func _update_roads() -> void:
-	if _road_rows.size() != game.roads.size():
+	if _road_rows.map(func(row): return row.road) != game.roads:
 		for row in _road_rows:
-			row.label.queue_free()
+			row.row.queue_free()
 		_road_rows.clear()
 		for r in game.roads:
-			var l := _label("", _roads, 12, UiTheme.TEXT)
-			_roads.move_child(l, _roads.get_child_count() - 2)
-			_road_rows.append({"road": r, "label": l})
+			_road_rows.append(_road_row(r))
 	var counts := {}
 	for e in game.enemies:
 		if not e.dead and e.zone == "":
 			counts[e.road] = int(counts.get(e.road, 0)) + 1
+	var total := 0
+	var hurt_gates := 0
 	for row in _road_rows:
 		var r: HdRoad = row.road
 		var n := int(counts.get(r, 0))
-		var hurt: bool = r.gate("vorwerk").destroyed
-		row.label.text = tr("%s · Vorwerk %s · Innentor %s · %d Gegner") % [tr(r.name), _gate_text(r.gate("vorwerk")),
-			_gate_text(r.gate("innentor")), n]
-		row.label.add_theme_color_override("font_color", UiTheme.MISSING if hurt else (UiTheme.GOLD if n > 0 else UiTheme.TEXT))
+		total += n
+		row.name.text = tr(r.name)
+		row.name.add_theme_color_override("font_color", UiTheme.MISSING if r.gate("vorwerk") != null and r.gate("vorwerk").destroyed else (UiTheme.GOLD if n > 0 else UiTheme.TEXT))
+		for pair in [[row.outer, r.gate("vorwerk")], [row.inner, r.gate("innentor")]]:
+			var bar: ProgressBar = pair[0]
+			var g = pair[1]
+			var share := 0.0 if g == null or g.destroyed else clampf(g.hp / g.max_hp, 0.0, 1.0)
+			if g != null and (g.destroyed or share < 0.999):
+				hurt_gates += 1
+			bar.value = share
+			var fill: StyleBox = bar.get_theme_stylebox("fill")
+			var color: Color = UiTheme.HAVE if share > 0.5 else (UiTheme.COIN if share > 0.0 else UiTheme.MISSING)
+			if fill is HdUiStyle.BarFrame and fill.fill != color:
+				fill.fill = color
+				bar.queue_redraw()
+		row.count.text = str(n) if n > 0 else "·"
+		row.count.add_theme_color_override("font_color", UiTheme.GOLD if n > 0 else UiTheme.MUTED)
+		row.row.tooltip_text = tr("%s · Vorwerk %s · Innentor %s · %d Gegner") % [tr(r.name), _gate_text(r.gate("vorwerk")), _gate_text(r.gate("innentor")), n]
+	_roads_toggle.text = tr("Straßen") + ("  ▾" if _roads_open else "  ▸")
+	_roads.visible = _roads_open
+	_roads_summary.visible = not _roads_open
+	_roads_summary.text = tr("%d Straßen · %d Gegner · %d Tore beschädigt") % [_road_rows.size(), total, hurt_gates]
 	if not game.tp_stone.is_empty():
 		var hold := float(game.cfg.arena.teleport.get("hold", 0.8))
 		var dest: String = tr("zur Feste")
@@ -195,6 +278,22 @@ func _update_roads() -> void:
 		_tp.text = tr("Teleport %s %d %%") % [dest, roundi(clampf(game.tp_hold / hold, 0, 1) * 100.0)]
 	else:
 		_tp.text = ""
+	_tp.visible = _tp.text != ""
+
+
+func fit_layout(area: Vector2) -> void:
+	if _inventory_panel == null:
+		return
+	# Fenster so klein wie ihr Inhalt (Lukas 2026-11-25), rechts bündig am Rand.
+	_inventory_panel.size = Vector2.ZERO
+	var inv := _inventory_panel.get_combined_minimum_size()
+	_inventory_panel.position = Vector2(area.x - inv.x - 16, area.y - inv.y - 39)
+	_resource_panel.size = Vector2.ZERO
+	_resource_panel.position = Vector2(area.x - _resource_panel.get_combined_minimum_size().x - 16, 68)
+	_roads_panel.size = Vector2.ZERO
+	_roads_panel.position = Vector2(16, 190)
+	_window.offset_top = 190
+	_window.offset_bottom = -190
 
 
 # ---------------------------------------------------------------- Shop-Fenster
@@ -216,7 +315,11 @@ func _build_window() -> void:
 	UiTheme.title(t, 22)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
-	UiUtil.button("✕", head, toggle)
+	var close := UiUtil.button("✕", head, toggle)
+	HdUiStyle.symbol_button(close, "x")
+	close.custom_minimum_size = Vector2(32, 32)
+	close.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	close.tooltip_text = tr("Schließen")
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 4)
 	v.add_child(_tabs)
@@ -227,6 +330,7 @@ func _build_window() -> void:
 			_rebuild(true))
 		b.set_meta("tab", id)
 		b.add_theme_font_size_override("font_size", 12)
+		b.size_flags_vertical = Control.SIZE_SHRINK_END
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -284,8 +388,15 @@ func _rebuild(force := false) -> void:
 	_sig = sig
 	for b in _tabs.get_children():
 		var on: bool = b.get_meta("tab") == tab
-		b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.CYAN, UiTheme.CYAN) if on else UiTheme.box(UiTheme.PANEL_2, UiTheme.BORDER))
-		b.add_theme_color_override("font_color", UiTheme.BG if on else UiTheme.TEXT)
+		# Reiter: oben abgeschrägt, der aktive höher mit Goldschrift (Bollwerk-Baukasten 2026-11-25).
+		for state in ["normal", "hover", "pressed", "hover_pressed"]:
+			var style := HdUiStyle.tab_style(on)
+			if state.begins_with("hover") and not on:
+				style.line = UiTheme.GOLD
+			b.add_theme_stylebox_override(state, style)
+		b.add_theme_color_override("font_color", HdUiStyle.GOLD_HI if on else UiTheme.MUTED.darkened(0.3))
+		b.set_meta("metal_text_color", HdUiStyle.GOLD_HI if on else UiTheme.MUTED.darkened(0.3))
+		b.queue_redraw()
 	for c in _list.get_children():
 		c.queue_free()
 	for c in _detail.get_children():
@@ -337,6 +448,12 @@ func _item_row(id: String) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
+	# Bild im selben gefassten Steckplatz wie im Inventar (Stein in Seltenheitsfarbe).
+	var icon := InvSlot.new(46.0)
+	icon.show_item(preload("res://scripts/heroes/hd_item_icons.gd").texture(id), shop.tier_color(id))
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(icon)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 0)
@@ -344,6 +461,15 @@ func _item_row(id: String) -> void:
 	_label(tr(str(it.name)), v, 14, shop.tier_color(id), true)
 	var info := _label(shop.stat_text(it.get("stats", {})) if it.has("stats") else tr(str(it.get("desc", ""))), v, 11, UiTheme.DIM)
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var effect := str(it.get("effect_desc", ""))
+	if it.has("active"):
+		effect = tr("Aktiv: %s · %d s Abklingzeit") % [tr(str(it.active.desc)), int(it.active.cooldown)]
+	elif bool(it.get("scepter", false)):
+		effect = tr("Szepter: %s") % tr(str(game.hero.def.get("scepter", {}).get("desc", "")))
+	elif effect == "" and float(it.get("stats", {}).get("mastery", 0)) > 0:
+		effect = str(game.hero.def.get("mastery", {}).get("name", ""))
+	if effect != "":
+		_label(tr(effect), v, 13, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if it.has("recipe"):
 		var parts: Array = []
 		var miss := shop.missing(id)
@@ -449,12 +575,14 @@ func _fill_gates() -> void:
 func refresh() -> void:
 	_gold.text = tr("%d Gold") % shop.gold
 	_wood.text = tr("%d Holz") % shop.wood
+	var hour: float = game.time_of_day()
+	_clock.text = "%02d:%02d · %s" % [int(hour), int(fmod(hour, 1.0) * 60), tr("Nacht") if game.is_night() else tr("Tag")]
 	_where.text = tr("In der Feste") if shop.in_fortress() else tr("Unterwegs: Käufe ins Lager")
 	for i in _inv_slots.size():
 		_paint(_inv_slots[i], shop.inv[i], "hero", i)
 	for i in _stash_slots.size():
 		_paint(_stash_slots[i], shop.stash[i], "stash", i)
 	_update_roads()
-	_roads.get_parent().visible = not _window.visible and not game.final.active
+	_roads.get_parent().visible = not _window.visible and not game.final.active and not game.event_arena.active
 	if _window.visible:
 		_rebuild()

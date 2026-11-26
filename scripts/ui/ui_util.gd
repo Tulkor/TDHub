@@ -105,3 +105,33 @@ static func open_json_file(parent: Node, on_loaded: Callable) -> void:
 		dlg.queue_free())
 	dlg.canceled.connect(dlg.queue_free)
 	dlg.popup_centered_ratio(0.7)
+
+
+## Zweistufiger Klick für Aktionen ohne Rückweg (Verkaufen, Abreißen): der erste Klick fragt im Knopf selbst
+## nach („Nochmal klicken: …“), erst der zweite innerhalb von CONFIRM_TIME Sekunden führt aus.
+## Keine Rückfrage-Fenster, damit der Spielfluss bleibt (UI-Prüfung 2026-11-25, Nielsen H3/H5).
+const CONFIRM_TIME := 2.5
+
+
+static func confirm_press(b: Button, action: Callable) -> void:
+	var armed := [false]
+	var original := [""]
+	# Zweizeilige Knöpfe (Hud._two_line) haben leeren Text und eigene Kinder: die werden kurz ausgeblendet
+	var set_armed := func(on: bool) -> void:
+		armed[0] = on
+		if on:
+			original[0] = b.text
+		var shown: String = original[0] if original[0] != "" else b.tooltip_text.get_slice(" · ", 0)
+		b.text = b.tr("Nochmal klicken: %s") % shown if on else original[0]
+		for c in b.get_children():
+			if c is Control:
+				c.visible = not on
+	b.pressed.connect(func():
+		if armed[0]:
+			set_armed.call(false)
+			action.call()
+			return
+		set_armed.call(true)
+		b.get_tree().create_timer(CONFIRM_TIME).timeout.connect(func():
+			if is_instance_valid(b) and armed[0]:
+				set_armed.call(false)))

@@ -8,7 +8,7 @@ extends HdHero
 const RAT := Color("9ac23a")
 
 var bombs: Array = []        ## {pos, next, left, tele}
-var banner: Dictionary = {}  ## {pos, until, tele, pole}
+var banner: Dictionary = {}  ## {pos, until, pw}; Standarte und Siegel zeichnet HdFx.hold
 var robe_until := 0.0
 
 
@@ -38,7 +38,7 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 			var t := HdTelegraph.circle(float(a.radius), HdTelegraph.BLUE)
 			t.position = Vector3(p.x, 0.05, p.z)
 			game.add_child(t)
-			game.fx.tracer(position + Vector3(0, 1.8, 0), p + Vector3(0, 0.3, 0), Color("a8a8b0"))
+			game.fx.play("lob", position + Vector3(0, 1.9, 0), dir, float(a.flight), Color.WHITE, p + Vector3(0, 0.3, 0))
 			bombs.append({"pos": p, "next": game.play_time + float(a.flight), "left": int(a.blasts), "tele": t, "pw": pw})
 		1:
 			var hits: Array = game.enemies_in(HdTelegraph.CIRCLE, position, dir, float(a.radius), 0, 0, 0, 0)
@@ -50,19 +50,12 @@ func _cast(slot: int, a: Dictionary, dir: Vector3, at: Vector3) -> bool:
 		2:
 			add_shield(max_hp * float(a.shield), float(a.time))
 			robe_until = game.play_time + float(a.time)
-			game.fx.nova(position, 1.6, UiTheme.GOLD)
+			game.fx.play("robe", position, dir, 1.0, UiTheme.GOLD)
 		3:
 			_end_banner(false)
 			var p := clamp_point(at, float(a.range))
-			var t := HdTelegraph.circle(float(a.radius), HdTelegraph.BLUE)
-			t.position = Vector3(p.x, 0.04, p.z)
-			game.add_child(t)
-			var pole := Node3D.new()
-			pole.position = p
-			pole.add_child(HdDev.box(Vector3(0.18, 3.2, 0.18), HdDev.mat(Color("5a3a22"), 0.5), Vector3(0, 1.6, 0)))
-			pole.add_child(HdDev.box(Vector3(1.3, 0.9, 0.06), HdDev.mat(RAT, 0.5, 0.6), Vector3(0.7, 2.6, 0)))
-			game.add_child(pole)
-			banner = {"pos": p, "until": game.play_time + float(a.duration), "tele": t, "pole": pole, "pw": pw}
+			banner = {"pos": p, "until": game.play_time + float(a.duration), "pw": pw}
+			game.fx.nova(p, float(a.radius), RAT)
 	return true
 
 
@@ -75,19 +68,23 @@ func _swarm(hits: Array, total: int, a: Dictionary, pw: float) -> void:
 		var n := mini(int(a.per_target), left)
 		e.add_rats(n, int(a.per_target), float(a.duration), float(a.bite) * pw, float(a.armor), a.plague)
 		left -= n
-		game.fx.bolt(position + Vector3(0, 1.0, 0), e.position + Vector3(0, 0.5, 0), RAT)
+		game.fx.play("rats", position, Vector3.FORWARD, float(n), RAT, e.position + Vector3(0, e.height() * 0.5, 0))
 
 
 func _kit_step(_dt: float, now: float) -> void:
+	if alive() and reflect_chance() > 0.0:
+		game.fx.hold("robe:%d" % get_instance_id(), "shield_dome", position, 1.0, UiTheme.GOLD)
 	for i in range(bombs.size() - 1, -1, -1):
 		var b: Dictionary = bombs[i]
 		var a := ability(0)
 		var t: HdTelegraph = b.tele
 		if is_instance_valid(t):
 			t.progress = clampf(1.0 - (float(b.next) - now) / float(a.blast_gap), 0.0, 1.0)
+			if int(b.left) < int(a.blasts):
+				game.fx.hold("bomb:%d" % t.get_instance_id(), "scrap_pile", b.pos)
 		if now < float(b.next):
 			continue
-		game.fx.nova(b.pos, float(a.radius), Color("e0a050"))
+		game.fx.play("scrap_blast", b.pos, Vector3.FORWARD, float(a.radius))
 		for e in game.enemies_in(HdTelegraph.CIRCLE, b.pos, Vector3.FORWARD, float(a.radius), 0, 0, 0, 0):
 			game.hero_hit(e, float(a.damage) * float(b.pw), "q")
 			if not e.dead:
@@ -101,9 +98,8 @@ func _kit_step(_dt: float, now: float) -> void:
 	if banner.is_empty():
 		return
 	var ba := ability(3)
-	var bt: HdTelegraph = banner.tele
 	var left := float(banner.until) - now
-	bt.progress = clampf(1.0 - left / float(ba.duration), 0.0, 1.0)
+	game.fx.hold("banner:%d" % get_instance_id(), "banner_zone", banner.pos, float(ba.radius), RAT, Vector3(clampf(1.0 - left / float(ba.duration), 0.0, 1.0), 0, 0))
 	if alive() and Vector2(position.x - banner.pos.x, position.z - banner.pos.z).length() <= float(ba.radius):
 		add_buff("rattenbanner", {"speed": float(ba.speed), "dmg_in": float(ba.dmg_in), "slow_immune": true}, 0.25)
 	if left <= 0.0:
@@ -117,7 +113,7 @@ func _end_banner(burst: bool) -> void:
 	var ba := ability(3)
 	if burst:
 		var hits: Array = game.enemies_in(HdTelegraph.CIRCLE, banner.pos, Vector3.FORWARD, float(ba.radius), 0, 0, 0, 0)
-		game.fx.nova(banner.pos, float(ba.radius), RAT)
+		game.fx.play("plague_burst", banner.pos, Vector3.FORWARD, float(ba.radius), RAT)
 		for e in hits:
 			game.hero_hit(e, float(ba.damage) * float(banner.pw), "r")
 			if e.dead:
@@ -128,10 +124,7 @@ func _end_banner(burst: bool) -> void:
 		for e in hits:
 			if not e.dead:
 				e.add_rats(int(sw.per_target), int(sw.per_target), float(sw.duration), float(sw.bite) * float(banner.pw), float(sw.armor), sw.plague)
-	if is_instance_valid(banner.tele):
-		banner.tele.trigger(0.3)
-	if is_instance_valid(banner.pole):
-		banner.pole.queue_free()
+	game.fx.release("banner:%d" % get_instance_id())
 	banner = {}
 
 

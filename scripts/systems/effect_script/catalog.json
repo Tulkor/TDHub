@@ -1,0 +1,1079 @@
+{
+  "version": 1,
+  "limits": {
+    "text": 16384,
+    "depth": 24,
+    "nodes": 256
+  },
+  "functions": {
+    "OnHit": {
+      "trigger": "hit",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnAttack": {
+      "trigger": "attack",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnKill": {
+      "trigger": "kill",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnHurt": {
+      "trigger": "hurt",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnCast": {
+      "trigger": "cast",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnDeath": {
+      "trigger": "death",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "OnSpawn": {
+      "trigger": "spawn",
+      "chance": true,
+      "children": true,
+      "root": true
+    },
+    "Every": {
+      "trigger": "tick",
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0.05,
+          3600
+        ]
+      ],
+      "children": true,
+      "root": true
+    },
+    "Sequence": {
+      "children": true
+    },
+    "Chance": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1
+        ]
+      ],
+      "children": true
+    },
+    "Self": {
+      "children": true
+    },
+    "AoE": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000
+        ]
+      ],
+      "children": true
+    },
+    "Allies": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000
+        ]
+      ],
+      "children": true,
+      "requires": "Spiel.allies() oder Spiel.towers"
+    },
+    "Cone": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000
+        ],
+        [
+          0,
+          360
+        ]
+      ],
+      "children": true
+    },
+    "Line": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000
+        ],
+        [
+          0,
+          1000
+        ]
+      ],
+      "children": true
+    },
+    "Ring": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000
+        ],
+        [
+          0,
+          1000
+        ]
+      ],
+      "children": true
+    },
+    "Chain": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          1,
+          64
+        ],
+        [
+          0,
+          1000
+        ]
+      ],
+      "children": true,
+      "integers": [
+        0
+      ]
+    },
+    "IceBall": {
+      "children": true,
+      "projectile": "ice"
+    },
+    "FireBall": {
+      "children": true,
+      "projectile": "fire"
+    },
+    "Projectile": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0.1,
+          1000
+        ]
+      ],
+      "children": true,
+      "projectile": "physical"
+    },
+    "Delay": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          3600
+        ]
+      ],
+      "children": true
+    },
+    "Damage": {
+      "params": [
+        "number"
+      ],
+      "optional": [
+        "string"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ]
+      ]
+    },
+    "DamagePercent": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "Slow": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Ziel.apply_slow oder Ziel.cc.slow; sonst Spieladapter."
+    },
+    "Stun": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Ziel.apply_stun oder Ziel.cc.hard; sonst Spieladapter."
+    },
+    "Root": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Spieladapter effect_script_action: Root (Bollwerk).",
+      "bridge": true
+    },
+    "ArmorReduce": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Ziel.apply_armor_reduction oder Ziel.cc.reduce_armor; sonst Spieladapter."
+    },
+    "Poison": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ]
+    },
+    "Burn": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ]
+    },
+    "DoT": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "optional": [
+        "string"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ]
+    },
+    "Heal": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ]
+      ],
+      "requires": "Ziel.heal"
+    },
+    "Shield": {
+      "params": [
+        "number",
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Ziel.add_shield"
+    },
+    "Mana": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          -1000000000,
+          1000000000
+        ]
+      ],
+      "requires": "Ziel.mana und Ziel.max_mana"
+    },
+    "Gold": {
+      "params": [
+        "number"
+      ],
+      "ranges": [
+        [
+          0,
+          1000000
+        ]
+      ],
+      "integers": [
+        0
+      ]
+    },
+    "Buff": {
+      "params": [
+        "string",
+        "number",
+        "number"
+      ],
+      "ranges": [
+        null,
+        [
+          -1000000,
+          1000000
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "requires": "Ziel.add_buff oder Spieladapter; Bonusnamen müssen vom Ziel unterstützt werden."
+    },
+    "Summon": {
+      "params": [
+        "string",
+        "number",
+        "number"
+      ],
+      "ranges": [
+        null,
+        [
+          1,
+          64
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "bridge": true,
+      "requires": "Spieladapter effect_script_action: Summon (Bollwerk); id muss existieren.",
+      "integers": [
+        1
+      ]
+    },
+    "Invoke": {
+      "params": [
+        "string",
+        "string"
+      ],
+      "bridge": true,
+      "requires": "Registrierter Handler oder Spieladapter; Fähigkeits-ID und JSON-Parameter werden dort geprüft."
+    },
+    "Native": {
+      "params": [
+        "string"
+      ],
+      "root": true,
+      "passive": true,
+      "requires": "Nativer Towerkontext tower; eeve.* benötigt zusätzlich eeve (EeveTower). Auf Helden nicht unterstützt; kein Ersatzverhalten."
+    },
+    "OnDay": {
+      "chance": true,
+      "root": true,
+      "trigger": "day",
+      "children": true
+    },
+    "OnNight": {
+      "chance": true,
+      "root": true,
+      "trigger": "night",
+      "children": true
+    },
+    "WhenNight": {
+      "children": true,
+      "requires": "Spiel.is_night()"
+    },
+    "WhenDay": {
+      "children": true,
+      "requires": "Spiel.is_night()"
+    },
+    "Knockback": {
+      "bridge": true,
+      "ranges": [
+        [
+          0,
+          1000
+        ],
+        [
+          0,
+          3600
+        ]
+      ],
+      "params": [
+        "number",
+        "number"
+      ],
+      "requires": "Spieladapter effect_script_action: Knockback (Bollwerk)."
+    }
+  },
+  "native": {
+    "fork": {
+      "count": 1,
+      "angle": 30.0,
+      "reach": 3.0,
+      "factor": 1.0
+    },
+    "damage_aura": {
+      "radius": 3.0,
+      "bonus": 0.15
+    },
+    "xp_aura": {
+      "radius": 7.8,
+      "bonus": 0.45
+    },
+    "slow_aura": {
+      "radius": 2.0,
+      "factor": 0.3
+    },
+    "armor_reduce": {
+      "amount": 3.0,
+      "duration": 5.0
+    },
+    "bounce": {
+      "targets": 3,
+      "falloff": 0.8,
+      "radius": 2.5
+    },
+    "poison": {
+      "dps": 5.0,
+      "duration": 3.0
+    },
+    "pierce": {
+      "count": 2,
+      "factor": 1.0
+    },
+    "burn_aura": {
+      "radius": 2.0,
+      "dps": 20.0
+    },
+    "slow": {
+      "factor": 0.3,
+      "duration": 2.0
+    },
+    "splash": {
+      "radius": 1.0,
+      "factor": 0.5
+    },
+    "multishot": {
+      "targets": 3
+    },
+    "stun": {
+      "chance": 0.1,
+      "duration": 1.0
+    },
+    "crit": {
+      "chance": 0.2,
+      "multiplier": 2.0
+    },
+    "armor_aura": {
+      "radius": 2.0,
+      "amount": 3.0
+    },
+    "chain": {
+      "count": 2,
+      "radius": 2.5,
+      "factor": 1.0
+    },
+    "gold_on_hit": {
+      "chance": 0.05,
+      "gold": 1
+    },
+    "stacking_damage": {
+      "per_hit": 35.0,
+      "duration": 5.0,
+      "death_damage": 0.0,
+      "death_radius": 5.9
+    },
+    "bounty_aura": {
+      "radius": 7.8,
+      "bonus": 0.33
+    },
+    "speed_aura": {
+      "radius": 3.0,
+      "bonus": 0.15
+    },
+    "cone": {
+      "length": 4.0,
+      "width_start": 0.5,
+      "width_end": 1.5
+    },
+    "air_bonus": {
+      "multiplier": 2.0
+    },
+    "nova": {
+      "radius": 0.78,
+      "damage": 350.0,
+      "chance": 0.1
+    },
+    "wave_damage": {
+      "per_wave": 20.0
+    },
+    "eeve.death_explosion": {
+      "radius": 1.95,
+      "damage": 3000.0,
+      "duration": 3.0
+    },
+    "eeve.hp_cut": {
+      "radius": 5.47,
+      "factor": 0.23
+    },
+    "eeve.pulse": {
+      "every": 20.0,
+      "slow": 0.0,
+      "duration": 3.0,
+      "targets": "both",
+      "stun": 0.0,
+      "radius": 14.06,
+      "damage": 0.0,
+      "center": "tower"
+    },
+    "eeve.rage": {
+      "every": 15.0,
+      "bonus": 0.4,
+      "radius": 3.52,
+      "duration": 8.0
+    },
+    "eeve.area_debuff": {
+      "dps": 60.0,
+      "duration": 15.0,
+      "radius": 1.95,
+      "slow": 0.1,
+      "armor": 3.0
+    },
+    "eeve.chain": {
+      "growth": 1.25,
+      "damage": 1250.0,
+      "radius": 3.91,
+      "chance": 0.2,
+      "targets": 4
+    },
+    "eeve.amplify": {
+      "bonus": 0.25,
+      "duration": 5.0,
+      "chance": 0.2
+    },
+    "eeve.orb": {
+      "radius": 6.25,
+      "color": "#c8b0ff",
+      "dps": 130.0,
+      "every": 0.5
+    }
+  },
+  "native_ranges": {
+    "falloff": [
+      0,
+      1
+    ],
+    "factor": [
+      0,
+      1
+    ],
+    "bonus": [
+      0,
+      1000000
+    ],
+    "amount": [
+      0,
+      1000000
+    ],
+    "duration": [
+      0,
+      3600
+    ],
+    "targets": [
+      1,
+      64
+    ],
+    "gold": [
+      0,
+      1000000
+    ],
+    "length": [
+      0,
+      1000
+    ],
+    "reach": [
+      0,
+      1000
+    ],
+    "dps": [
+      0,
+      1000000000
+    ],
+    "death_damage": [
+      0,
+      1000000000
+    ],
+    "chance": [
+      0,
+      1
+    ],
+    "death_radius": [
+      0,
+      1000
+    ],
+    "multiplier": [
+      0,
+      1000000
+    ],
+    "angle": [
+      0,
+      360
+    ],
+    "per_hit": [
+      0,
+      1000000000
+    ],
+    "width_end": [
+      0,
+      1000
+    ],
+    "width_start": [
+      0,
+      1000
+    ],
+    "count": [
+      0,
+      64
+    ],
+    "damage": [
+      0,
+      1000000000
+    ],
+    "radius": [
+      0,
+      1000
+    ],
+    "per_wave": [
+      0,
+      1000000000
+    ],
+    "slow": [
+      0,
+      1
+    ],
+    "every": [
+      0.05,
+      3600
+    ],
+    "stun": [
+      0,
+      3600
+    ],
+    "armor": [
+      0,
+      1000000
+    ],
+    "max": [
+      1,
+      1000000
+    ],
+    "growth": [
+      0,
+      1000000
+    ],
+    "factor_challenge": [
+      0,
+      1
+    ],
+    "gold_per_wave": [
+      0,
+      1000000
+    ]
+  },
+  "native_integers": [
+    "targets",
+    "count",
+    "gold",
+    "max"
+  ],
+  "native_optional": {
+    "poison": [
+      "chance",
+      "text"
+    ],
+    "stun": [
+      "chance",
+      "damage",
+      "text"
+    ],
+    "stacking_damage": [
+      "chance",
+      "text"
+    ],
+    "slow": [
+      "chance",
+      "text"
+    ],
+    "gold_on_hit": [
+      "chance",
+      "gold_per_wave",
+      "text"
+    ],
+    "cone": [
+      "chance",
+      "damage",
+      "text"
+    ],
+    "armor_reduce": [
+      "chance",
+      "text"
+    ],
+    "nova": [
+      "slow",
+      "text"
+    ],
+    "eeve.death_explosion": [
+      "text",
+      "chance"
+    ],
+    "eeve.hp_cut": [
+      "text",
+      "factor_challenge"
+    ],
+    "eeve.pulse": [
+      "text",
+      "max"
+    ],
+    "eeve.rage": [
+      "text"
+    ],
+    "eeve.area_debuff": [
+      "text",
+      "chance"
+    ],
+    "eeve.chain": [
+      "text",
+      "chance"
+    ],
+    "eeve.amplify": [
+      "text",
+      "chance"
+    ],
+    "eeve.orb": [
+      "text"
+    ],
+    "armor_aura": [
+      "targets",
+      "text"
+    ],
+    "slow_aura": [
+      "targets",
+      "text"
+    ],
+    "burn_aura": [
+      "targets",
+      "text"
+    ],
+    "fork": [
+      "text"
+    ],
+    "damage_aura": [
+      "text"
+    ],
+    "xp_aura": [
+      "text"
+    ],
+    "bounce": [
+      "text"
+    ],
+    "pierce": [
+      "text"
+    ],
+    "splash": [
+      "text"
+    ],
+    "multishot": [
+      "text"
+    ],
+    "crit": [
+      "text"
+    ],
+    "chain": [
+      "text"
+    ],
+    "bounty_aura": [
+      "text"
+    ],
+    "speed_aura": [
+      "text"
+    ],
+    "air_bonus": [
+      "text"
+    ],
+    "wave_damage": [
+      "text"
+    ]
+  },
+  "native_scopes": {
+    "eeve.hp_cut": "eeve",
+    "eeve.orb": "eeve",
+    "eeve.area_debuff": "eeve",
+    "eeve.death_explosion": "eeve",
+    "eeve.chain": "eeve",
+    "eeve.pulse": "eeve",
+    "eeve.amplify": "eeve",
+    "eeve.rage": "eeve"
+  },
+  "native_runtime_types": {
+    "eeve.hp_cut": "hp_cut",
+    "eeve.orb": "orb",
+    "eeve.area_debuff": "area_debuff",
+    "eeve.death_explosion": "death_explosion",
+    "eeve.chain": "chain",
+    "eeve.pulse": "pulse",
+    "eeve.amplify": "amplify",
+    "eeve.rage": "rage"
+  },
+  "native_optional_types": {
+    "eeve.hp_cut": {
+      "text": "string"
+    },
+    "eeve.orb": {
+      "text": "string"
+    },
+    "eeve.area_debuff": {
+      "text": "string"
+    },
+    "eeve.death_explosion": {
+      "text": "string"
+    },
+    "eeve.chain": {
+      "text": "string"
+    },
+    "eeve.pulse": {
+      "text": "string"
+    },
+    "eeve.amplify": {
+      "text": "string"
+    },
+    "eeve.rage": {
+      "text": "string"
+    },
+    "armor_aura": {
+      "text": "string",
+      "targets": "string"
+    },
+    "slow_aura": {
+      "text": "string",
+      "targets": "string"
+    },
+    "burn_aura": {
+      "text": "string",
+      "targets": "string"
+    },
+    "fork": {
+      "text": "string"
+    },
+    "damage_aura": {
+      "text": "string"
+    },
+    "xp_aura": {
+      "text": "string"
+    },
+    "armor_reduce": {
+      "text": "string"
+    },
+    "bounce": {
+      "text": "string"
+    },
+    "poison": {
+      "text": "string"
+    },
+    "pierce": {
+      "text": "string"
+    },
+    "slow": {
+      "text": "string"
+    },
+    "splash": {
+      "text": "string"
+    },
+    "multishot": {
+      "text": "string"
+    },
+    "stun": {
+      "text": "string"
+    },
+    "crit": {
+      "text": "string"
+    },
+    "chain": {
+      "text": "string"
+    },
+    "gold_on_hit": {
+      "text": "string"
+    },
+    "stacking_damage": {
+      "text": "string"
+    },
+    "bounty_aura": {
+      "text": "string"
+    },
+    "speed_aura": {
+      "text": "string"
+    },
+    "cone": {
+      "text": "string"
+    },
+    "air_bonus": {
+      "text": "string"
+    },
+    "nova": {
+      "text": "string"
+    },
+    "wave_damage": {
+      "text": "string"
+    }
+  },
+  "native_enums": {
+    "eeve.pulse": {
+      "center": [
+        "tower",
+        "target"
+      ],
+      "targets": [
+        "both",
+        "air",
+        "ground"
+      ]
+    },
+    "armor_aura": {
+      "targets": [
+        "both",
+        "air",
+        "ground"
+      ]
+    },
+    "slow_aura": {
+      "targets": [
+        "both",
+        "air",
+        "ground"
+      ]
+    },
+    "burn_aura": {
+      "targets": [
+        "both",
+        "air",
+        "ground"
+      ]
+    }
+  },
+  "native_param_ranges": {
+    "chain": {
+      "factor": [
+        0,
+        1000000
+      ]
+    },
+    "multishot": {
+      "targets": [
+        1,
+        99
+      ]
+    },
+    "fork": {
+      "factor": [
+        0,
+        1000000
+      ]
+    },
+    "pierce": {
+      "factor": [
+        0,
+        1000000
+      ]
+    }
+  }
+}

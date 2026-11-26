@@ -74,13 +74,13 @@ PY
 mkdir -p export/windows "$TMP/GemTD"
 tools/godot_import.sh
 EXPORT_LOG="$PWD/.godot/windows-export.log"
-"$GODOT_BIN" --headless --path . --export-release "Windows" "$TMP/GemTD/GemTD.exe" >"$EXPORT_LOG" 2>&1 || {
+"$GODOT_BIN" --headless --audio-driver Dummy --path . --export-release "Windows" "$TMP/GemTD/GemTD.exe" >"$EXPORT_LOG" 2>&1 || {
   echo "Export fehlgeschlagen:"; grep -E "ERROR|error" "$EXPORT_LOG" | grep -v 'Parameter "m"' | head -20; exit 1; }
 [ -s "$TMP/GemTD/GemTD.exe" ] || { echo "Export hat keine GemTD.exe erzeugt"; tail -20 "$EXPORT_LOG"; exit 1; }
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
     SMOKE_LOG="$PWD/.godot/windows-build-smoke.log"
-    timeout 120 "$TMP/GemTD/GemTD.exe" --headless --quit-after 120 --log-file "$SMOKE_LOG" >/dev/null 2>&1 || {
+    timeout 120 "$TMP/GemTD/GemTD.exe" --headless --audio-driver Dummy --quit-after 120 --log-file "$SMOKE_LOG" >/dev/null 2>&1 || {
       echo "Windows-Starttest fehlgeschlagen: $SMOKE_LOG"; exit 1; }
     if grep -Eq 'SCRIPT ERROR|SHADER ERROR|Parse Error' "$SMOKE_LOG"; then
       echo "Windows-Starttest meldet Fehler: $SMOKE_LOG"; exit 1

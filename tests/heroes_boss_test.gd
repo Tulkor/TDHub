@@ -50,12 +50,16 @@ func encounter(id: String) -> void:
 	var queued: Array = g.spawn_queue.filter(func(q): return str(g.enemy_defs[q.id].rank) == "boss")
 	check(queued.is_empty(), id + ": Welle 40 bleibt Großangriff ohne Endboss")
 	g.spawn_queue.clear()
+	g.exploration.completed = 40  # Erkundungsrast separat in heroesexplore; hier Endboss-Übergang.
 	g.step(1.0 / 30.0)
 	check(g.final.active and g.state == "play", id + ": nach Welle 40 ins Endgebiet")
+	check(g.final.arena_theme == HdFinalStyle.theme_id(id), id + ": Arena passt zur ausgewählten Bossvariante")
 	g.systems.challenges.start_boss("gate")
 	var boss: HdEnemy = g.final.boss
 	check(boss.id == "final_" + id, id + ": ausgewählte Variante erscheint im Schlund")
-	check(boss.boss_visual != null and boss.boss_visual.get_child_count() >= 10, id + ": eigene Silhouette")
+	check(boss.boss_visual != null and str(boss.boss_visual.get_meta("gothic_theme", "")) == str(boss.def.visual.theme) and not boss.boss_visual.find_children("*", "MeshInstance3D", true, false).is_empty(), id + ": eigene thematische Silhouette")
+	check(boss.boss_visual.get_meta("gothic_batches", 999) <= 32 and boss.boss_visual.find_children("*", "Light3D", true, false).is_empty() and boss.boss_visual.find_children("*", "CollisionObject3D", true, false).is_empty(), id + ": gegliederte Grafik ohne zusätzliche Lichter oder Kollisionen")
+	check(int(boss.boss_visual.get_meta("articulated_limbs",0)) >= 3, id + ": mehrere echte Gelenkgruppen")
 	check(boss.zone == "final", id + ": Schlund-Arena")
 	g.hero.position = boss.position + Vector3(0, 0, 7)
 	boss.target = g.hero
@@ -124,6 +128,7 @@ func encounter(id: String) -> void:
 
 
 func move(g: HdGame, boss: HdEnemy, aid: String) -> void:
+	g.fx.network_events.clear()
 	g.play_time += 30
 	g.hero.hp = g.hero.max_hp
 	g.hero.dodge_t = 0
@@ -146,6 +151,7 @@ func move(g: HdGame, boss: HdEnemy, aid: String) -> void:
 	boss._step_cast(float(ab.windup) * 0.45, g.play_time)
 	check(g.hero.hp == hp, aid + ": kein Schaden vor Ablauf der Warnzeit")
 	boss._step_cast(float(ab.windup) * 0.6, g.play_time)
+	check(g.fx.network_events.any(func(event): return str(event.get("id","")).begins_with("boss:")), aid + ": thematischer Effekt wird auch im Koop übertragen")
 	match str(ab.kind):
 		"summon": check(boss.boss_brain.remaining_adds() < 8, aid + ": Adds beschworen")
 		"skillshot":

@@ -26,7 +26,27 @@ func check(cond: bool, msg: String) -> void:
 func _ready() -> void:
 	await get_tree().process_frame
 	Profile.dir = "user://test_heroes_profile"
+	if "--gpu-profil" in OS.get_cmdline_user_args():
+		Profile.dir += "_gpu"
 	Profile.reset_cache()
+	if "--nur=unterbrechen" in OS.get_cmdline_user_args():
+		Sfx.audible = false
+		await _interrupt()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures else 0)
+		return
+	if "--nur=ki" in OS.get_cmdline_user_args():
+		await _ai()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures > 0 else 0)
+		return
+	if "--nur=ablauf" in OS.get_cmdline_user_args():
+		await _flyer_elite()
+		await _bosses()
+		await _final_area()
+		print("FERTIG, Fehler: %d" % failures)
+		get_tree().quit(1 if failures else 0)
+		return
 	_data()
 	_cc()
 	_shapes()
@@ -109,6 +129,20 @@ func _cc() -> void:
 	check(_same(bt, [1.0, 0.6, 0.3, 0.0]), "Boss: 100/60/30 %%, dann immun: %s" % [bt])
 	check(b.immune(10.0) and not b.immune(3.0 + 0.3 + float(cfg.boss.immune) + 0.1), "Boss: Immunität endet nach %s s" % cfg.boss.immune)
 	check(is_equal_approx(b.hard(1.0, 20.0), 1.0), "Boss: nach der Immunität wieder volle Dauer")
+	# Anzeige (Bossleiste): gelber Aufbau, der sich langsam leert; immun = rot und ablaufend, CC ändert dann nichts
+	var g := HdCc.new(cfg, "boss")
+	g.hard(1.0, 0.0)
+	var built: Dictionary = g.gauge(1.0)
+	check(not built.immune and is_equal_approx(float(built.value), 1.0 / 3.0), "CC-Balken: eine CC füllt ein Drittel")
+	check(float(g.gauge(6.0).value) < float(built.value) and float(g.gauge(6.0).value) > 0.0, "CC-Balken leert sich langsam bis zum Zurücksetzen")
+	g.hard(1.0, 2.0)
+	g.hard(1.0, 3.0)
+	var full: Dictionary = g.gauge(3.4)
+	check(full.immune and float(full.value) > 0.95, "CC-Balken: immun ist voll und rot")
+	var mid: float = float(g.gauge(8.0).value)
+	g.hard(1.0, 8.0)
+	check(g.gauge(8.0).immune and is_equal_approx(float(g.gauge(8.0).value), mid), "CC während der Immunität setzt den Balken nicht zurück")
+	check(float(g.gauge(10.0).value) < mid, "Immunitätsbalken läuft ab")
 	# Verlangsamung und Rüstungssenkung: immer, auf Bossen halb
 	var s1 := HdCc.new(cfg, "normal")
 	s1.slow("x", 0.4, 2.0, 0.0)
@@ -160,6 +194,11 @@ func _new_game(held := "torvik") -> HdGame:
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
+	g.cfg.arena.walls = false
+	g.lane_ids = []
+	g.road_choice = 0
+	g._build_roads()
+	g.obstacles = [[Vector3(-32, 0, -32), 2.0], [Vector3(32, 0, 32), 2.0], [Vector3(-30, 0, 12), 2.0]]
 	g.spawn_queue.clear()
 	for e in g.enemies:
 		g._remove(e)
@@ -204,8 +243,10 @@ func _ai() -> void:
 	g.hero.position.x = clampf(g.hero.position.x, -40, 40)
 	_run(g, 6.0)
 	check(e.target == null and e.state in ["return", "road"], "Leine gerissen: zurück zur Straße (%s)" % e.state)
+	# Der neue Straßenbogen führt sonst später wieder direkt am wartenden Helden vorbei.
+	_park_hero(g)
 	_run(g, 6.0)
-	check(e.state == "road", "wieder auf der Straße")
+	check(e.state == "road", "wieder auf der Straße (%s, %s, Anker %s, Held %s)" % [e.state, e.position, e.anchor_point(), g.hero.position])
 	# Angegriffen außerhalb der Aggro-Reichweite (aber in Leine) → greift an
 	var at := g.road_point(e.road_s + 2.0)
 	var side := (g.road_point(e.road_s + 3.0) - at).normalized().cross(Vector3.UP)
@@ -237,28 +278,32 @@ func _ai() -> void:
 func _interrupt() -> void:
 	var g := await _new_game()
 	var e := g.spawn("schlammwerfer")
-	e.ab_ready["moerser"] = 0.0
+	var aid := str(e.abilities()[0])
+	e.ab_ready[aid] = 0.0
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	var k := 0
 	while not e.casting() and k < 120:
 		g.step(DT)
 		k += 1
-	check(e.casting() and str(e.cast.id) == "moerser", "Schlammwerfer setzt Mörser an")
+	check(e.casting() and str(e.cast.id) == aid, "Schlammwerfer setzt sein Mörsermuster an")
 	var teles: Array = e.cast.tele.duplicate()
-	check(teles.size() == 1 and teles[0].shape == HdTelegraph.CIRCLE, "Mörser zeigt eine Kreis-Warnfläche")
+	check(teles.size() == int(g.ability_defs[aid].get("count", 1)), "Mörser kündigt jeden Einschlag an")
+	for tele in teles:
+		check(tele.shape == HdTelegraph.CIRCLE, "Mörser zeigt Kreis-Warnflächen")
 	g.step(DT * 10)
 	var p: float = teles[0].progress
 	check(p > 0.1 and p < 0.9, "Füllung wächst mit der Aufladung (%.2f)" % p)
 	g.stun(e, 1.0)
 	g.step(DT)
 	check(not e.casting(), "Betäubung beim Aufladen bricht die Fähigkeit ab")
-	check(float(e.ab_ready.moerser) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
+	check(float(e.ab_ready[aid]) > g.play_time + 5.0, "abgebrochene Fähigkeit ist trotzdem auf Cooldown")
 	await get_tree().process_frame
-	check(not is_instance_valid(teles[0]) or teles[0].is_queued_for_deletion(), "Warnfläche verschwindet")
+	for tele in teles:
+		check(not is_instance_valid(tele) or tele.is_queued_for_deletion(), "Jede unterbrochene Warnfläche verschwindet")
 	_run(g, 3.0)
 	check(e.casts_started == 1, "kein neuer Mörser während des Cooldowns")
 	# Treffer: Held bleibt stehen → Schaden; ausweichen → kein Schaden
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	var hp0 := g.hero.hp
 	g.hero.position = e.position + Vector3(0, 0, 9)
 	k = 0
@@ -275,7 +320,7 @@ func _interrupt() -> void:
 	check(g.hero.hp < hp0 - 50.0, "Mörser trifft den Helden (%d → %d)" % [hp0, g.hero.hp])
 	# Ausweichen während des Auslösens
 	g.hero.hp = g.hero.max_hp
-	e.ab_ready["moerser"] = 0.0
+	e.ab_ready[aid] = 0.0
 	e.gap_until = 0.0
 	k = 0
 	while not e.casting() and k < 200:
@@ -514,6 +559,8 @@ func _no_stuck() -> void:
 	var c: Vector3 = ob[0]
 	var r: float = ob[1]
 	var e := g.spawn("moorbrute", c + Vector3(r + 1.2, 0, 0), g.road_project(c, 0, g.road_len))
+	e.zone = "test"
+	e.home = c
 	e.ab_ready.clear()
 	for a in e.def.abilities:
 		e.ab_ready[a] = 999.0
@@ -589,7 +636,7 @@ func _roads_gates() -> void:
 	await get_tree().process_frame
 	g4.road_choice = 4
 	g4._build_roads()
-	check(g4.roads.size() == 4 and g4.buildings.size() == 8, "Einstellung: alle 4 Straßen (%d, %d Torwerke)" % [g4.roads.size(), g4.buildings.size()])
+	check(g4.roads.size() == 8 and g4.buildings.size() == 16, "Einstellung: alle 8 Straßen (%d, %d Torwerke)" % [g4.roads.size(), g4.buildings.size()])
 	g4.road_choice = keep
 	g4.save_settings()
 	g4.queue_free()
@@ -687,6 +734,11 @@ func _bot_run(diff: int, held := "torvik") -> void:
 	add_child(g)
 	await get_tree().process_frame
 	g.set_physics_process(false)
+	g.cfg.arena.walls = false
+	g.lane_ids = []
+	g.road_choice = 0
+	g._build_roads()
+	g.obstacles = [[Vector3(-32, 0, -32), 2.0], [Vector3(32, 0, 32), 2.0], [Vector3(-30, 0, 12), 2.0]]
 	g.wave_limit = 10
 	var runs_before: int = Profile.data().get("runs", []).size() if Profile.data().has("runs") else -1
 	_run(g, 900.0, true)
@@ -812,7 +864,7 @@ func _flyer_elite() -> void:
 	f.hp = f.max_hp
 	check(f.fly and f.fly_road != null and f.fly_road.points.size() == 2, "Flieger nimmt die gerade Fluglinie")
 	var lives0 := g.lives
-	_run(g, 30.0)
+	_run(g, f.fly_road.length / maxf(f.speed, .1) + 5.0)
 	check(f.dead and g.lives < lives0, "Flieger erreicht die Feste über Felsen und Torwerke hinweg")
 	# Teiler: zerfällt in zwei schwächere
 	var t := _dummy(g, "glutling", g.road_point(20.0))
@@ -862,8 +914,13 @@ func _bosses() -> void:
 	if vargul:
 		g.hero_hit(vargul, 9999999.0, "test")
 	check(g.shop.trophies == 1, "Kriegsherr gibt eine Trophäe")
+	# Die Erkundungsrast beginnt erst, wenn die gesamte Welle besiegt ist.
+	g.spawn_queue.clear()
+	for remaining in g.enemies.duplicate():
+		g.hero_hit(remaining, 1e9, "test")
+	g.spawn_queue.clear()  # Auch verzögert wiederauferstehende Knochengegner sind beseitigt.
 	_run(g, 1.0)
-	check(g.rest_given and g.wave_len(20) - g.wave_time <= 45.1, "Rast: höchstens 45 s bis zur nächsten Welle")
+	check(g.exploration.active and g.exploration.remaining <= HdExploration.BREAK_SECONDS, "Nach Welle 20 gilt die aktuelle Erkundungsrast")
 	# Kriegsherren-Händler
 	check(g.shop.act({"kind": "buy", "id": "moorkrone"}) == "" and g.shop.trophies == 0, "Trophäe kauft die Moorkrone")
 	check(g.shop.can_buy("glutherz") != "", "Ohne Trophäe kein weiteres Trophäen-Item")
@@ -1146,6 +1203,7 @@ func _final_area() -> void:
 	check(ch != null and ch.list.size() >= 5, "Endgebiet: Challenges geladen")
 	g.wave = 40
 	g.wave_limit = 0
+	g.exploration.completed = 40  # Erkundungsrast wird separat in heroesexplore geprüft.
 	g.spawn_queue.clear()
 	for x in g.enemies.duplicate():
 		g._remove(x)

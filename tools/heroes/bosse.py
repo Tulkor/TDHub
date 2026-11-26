@@ -7,9 +7,37 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def contact_sheet(data, models=False):
+    """Kontaktbogen aus den echten --arena/--schlund-Aufnahmen (Pillow nur hierfür)."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        raise SystemExit("--kontakt braucht eine Python-Umgebung mit Pillow; der normale Bossdatencheck nicht.") from None
+
+    shots = [(ROOT / f".godot/{'boss-model' if models else 'arena'}-{b['id']}.png", f"{b['name'].split(',')[0]} · {b['theme']}")
+             for b in data["bosses"]]
+    shots.append((ROOT / ("export/screens/bollwerk-gothic-detail_bild.png" if models else ".godot/schlund-varkhun.png"), "Bollwerk · Schwarze Kathedrale" if models else "Der Schlund · Challenge-Vorplatz"))
+    width, height, caption = 640, 412, 34
+    result = Image.new("RGB", (width * 2, (height + caption) * 3), "#080e1a")
+    draw = ImageDraw.Draw(result)
+    font = ImageFont.truetype(str(ROOT / "assets/fonts/Cinzel-Bold.ttf"), 18)
+    for i, (path, title) in enumerate(shots):
+        with Image.open(path) as source:
+            source = source.convert("RGB").resize((width, height), Image.Resampling.LANCZOS)
+            x, y = (i % 2) * width, (i // 2) * (height + caption)
+            result.paste(source, (x, y + caption))
+            draw.text((x + 14, y + 5), title, font=font, fill="#d6b37a")
+    target = ROOT / ("export/editoren/bollwerk-gothic-bosse.png" if models else "export/editoren/bollwerk-arenen-kontakt.png")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    result.save(target)
+    print(f"BILD {target}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bericht", action="store_true")
+    parser.add_argument("--kontakt", action="store_true", help="Beschrifteten Kontaktbogen aus vorhandenen GPU-Aufnahmen erzeugen (Pillow)")
+    parser.add_argument("--modelle", action="store_true", help="Gothic-Bossmodelle und Mapdetail als Kontaktbogen (boss_probe --modell=<id>)")
     args = parser.parse_args()
     data = json.loads((ROOT / "data/heroes_bosse.json").read_text(encoding="utf-8"))
     base = json.loads((ROOT / "data/heroes.json").read_text(encoding="utf-8"))
@@ -57,6 +85,10 @@ def main():
     for error in errors:
         print("FAIL " + error)
     print(f"Bossdaten: {len(ids)} Bosse, {len(known)} Moves, {len(errors)} Fehler")
+    if args.kontakt and not errors:
+        contact_sheet(data)
+    if args.modelle and not errors:
+        contact_sheet(data, models=True)
     return bool(errors)
 
 

@@ -4,6 +4,9 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_always, cull_back, specular_schlick_ggx;
 
+#include "res://assets/shaders/terrain_relief.gdshaderinc"
+uniform float relief_strength : hint_range(0.0, 1.0) = 0.35;
+
 uniform vec4 color : source_color = vec4(0.36, 0.29, 0.52, 1.0);
 uniform vec4 core_color : source_color = vec4(0.015, 0.005, 0.035, 1.0);
 uniform float edge_alpha = 0.45;
@@ -39,8 +42,13 @@ void fragment() {
 	vec3 tint = color.rgb * mix(0.84, 1.14, variation);
 	ALBEDO = mix(tint, core_color.rgb, core);
 	ALPHA = mix(edge_alpha, core_alpha, core);
-	ROUGHNESS = 0.15;
-	SPECULAR = 0.4;
+	// Polished dark glass, with minute vein relief rather than a stone replacement.
+	float micro = grain * 0.5 + 0.5;
+	float relief = grain * 0.0015 + vein * 0.001;
+	float detail_visible = 1.0 - smoothstep(0.04, 0.16, length(fwidth(rock_pos)));
+	NORMAL = terrain_relief_normal(NORMAL, VERTEX, relief, relief_strength * detail_visible);
+	ROUGHNESS = mix(0.13, 0.19, micro);
+	SPECULAR = mix(0.38, 0.46, micro * 0.6 + vein * 0.4);
 	// schwacher violetter Saum, damit die Kontur vor dem dunklen Feld sichtbar bleibt
 	EMISSION = tint * (rim * 0.8 + vein * vein_strength);
 	if (floor_glow > 0.0) {

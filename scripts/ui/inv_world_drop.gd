@@ -27,7 +27,7 @@ func _ready() -> void:
 	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tag.visible = false
 	_layer.add_child(_tag)
-	_label = UiUtil.label("", _tag, 13)
+	_label = UiUtil.label("", _tag, 14)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_process(false)
 

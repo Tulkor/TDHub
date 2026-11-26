@@ -4,10 +4,13 @@ shader_type spatial;
 
 uniform sampler2D grass : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D grass_n : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D grass_s : filter_linear_mipmap, repeat_enable;
 uniform sampler2D dirt : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D dirt_n : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D dirt_s : filter_linear_mipmap, repeat_enable;
 uniform sampler2D gravel : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D gravel_n : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D gravel_s : filter_linear_mipmap, repeat_enable;
 uniform vec3 grass_tint : source_color = vec3(0.35, 0.42, 0.36);
 uniform vec3 dirt_tint : source_color = vec3(0.48, 0.40, 0.33);
 uniform vec3 gravel_tint : source_color = vec3(0.36, 0.35, 0.37);
@@ -85,4 +88,6 @@ void fragment() {
 	NORMAL_MAP = nrm;
 	NORMAL_MAP_DEPTH = mix(1.0, 0.8, gm);
 	ROUGHNESS = mix(0.95, 0.8, gm);
+	float gs = mix(texture(grass_s, uv).r, texture(grass_s, uv * 0.37 + 0.31).r, 0.35);
+	SPECULAR = mix(mix(gs, texture(dirt_s, p / 3.0).r, dm), texture(gravel_s, p / 1.6).r, gm);
 }

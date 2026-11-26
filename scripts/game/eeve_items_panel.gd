@@ -42,7 +42,7 @@ func _ready() -> void:
 	UiTheme.heading(title)
 	title.tooltip_text = tr("Items fallen ab Level 11 von Gegnern, Golems bringen immer zwei. Mehr gibt es am Marktplatz.")
 	title.mouse_filter = Control.MOUSE_FILTER_PASS
-	_count = UiUtil.label("", head, 13)
+	_count = UiUtil.label("", head, 14)
 	_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_count.add_theme_color_override("font_color", UiTheme.MUTED)
@@ -53,13 +53,13 @@ func _ready() -> void:
 	_grid.add_theme_constant_override("v_separation", 6)
 	v.add_child(_grid)
 	_detail = UiUtil.wrap_label("", v, 250)
-	_detail.add_theme_font_size_override("font_size", 13)
+	_detail.add_theme_font_size_override("font_size", 14)
 
 	_slots_box = VBoxContainer.new()
 	_slots_box.add_theme_constant_override("separation", 6)
 	v.add_child(_slots_box)
 	_slots_title = UiUtil.wrap_label("", _slots_box, 250)
-	_slots_title.add_theme_font_size_override("font_size", 13)
+	_slots_title.add_theme_font_size_override("font_size", 14)
 	_slots_title.add_theme_color_override("font_color", UiTheme.CYAN)
 	_slots_row = HBoxContainer.new()
 	_slots_row.add_theme_constant_override("separation", 4)
@@ -71,7 +71,7 @@ func _ready() -> void:
 	_use.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # lange Itemnamen umbrechen statt abschneiden
 	UiTheme.accent_button(_use, UiTheme.GOLD, UiTheme.GOLD_DARK)
 	_hint = UiUtil.wrap_label("", v, 250)
-	_hint.add_theme_font_size_override("font_size", 12)
+	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_color", UiTheme.MUTED)
 	refresh()
 

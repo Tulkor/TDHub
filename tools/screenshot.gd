@@ -10,6 +10,10 @@ extends Node
 ##                           --weit Kamera weit weg (ganze Karte), --shop[=grund|ruest|rezept|holz|tore] Shop offen,
 ##                           --gold=N Gold dazu, --farbe=0–4 --umriss=0–2 Warnflächen (Barrierefreiheit)
 ##                           --held=torvik|unrat|vesna|zix Held (Standard: gespeicherte Wahl)
+##                           --lanes=alle zeigt alle acht aktiven Lanes inklusive ihrer 16 Torwerke
+##                           --erkundung=karte|<Fundort-ID aus heroes_secrets.json> [--hoehle] zeigt Erkundungspause und geheime Nebenbereiche
+##                           --wegweiser=fern|nah Gegnerpfeil neben dem Helden prüfen (--zeit=0 --nah)
+##                           --kartenzoom=1..4 Vergrößerung der Bollwerk-Minimap
 ##                           --endboss=varkhun|nerathis|morvath|astrael|zharok feste Endboss-Variante in Welle 40
 ##                           --punkt=x,z Kamera auf diesen Weltpunkt (--abstand=N), --bezirk=ueberwuchert Pilzhöfe am Rand
 ##   --seite=single|history|profile|credits|lobby|einstellungen   im Hauptmenü diese Seite zeigen (Standard Hub)
@@ -21,6 +25,7 @@ extends Node
 ##                           (Host zuerst), --stimme=eevetd Modus vorwählen, --relay=127.0.0.1:24565 über einen Relay
 ##                           hosten (vorher tools/relay/relay.py starten), Code steht dann oben links
 ##   Shopping Maul (--szene=maul): --filiale=hm (ohne: Filialwahl), --level=N (so viele Level spielen),
+##                           --licht=weich|hart|spotlight vergleicht Bodenlichtprofile, ohne Daten zu speichern.
 ##                           --welle (nächstes Level starten), --auswahl[=Tower-ID], --warten=S; Kamera aufs Zentrum
 ##                           (oder --punkt=x,y), Abstand --abstand=34;
 ##                           --sandbox, --gold=N, --reiter=xpert|main (Ladenreiter), --einheit (erste Einheit wählen),
@@ -126,11 +131,14 @@ func _example_profile() -> void:
 
 
 func _ready() -> void:
+	Sfx.audible = false  # GPU-Aufnahmen bleiben auch intern ohne Dummy-WAV-Playbacks.
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--"):
 			var kv := a.substr(2).split("=", true, 1)
 			opts[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	rng.seed = int(opts.get("seed", "1"))
+	var static_batch = preload("res://scripts/map/static_mesh_batch.gd")
+	static_batch.enabled = str(opts.get("static-batches", "on")) != "off"
 	RunHistory.path = "user://screenshot_run_history.json"
 	Profile.dir = "user://screenshot_profile"
 	if opts.has("beispielprofil"):
@@ -214,6 +222,16 @@ func _ready() -> void:
 	var angles: PackedStringArray = ["bild"]
 	if scene == "maul":
 		await _prepare_maul(node)
+		# Reproducible isolation of apparent light spill; diagnostics never persist.
+		match str(opts.get("lichtdiagnose", "")):
+			"waende-aus": node.board._markers.hide()
+			"reflexion-aus":
+				if node.board._reflect != null:
+					node.board._reflect.hide()
+			"glanz-aus":
+				node.board._floor_mat.set_shader_parameter("floor_specular", 0.0)
+				node.board._floor_mat.set_shader_parameter("line_metallic", 0.0)
+				node.board._floor_mat.set_shader_parameter("line_clearcoat", 0.0)
 	if scene == "heroes":
 		await _prepare_heroes(node)
 	if scene == "survivors":
@@ -300,6 +318,9 @@ func _fake_lobby(menu: Node) -> void:
 
 ## --messen: S Sekunden lang je Bild die Leistungswerte sammeln, dann Mittel, 95-%-Wert und Höchstwert ausgeben.
 func _measure(seconds: float) -> void:
+	var warmup := Time.get_ticks_msec() + 2000
+	while Time.get_ticks_msec() < warmup:
+		await get_tree().process_frame
 	await _frames(10)
 	var keys := {
 		"bild_ms": -1,
@@ -328,6 +349,8 @@ func _measure(seconds: float) -> void:
 			rows[k].append(v)
 	var counts := {"lichter": 0, "lichter_schatten": 0, "partikel": 0, "multimesh": 0, "multimesh_inst": 0, "gegner": 0, "tower": 0}
 	for n in _all_nodes(get_tree().root):
+		if n.has_meta("menu_build_ms"):
+			print("MESSUNG menu_aufbau_ms %.2f" % float(n.get_meta("menu_build_ms")))
 		if n is Light3D and n.is_visible_in_tree():
 			counts.lichter += 1
 			if n.shadow_enabled:
@@ -497,16 +520,6 @@ func _prepare_survivors(game: Node) -> void:
 		return
 	game.rng.seed = int(opts.get("seed", "1"))
 	game.gold += float(opts.get("gold", "0"))
-	# --gegner=a,b,c stellt diese Gegner in einer Reihe vor den Helden (Modelle ansehen), meist mit --zeit=1
-	if opts.has("gegner"):
-		game.spawn_queue.clear()
-		for e in game.enemies.duplicate():
-			game._remove(e)
-		var ids := str(opts.gegner).split(",")
-		game.hero.position += Vector3(10, 0, 4)  # weg von der Feste, damit nichts verdeckt
-		var p0: Vector3 = game.hero.position + Vector3(-1.6 * (ids.size() - 1), 0, 3.5)
-		for i in ids.size():
-			game.spawn(ids[i], p0 + Vector3(3.2 * i, 0, 0))  # schauen zur Kamera, solange --zeit=0
 	var left := float(opts.get("zeit", "150"))
 	var dt := 1.0 / 30.0
 	var k := 0
@@ -566,9 +579,14 @@ func _prepare_survivors(game: Node) -> void:
 
 ## Bollwerk: Bot spielt im Zeitraffer, danach optional auf halb gefüllte Warnflächen warten und anhalten.
 func _prepare_heroes(game: Node) -> void:
+	if opts.has("ohneunterholz"):
+		game.get_node("Atmosphere/UndergrowthPatches").hide()
 	if game.state == "setup":
 		return
 	game.set_physics_process(false)
+	if str(opts.get("lanes",""))=="alle":
+		game.lane_ids=game.cfg.arena.roads.map(func(road): return str(road.id))
+		game._build_roads()
 	game.rng.seed = int(opts.get("seed", "1"))
 	if opts.has("farbe"):
 		HdTelegraph.palette = int(opts.farbe)
@@ -674,12 +692,42 @@ func _prepare_heroes(game: Node) -> void:
 			game.hud.econ.picked = "schmiedesonne"
 		game.hud.econ.toggle()
 		game.hud.refresh()
+	if opts.has("nacht"):
+		game.day_cycle.set_hour(21.0)
+		game.hud.refresh()
+	if opts.has("erkundung"):
+		game.spawn_queue.clear()
+		for enemy in game.enemies.duplicate():
+			game._remove(enemy)
+		game.enemies.clear()
+		game.wave = 10
+		game.imprint_claimed.append(10)
+		game.paused = false
+		game.exploration.begin(10)
+		game.hud._banner_t = 0.0
+		game.hud._banner.modulate.a = 0.0
+		var site_id := str(opts.erkundung)
+		for site: Dictionary in HdExplorationLayout.sites():
+			if site.id == site_id:
+				if not game.exploration.active_ids.has(site_id):
+					var selected: Array = game.exploration.active_ids.duplicate()
+					selected[-1] = site_id
+					game.exploration.select_sites(selected)
+				var at: Vector3 = site.cave if opts.has("hoehle") else site.pos
+				opts["punkt"] = "%s,%s" % [at.x, at.z]
+		game.hud.refresh()
 	if opts.has("nah"):
 		game.cam_dist = 17.0
 	if opts.has("weit"):
-		game.cam_dist = 150.0
-		game.cam_pos = game.fortress_pos
-		game.camera.far = 400.0
+		game.hud._banner_t = 0.0
+		game.hud._banner.modulate.a = 0.0
+		game.cam_dist = float(opts.get("abstand","150"))
+		game.cam_pos = game.final.center if game.final.active else game.fortress_pos
+		game.camera.far = maxf(400.0,game.cam_dist+200.0)
+		# Fernaufnahme: der Spielnebel verdeckt bei dieser Fotodistanz sonst das ganze Endgebiet.
+		for child in game.get_children():
+			if child is WorldEnvironment:
+				child.environment.fog_density = minf(child.environment.fog_density, 0.002)
 		game._place_camera()
 		await _frames(12)
 		return
@@ -690,11 +738,30 @@ func _prepare_heroes(game: Node) -> void:
 		game.cam_pos = Vector3(float(pk[0]), 0.0, float(pk[1]))
 		game.hero.position = game.cam_pos
 		game.cam_dist = float(opts.get("abstand", str(game.cam_dist)))
+		game.hud.refresh()
+		game.hud.side.refresh(true)
 	game._place_camera()
+	if opts.has("kartenzoom"):
+		game.hud.minimap.set_zoom(float(opts.kartenzoom))
+	if opts.has("wegweiser"):
+		game.spawn_queue.clear()
+		for enemy in game.enemies.duplicate():
+			game._remove(enemy)
+		game.enemies.clear()
+		var enemy = game.spawn("sumpfling", null, 5.0)
+		enemy.position = game.hero.position + Vector3.RIGHT * (3.0 if str(opts.wegweiser) == "nah" else 100.0)
+		game.hud.enemy_guide.refresh_target()
 	await _frames(12)
 
 
 func _prepare_maul(game: Node) -> void:
+	if opts.has("licht"):
+		var profiles := {"weich": 0, "hart": 1, "spotlight": 2}
+		if not profiles.has(str(opts.licht)):
+			push_error("Unbekanntes Lichtprofil: " + str(opts.licht))
+			get_tree().quit(1)
+			return
+		game.board._floor_mat.set_shader_parameter("lamp_type", profiles[str(opts.licht)])
 	game.camera_rig.set_process(false)
 	if opts.has("alle_wege"):
 		game.set_show_all_paths(true)

@@ -109,6 +109,7 @@ label.field > span { font-size: 12px; color: var(--muted); text-transform: upper
 <div class="tabs" id="tabs">
   <button class="tab on" data-tab="map">Map</button>
   <button class="tab" data-tab="tower">Tower</button>
+  <button class="tab" data-tab="item">Items</button>
 </div>
 <div class="panel" id="main"></div>
 
@@ -125,6 +126,7 @@ const D = Object.assign({
 // ---------------------------------------------------------------- JSON im Format der Spieldateien
 // Wie der Balance-Editor: Einrückung mit Tabs, Zahlen mit Komma (1.0) bleiben Kommazahlen.
 const FLOATS = new WeakMap();  // Container -> Set der Schlüssel/Indizes mit Kommazahl
+const SOURCE_TEXT = new WeakMap(); // Exact source for unchanged imported maps, including compact arrays.
 
 function markFloat(c, k) { let s = FLOATS.get(c); if (!s) FLOATS.set(c, s = new Set()); s.add(k); }
 function isFloatAt(c, k) { const s = FLOATS.get(c); return !!s && s.has(k); }
@@ -175,6 +177,7 @@ function parseJson(text) {
   }
   const root = value(null, null); ws();
   if (i < text.length) fail("Zeichen nach dem Ende");
+  if (root && typeof root === "object") SOURCE_TEXT.set(root, {text, canonical:dumpJson(root)});
   return root;
 }
 
@@ -280,9 +283,9 @@ function download(name, text) {
 }
 
 let TAB = "map";
-function touched() { updateDirty(); }
+function touched() { updateDirty(); persistEditors(); }
 function updateDirty() {
-  const d = TAB === "map" ? mapDirty() : towerDirty();
+  const d = TAB === "map" ? mapDirty() : TAB === "item" ? itemDirty() : towerDirty();
   $("dirty").textContent = d ? "● ungespeichert" : "";
 }
 
@@ -332,6 +335,7 @@ function normalizeMap(o) {
 // nl: Datei endet mit Zeilenumbruch (die Godot-Editoren schreiben einen, die Maul-Maps aus maul_daten.py nicht).
 function loadMap(obj, label, nl = true) {
   M.nl = nl;
+  M.source = SOURCE_TEXT.get(obj);
   M.obj = normalizeMap(obj);
   M.grid = Array.from({ length: M.obj.height }, (_, y) => {
     const r = String((M.obj.tiles || [])[y] ?? "");
@@ -347,7 +351,8 @@ function loadMap(obj, label, nl = true) {
 
 function mapText() {
   M.obj.tiles = M.grid.map((r) => r.join(""));
-  return dumpJson(M.obj) + (M.nl ? "\n" : "");
+  const canonical = dumpJson(M.obj);
+  return M.source && M.source.canonical === canonical ? M.source.text : canonical + (M.nl ? "\n" : "");
 }
 function mapDirty() { return M.obj && mapText() !== M.saved; }
 
@@ -796,6 +801,7 @@ function validateTower() {
   if (!validId(String(T.obj.id ?? ""))) return "Ungültige ID: nur Kleinbuchstaben, Ziffern und _ erlaubt.";
   if (!T.obj.tiers.length) return "Der Tower braucht mindestens eine Stufe.";
   if (T.obj.category === "special" && !(T.obj.recipe || []).length) return "Ein Spezial-Tower braucht ein Rezept.";
+  const scriptError = validateScript(T.obj); if (scriptError) return scriptError;
   return "";
 }
 function saveTower() {
@@ -803,7 +809,7 @@ function saveTower() {
   if (err) { message(err, true); return; }
   const text = towerText();
   download(T.obj.id + ".json", text);
-  T.saved = text; updateDirty();
+  T.saved = text; touched();
   message("Gespeichert als " + T.obj.id + ".json. Im Spiel: Tower-Editor → „Datei importieren“, dann Speichern.");
 }
 
@@ -847,6 +853,7 @@ function renderTower() {
     el("div", { id: "tform" })));
   renderTowerList();
   renderTowerForm();
+  updateDirty(); persistEditors();
 }
 function duplicateTower() {
   if (!T.obj) return;
@@ -901,6 +908,7 @@ function renderTowerForm() {
   kids.push(section("Stufen", o.category === "gem" ? "Bei Gems: " + D.tier_names.join(", ") + "." : null, tiersBox(o, rerender)));
   if (o.category === "special" && o.tiers.length >= 2) kids.push(section("Upgrades", "Goldkosten; optionale Zutaten müssen fertig auf dem Feld stehen und werden zu Steinen.", upgradesBox(o, rerender)));
   kids.push(rawBox(o));
+  kids.push(scriptBox(o));
   box.replaceChildren(...kids.filter(Boolean));
 }
 
@@ -1007,7 +1015,7 @@ function rawBox(o) {
         const n = parseJson(ta.value);
         if (!n || typeof n !== "object" || Array.isArray(n)) throw new Error("kein Objekt");
         T.obj = n; if (!Array.isArray(n.tiers)) n.tiers = [];
-        renderTowerForm(); updateDirty(); message("JSON übernommen.");
+        renderTowerForm(); touched(); message("JSON übernommen.");
       } catch (e) { message("JSON fehlerhaft: " + e.message, true); }
     } }, "Übernehmen")));
   let edited = false;
@@ -1021,8 +1029,9 @@ function setTab(t) {
   TAB = t;
   for (const b of document.querySelectorAll(".tab")) b.classList.toggle("on", b.dataset.tab === t);
   message("");
-  if (t === "map") renderMap(); else renderTower();
+  if (t === "map") renderMap(); else if (t === "item") renderItems(); else renderTower();
   updateDirty();
+  persistEditors();
 }
 
 async function openFiles(files) {
@@ -1035,6 +1044,8 @@ async function openFiles(files) {
       if (!obj.id) obj.id = fallbackId;
       if (TAB !== "map") setTab("map");
       loadMap(obj, f.name, text.endsWith("\n"));
+    } else if (Array.isArray(obj.items) || (TAB === "item" && obj.id && !Array.isArray(obj.tiers))) {
+      importItems(obj, f.name);
     } else if (Array.isArray(obj.tiers)) {
       if (!obj.id) obj.id = fallbackId;
       if (TAB !== "tower") setTab("tower");
@@ -1050,7 +1061,7 @@ function init() {
   });
   $("b-open").addEventListener("click", () => $("file").click());
   $("file").addEventListener("change", (e) => { openFiles([...e.target.files]); e.target.value = ""; });
-  $("b-save").addEventListener("click", () => (TAB === "map" ? saveMap() : saveTower()));
+  $("b-save").addEventListener("click", () => (TAB === "map" ? saveMap() : TAB === "item" ? saveItems() : saveTower()));
   document.addEventListener("dragover", (e) => e.preventDefault());
   document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer.files.length) openFiles([...e.dataTransfer.files]); });
   document.addEventListener("keydown", (e) => {
@@ -1065,15 +1076,17 @@ function init() {
   });
   document.addEventListener("keyup", (e) => { if (e.key === " ") M.space = false; });
   window.addEventListener("resize", () => { M.needDraw = true; });
-  window.addEventListener("beforeunload", (e) => { if (mapDirty() || towerDirty()) { e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("beforeunload", (e) => { if (mapDirty() || towerDirty() || itemDirty()) { e.preventDefault(); e.returnValue = ""; } });
 
   const first = Object.keys(D.maps).find((p) => p.endsWith("/classic.json")) || Object.keys(D.maps)[0];
   if (first) loadMap(parseJson(D.maps[first]), "", D.maps[first].endsWith("\n")); else loadMap(newMapObj());
   const ruby = TOWERS.ruby || Object.values(TOWERS)[0];
   if (ruby) loadTower(clone(ruby)); else newTower("gem");
-  setTab("map");
+  restoreEditors();
   requestAnimationFrame(frame);
 }
+/*EFFECT_SCRIPT*/
+/*ITEM_EDITOR*/
 init();
 </script>
 </body>
