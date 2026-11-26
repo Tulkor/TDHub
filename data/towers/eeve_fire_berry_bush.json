@@ -42,5 +42,6 @@
 	],
 	"model_tint": false,
 	"model_solid": true,
-	"hit_fx": "bk_fire"
+	"hit_fx": "bk_fire",
+	"element": "feuer"
 }

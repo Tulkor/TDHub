@@ -41,5 +41,6 @@
 	"model_tint": false,
 	"model_solid": true,
 	"kind": "trap",
-	"model_scale": 0.3
+	"model_scale": 0.3,
+	"element": "gift"
 }

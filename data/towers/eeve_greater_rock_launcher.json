@@ -35,5 +35,6 @@
 		}
 	],
 	"model_tint": false,
-	"model_solid": true
+	"model_solid": true,
+	"element": "erde"
 }

@@ -48,5 +48,6 @@
 	"flame_height": 0.2,
 	"hit_fx": "bk_fire",
 	"kind": "trap",
-	"model_scale": 0.3
+	"model_scale": 0.3,
+	"element": "feuer"
 }

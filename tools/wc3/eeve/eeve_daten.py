@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "modelle"))
 from tower_look import look  # noqa: E402  Modelle aus data/tower_models.json
 
 ROOT = Path(__file__).resolve().parents[3]
+ELEMENTS = json.loads((ROOT / "data/fx/tower_elements.json").read_text(encoding="utf-8"))
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/mnt/project-files/konzepte/recherche-stand/eeve")
 U = 128.0  # WC3-Einheiten pro Towerbreite
 
@@ -354,6 +355,7 @@ def tower_json(uid, element, line, children, kind="tower"):
         d["hit_fx"] = STORM_HIT
     d.update(LOOK.get(name, {}))
     d.update(look("eeve", d["id"][5:]))
+    d.update(ELEMENTS.get(d["id"], {}))
     if kind == "trap":
         d["kind"] = "trap"
         d["model_scale"] = 0.3

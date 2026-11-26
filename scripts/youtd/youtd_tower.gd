@@ -108,7 +108,12 @@ static func fx_def(id: String) -> Dictionary:
 	var t := YoutdData.tower(id.trim_prefix(PREFIX))
 	if t.is_empty():
 		return {}
-	return {"color": "#" + YoutdData.element_color(str(t.get("element", ""))).to_html(false)}
+	var aliases := {"ice": "eis", "nature": "natur", "fire": "feuer", "astral": "licht", "darkness": "dunkel", "iron": "physisch", "storm": "blitz"}
+	var out := {"color": "#" + YoutdData.element_color(str(t.get("element", ""))).to_html(false), "element": aliases.get(str(t.get("element", "")), "")}
+	for key in ["lightning", "shot_fx", "hit_fx", "shot_sfx"]:
+		if t.has(key):
+			out[key] = t[key]
+	return out
 
 
 func label() -> String:

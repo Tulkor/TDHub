@@ -5,10 +5,11 @@ class_name FxData
 ## shots.json – Schuss-Effekte als Sprite-Sheets (ebenfalls tools/fx/kenney_effekte.py) und die Regeln
 ##              für die automatische Wahl ("auto")
 ## Ein Tower kann in seiner Datei "hit_fx" und "shot_fx" setzen (Effekt-ID, "auto" oder "none").
-## Ohne Angabe wird nach seiner Farbe gewählt und der Effekt auf seinen Farbton gedreht.
+## Ohne eigene Angabe: Element, Fähigkeit, schließlich Farbe. Schüsse bleiben in Towerfarbe.
 
 const HITS := "res://data/fx/hits.json"
 const SHOTS := "res://data/fx/shots.json"
+const ELEMENTS := "res://data/fx/elements.json"
 const AUTO := "auto"
 const NONE := "none"
 ## Ab diesem Farbton-Abstand (0..1) wird ein Effekt auf die Towerfarbe gedreht.
@@ -19,6 +20,7 @@ const PALE := 0.25
 static var _hits: Dictionary = {}
 static var _shots: Dictionary = {}
 static var _rules: Dictionary = {}
+static var _elements: Dictionary = {}
 static var _loaded := false
 static var _cache: Dictionary = {}
 
@@ -27,6 +29,7 @@ static func _load() -> void:
 	if _loaded:
 		return
 	_loaded = true
+	_elements = _read(ELEMENTS)
 	var h = _read(HITS)
 	if h is Dictionary:
 		_hits = h.get("effects", {})
@@ -80,18 +83,18 @@ static func for_tower(tower_id: String, tier: int = 0) -> Dictionary:
 	if _cache.has(key):
 		return _cache[key]
 	_load()
-	var def: Dictionary = Database.towers.get(tower_id, {})
-	if def.is_empty():
-		def = MaulData.tower(tower_id)  # Shopping-Maul-Tower stehen nicht in Database.towers
-	if def.is_empty() and tower_id.begins_with(YoutdTower.PREFIX):
-		def = YoutdTower.fx_def(tower_id)
+	var def := tower_def(tower_id)
+	var element := element_for(def)
 	var col := Color.from_string(str(def.get("color", "#ffffff")), Color.WHITE)
 	var types := _ability_types(def, tier)
 	var out := {}
-	var hit_id := _pick(str(def.get("hit_fx", AUTO)), _hits, func(): return _auto_hit_for(types, col))
+	var hit_id := _pick(str(def.get("hit_fx", AUTO)), _hits, func(): return str(element.get("splash" if "splash" in types else "hit", _auto_hit_for(types, col))))
 	if hit_id != "":
 		out["hit"] = _tint(_hits[hit_id], hit_id, col)
-	var shot_id := _pick(str(def.get("shot_fx", AUTO)), _shots, func(): return _auto_shot(types, col))
+		# Elementtreffer behalten ihre Bedeutung (Wasser blau, Eis hellblau).
+		if not element.is_empty() and str(def.get("hit_fx", AUTO)) == AUTO:
+			out["hit"] = {"id": hit_id, "shift": 0.0, "sat": 1.0}
+	var shot_id := _pick(str(def.get("shot_fx", AUTO)), _shots, func(): return str(element.get("shot", _auto_shot(types, col))))
 	if shot_id != "":
 		out["shot"] = _tint(_shots[shot_id], shot_id, col)
 	if "nova" in types:
@@ -105,6 +108,20 @@ static func for_tower(tower_id: String, tier: int = 0) -> Dictionary:
 static func clear_cache() -> void:
 	_cache.clear()
 	_loaded = false
+
+
+static func tower_def(id: String) -> Dictionary:
+	var def: Dictionary = Database.towers.get(id, {})
+	if not def.is_empty():
+		return def
+	if id.begins_with(YoutdTower.PREFIX):
+		return YoutdTower.fx_def(id)
+	return MaulData.tower(id)
+
+
+static func element_for(def: Dictionary) -> Dictionary:
+	_load()
+	return _elements.get("blitz" if def.get("lightning", false) else str(def.get("element", "")), {})
 
 
 static func _pick(wanted: String, pool: Dictionary, auto: Callable) -> String:
@@ -156,6 +173,8 @@ static func _auto_hit(col: Color) -> String:
 
 ## Schuss: nach Fähigkeit, dann nach Farbton (Regeln in shots.json → "auto"), sonst der Standard-Schuss.
 static func _auto_shot(types: Array, col: Color) -> String:
+	if "bounce" in types or "chain" in types:
+		return "lightning_arc"
 	var by_ability: Dictionary = _rules.get("ability", {})
 	for t in types:
 		if by_ability.has(t):

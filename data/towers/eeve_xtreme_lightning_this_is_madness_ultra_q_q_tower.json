@@ -37,5 +37,6 @@
 	],
 	"hit_fx": "kb_shock_ring",
 	"model_tint": false,
-	"model_solid": true
+	"model_solid": true,
+	"element": "blitz"
 }

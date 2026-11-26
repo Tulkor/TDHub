@@ -15,7 +15,7 @@ Stock-Video-Dateien, nichts mit NC oder unklarer Herkunft).
 Heruntergeladene Pakete und Videos immer in einen eigenen, leeren Ordner entpacken und mit `python3 -I` verarbeiten.
 
 Im Spiel: `scripts/game/fx_data.gd` wählt die Effekte pro Tower (Felder `hit_fx`/`shot_fx` in der Tower-Datei,
-sonst automatisch nach Farbe; Regeln in `data/fx/shots.json` → `auto`), `scripts/game/fx_player.gd` spielt sie ab.
+sonst Element aus `data/fx/elements.json`, Fähigkeit und schließlich Farbe; Regeln in `data/fx/shots.json` → `auto`), `scripts/game/fx_player.gd` spielt sie ab.
 Splash nimmt Feuer (`fire_orb` + `bk_explosion`) nur für warme Tower (`auto.warm`, rot bis gelb), sonst
 Energiekugel + Spritzer (`energy_orb` + `kb_splash`, auf die Towerfarbe gedreht). Treffer eines Geschosses
 starten erst beim Einschlag. Jeder Treffer leuchtet kurz als Licht in seiner Farbe (`OmniLight3D` aus einem Pool

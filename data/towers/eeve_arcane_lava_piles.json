@@ -40,5 +40,6 @@
 	"model_tint": false,
 	"model_solid": true,
 	"flame": 0.45,
-	"flame_height": 0.4
+	"flame_height": 0.4,
+	"element": "feuer"
 }
