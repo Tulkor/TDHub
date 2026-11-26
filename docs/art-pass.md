@@ -61,5 +61,15 @@ Vorschlag CC0: Kenney „Impact Sounds“, „RPG Audio“, „Sci-fi Sounds“.
 ## A4: Fehlende oder notdürftige Modelle (braucht ggf. Downloads)
 Aus `data/tower_models.json`: randgruppen Dompteur (Raubkatze), Eisläuferin (Schlittschuh), Eyeliner-Profi/Ponyfranse (Emo-Figur), Rasensprenger; Maul o005 Roboterhund, o00V Kettensäge, h01T Kopierer, h025 Windmühle, h024/h01Q Wahrzeichen; YouTD 145/267 Harpyie, 147 Phönix, 157 Greif mit Reiter, 112 Wasserlauf. Nur CC0, Eintrag in `tower_models.json` und `assets/models/CREDITS.md`.
 
+## Ergänzungen aus der Durchsicht (Art-Pass-Thread, 2026-11-26)
+
+**A3 ohne Download:** kenney.nl ist aus der Cloud gesperrt. `tools/sfx/bollwerk.py` ist schon ein prozeduraler Generator; die A3-Sounds (fire_whoosh, ice_crack, water_splash, poison_squish, arrow_release, cannon_boom, rock_impact, electric_crackle, Treffer nach Rüstung) zuerst damit erzeugen (Projektlizenz). Kenney-Packs nur, wenn Lukas sie lokal lädt und sie besser klingen.
+
+**A3b Tower Survivors:** hat auf main gar keine Sounds (kein Sfx-Aufruf in scripts/survivors). Je Waffenart (bullet, cone, lob, beam, line, nova) und Schadenstyp (phys, fire, poison, frost, shock) ein Schuss-Sound aus denselben neuen Sounds; Treffer/Tod gedrosselt (max. ~8 Stimmen).
+
+**A5 Gleiche Modelle in Ausbauketten:** eeve: pot_large 3× (Braziers), step_pyramid 4× (Pyramiden), orange_coral 5× (Korallen), plaque 3× (Runen), statue_head 3× (Totems/Statue), woodstove 2× (Area Melter/Roaster), cannon_mobile 2× (Permafrost Blaster, Tsunami Cannon), crystal_19 für 7 Tower (Ball Lightning, Diamond Mine, Essence of Fire, Frozen Monument, Glacier, Ice Cube, Lightning Field), crystal_18 für Wolken/Würfel/Tornado. Maul: detail_tank 4×, water_tower 4× (Irrigation Plant I–VIII). Vorschlag: je Stufe sichtbar wachsen (Skalierung 1,0/1,15/1,3, ab Stufe 2 Glüh-Akzent oder Zusatzteil, Element-Tint); Glacier/Ice Cube/Frozen Monument eisblau mit Frost-Rand, Essence of Fire mit Flamme, Diamond Mine mit Erzbrocken.
+
+**A6 YouTD-Fehlgriffe:** Tree Stump nutzt einen ganzen Baum (Stumpf nehmen), Fiery Dog ist ein Wolf ohne Flamme (Flamme dazu), Small Frozen Mushroom rot getönt (eisblau), Rowing Boat ist ein Segelschiff.
+
 ## Übergabe zurück
 PR von `codex/art-pass` mit der vereinbarten Übergabe (Was – Warum – Geprüft – Offen), Screenshots und Messwerten. A1 zuerst als eigener PR, A2–A4 danach getrennt.
