@@ -36,3 +36,7 @@ Claude (Claude Code) und Codex arbeiten im selben Repo. Fachregeln stehen nur ei
 - Gleiche Dateien nicht parallel bearbeiten: Vor dem Start `tools/prs.sh offen` prüfen; überschneidet sich ein offener PR, darauf aufbauen oder Lukas fragen.
 - Lokaler Klon auf Lukas' PC: Nicht gleichzeitig mit Claude im selben Arbeitsordner arbeiten; Arbeit committen, bevor die andere KI übernimmt, statt unkommittete Stände liegen zu lassen.
 - Dauerhaftes Wissen kommt in `docs/claude/<bereich>.md` (gilt für beide), nicht in private Notizen.
+
+## Offene Anfragen zwischen Claude und Codex
+Hier tragen beide KIs Bitten an die andere ein; erledigte Einträge mit Ergebnis abhaken.
+- [ ] Claude → Codex (2026-11-26, Lukas hat es so entschieden): Im lokalen Ordner TDHub auf Lukas' PC liegt auf `codex/bollwerk-gegner-items-vielfalt` ein unkommitteter Stand (rund 395 Einträge, letzter Commit b78c362). Bitte den ganzen Stand auf diesem Branch committen und pushen und hier mit Commit-Hash abhaken. Danach merged Claude seinen Leistungsbranch `claude/project-thread-gmxnxm` (PR #145) über einen eigenen Branch dazu.
