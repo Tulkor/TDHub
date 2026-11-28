@@ -4,7 +4,7 @@
 	"name_original": "Ball Lightning",
 	"category": "eeve",
 	"color": "#7fb2ff",
-	"model": "res://assets/models/crystals/crystal_19.glb",
+	"model": "",
 	"damage_type": "electric",
 	"targets": "both",
 	"eeve": {
@@ -38,5 +38,6 @@
 		}
 	],
 	"hit_fx": "kb_shock_ring",
-	"element": "blitz"
+	"element": "blitz",
+	"effect_tower": "ball_lightning"
 }

@@ -834,6 +834,7 @@ func _build_visual() -> void:
 	var category := str(def.get("category", "gem"))
 	_gem = null
 	var model_path := str(stats.get("model", def.get("model", "")))
+	var element_effect := str(def.get("effect_tower", ""))
 	# Figuren und Gegenstände aus assets/models/towers/ stehen still (Gems und Steine drehen sich)
 	_spin = not model_path.contains("/models/towers/")
 	if is_trap():
@@ -849,7 +850,12 @@ func _build_visual() -> void:
 		plate.material_override = mat
 		plate.position.y = 0.04
 		_visual.add_child(plate)
-		if model_path != "":
+		if element_effect != "":
+			_gem = preload("res://scripts/game/tower_element_fx.gd").make(element_effect)
+			_gem.position.y = 0.08
+			_spin = false
+			_visual.add_child(_gem)
+		elif model_path != "":
 			_gem = ModelLoader.instantiate(model_path, float(stats.get("model_scale", def.get("model_scale", 0.35))), mat)
 			if _gem:
 				_gem.position.y = 0.08
@@ -886,7 +892,12 @@ func _build_visual() -> void:
 		mat.set_shader_parameter("base_top", base_h)
 	# Special füllt die Sockelfläche: Breite (nicht Höhe) wird angepasst, höhere Stufen etwas breiter
 	var width := minf(0.86 + 0.02 * tier, 0.92) * foot
-	if category == "gem" and model_path != "":
+	if element_effect != "":
+		_gem = preload("res://scripts/game/tower_element_fx.gd").make(element_effect)
+		_gem.position.y = base_h
+		_spin = false
+		_visual.add_child(_gem)
+	elif category == "gem" and model_path != "":
 		_gem = _gem_cluster(model_path, tint, foot, base_h)
 		width = float(GEM_CLUSTERS[clampi(tier, 0, GEM_CLUSTERS.size() - 1)][1]) * foot
 		if _gem:
@@ -920,8 +931,9 @@ func _build_visual() -> void:
 		_gem = Node3D.new()
 		_gem.add_child(oct)
 		_visual.add_child(_gem)
-	ModelLoader.add_outline(_gem)
-	if tower_id.begins_with("eeve_") and not is_trap():
+	if element_effect == "":
+		ModelLoader.add_outline(_gem)
+	if element_effect == "" and tower_id.begins_with("eeve_") and not is_trap():
 		if eeve_accent == "kontur":
 			ModelLoader.add_outline(_gem, "druid_white")
 		elif eeve_accent == "sockel":

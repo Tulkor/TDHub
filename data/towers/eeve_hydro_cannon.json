@@ -39,5 +39,6 @@
 	],
 	"model_tint": false,
 	"model_solid": true,
-	"element": "wasser"
+	"element": "wasser",
+	"shot_fx": "water_jet"
 }

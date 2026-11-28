@@ -1,5 +1,13 @@
 # Effekte umwandeln
 
+Art-Pass A2: `prozedurale_effekte.py` registriert sieben Mesh-Geschosse und drei
+begrenzte Treffer. Der Kenney-Import ruft es am Ende automatisch auf; mit
+`python tools/fx/prozedurale_effekte.py --pruefen` den Datenstand prüfen.
+Die Geometrie entsteht in `scripts/game/fx_procedural.gd` ohne neue Bildassets.
+`vorschau.tscn -- --schuesse=stone_arc,arrow,...` zeigt Geschosse,
+`--effekttower=storm_cloud,tornado,...` die dauerhaften Tower-Effekte.
+`--nur=frost_ring,acid_cloud` beschränkt die Vorschau auf diese Treffer.
+
 Alle Effekte im Spiel kommen aus dem Kenney Particle Pack (CC0, `assets/fx/kenney/`). Nur Material mit einer
 Lizenz verwenden, die Weitergabe im öffentlichen Repo und Verkauf des Spiels erlaubt (keine Asset-Store- oder
 Stock-Video-Dateien, nichts mit NC oder unklarer Herkunft).

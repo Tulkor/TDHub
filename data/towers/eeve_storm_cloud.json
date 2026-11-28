@@ -4,7 +4,7 @@
 	"name_original": "Storm Cloud",
 	"category": "eeve",
 	"color": "#7fb2ff",
-	"model": "res://assets/models/crystals/crystal_18.glb",
+	"model": "",
 	"damage_type": "electric",
 	"targets": "both",
 	"eeve": {
@@ -41,5 +41,6 @@
 		}
 	],
 	"hit_fx": "kb_shock_ring",
-	"element": "blitz"
+	"element": "blitz",
+	"effect_tower": "storm_cloud"
 }

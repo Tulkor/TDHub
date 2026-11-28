@@ -174,7 +174,7 @@ static func _auto_hit(col: Color) -> String:
 ## Schuss: nach Fähigkeit, dann nach Farbton (Regeln in shots.json → "auto"), sonst der Standard-Schuss.
 static func _auto_shot(types: Array, col: Color) -> String:
 	if "bounce" in types or "chain" in types:
-		return "lightning_arc"
+		return str(_rules.get("ability", {}).get("chain", "lightning_arc"))
 	var by_ability: Dictionary = _rules.get("ability", {})
 	for t in types:
 		if by_ability.has(t):

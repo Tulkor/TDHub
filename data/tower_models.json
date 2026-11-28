@@ -91,29 +91,29 @@
 		"mighty_pyramide": "pp_einzeln/step_pyramid",
 		"ancient_pyramide": "pp_einzeln/step_pyramid",
 		"small_geyser": {
-			"fehlt": "Geysir: Effekt statt Modell"
+			"effect_tower": "small_geyser"
 		},
 		"geyser": {
-			"fehlt": "Geysir: Effekt statt Modell"
+			"effect_tower": "geyser"
 		},
 		"storm_cloud": {
-			"fehlt": "Wolke: Effekt statt Modell"
+			"effect_tower": "storm_cloud"
 		},
 		"radiating_cloud": {
-			"fehlt": "Wolke: Effekt statt Modell"
+			"effect_tower": "radiating_cloud"
 		},
 		"tornado": {
-			"fehlt": "Tornado: Effekt statt Modell"
+			"effect_tower": "tornado"
 		},
 		"natural_maelstrom": {
-			"fehlt": "Strudel: Effekt statt Modell"
+			"effect_tower": "natural_maelstrom"
 		},
 		"slowing_puddle": "eigen/pfuetze",
 		"lightning_field": {
-			"fehlt": "Blitzfeld: Effekt statt Modell"
+			"effect_tower": "lightning_field"
 		},
 		"ball_lightning": {
-			"fehlt": "Kugelblitz: Effekt statt Modell"
+			"effect_tower": "ball_lightning"
 		},
 		"lightning_trap": "eigen/blitzfalle"
 	},

@@ -4,7 +4,7 @@
 	"name_original": "Small Geyser",
 	"category": "eeve",
 	"color": "#c08a4a",
-	"model": "res://assets/models/crystals/crystal_13.glb",
+	"model": "",
 	"damage_type": "physical",
 	"targets": "both",
 	"eeve": {
@@ -35,5 +35,6 @@
 			]
 		}
 	],
-	"element": "wasser"
+	"element": "wasser",
+	"effect_tower": "small_geyser"
 }

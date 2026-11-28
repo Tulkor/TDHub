@@ -1,5 +1,7 @@
 # GemTD-Kern: Spielablauf, Tower, Effekte, HUD, Roguelike, Spielstand, Profil
 
+- Art-Pass A1/A2 (2026-11-26): `data/fx/elements.json` entscheidet nach eigenem Override → Element → Fähigkeit → Farbe. `data/fx/tower_elements.json` ist die kuratierte Freigabeliste für eeve-/Randgruppen-Generatoren (`tools/art/element_vorschlag.py --anwenden`). Automatische Elementtreffer behalten ihre Farbe. `fx_procedural.gd` zeichnet neue Geschosse in gemeinsamen Mesh-Batches; neue Treffer haben ein Budget von 24, auf Niedrig 12. `tower_element_fx.gd` ersetzt bei acht eeve-Towern den Ersatzkristall, auch im Fallenpfad (`effect_tower` aus `tower_models.json`); Animation auf der GPU, keine Zusatzlichter, Partikelzahl folgt Grafikwechseln. Tests: `fxelement`, `fxprocedural`; Bild-/Messbelege in `docs/art-a1-ergebnis.md` und `docs/art-a2-ergebnis.md`.
+
 - Kamerarand (2026-11-17): gemeinsames `CameraRig.VIEW_MARGIN` von 3 auf 8 Welteinheiten erweitert, auch für den Schwenk-Zielpunkt. Gilt für GemTD, eeveTD, Randgruppen, YouTD und via `MaulCamera` für Shopping Maul; Bildbegrenzung berücksichtigt weiter Zoom und Rotation. Bollwerk hat freie Kameraverschiebung, Survivors eine Arenakamera ohne diese Kartenrand-Klammer.
 
 Aus CLAUDE.md ausgelagert; der Hook `.claude/hooks/thema.py` blendet diese Notiz automatisch ein, sobald ein Thread passende Dateien anfasst.

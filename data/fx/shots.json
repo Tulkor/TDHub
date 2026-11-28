@@ -1,13 +1,14 @@
 {
-	"_quelle": "Kenney Particle Pack 1.1 (kenney.nl, CC0), erzeugt mit tools/fx/kenney_effekte.py",
+	"_quelle": "Sprite-Sheets: Kenney Particle Pack 1.1 (CC0); prozedurale Geometrie: scripts/game/fx_procedural.gd (Projektcode).",
 	"auto": {
 		"_info": "Automatische Wahl, wenn ein Tower kein shot_fx setzt: erst nach Fähigkeit (ability), dann nach Farbton der Towerfarbe (hue: von, bis, Effekt; blasse Farben zählen nicht), sonst default. nova: Effekt für die Fähigkeit nova. hit_ability: Treffer-Effekt nach Fähigkeit (vor der Farbwahl). Ein Eintrag in ability/hit_ability kann auch {\"warm\": Effekt, \"sonst\": Effekt} sein: warm = Farbton im Bereich warm (rot bis gelb, nicht blass), sonst z. B. Wasser, Magie, Silber.",
 		"ability": {
-			"bounce": "lightning_arc",
+			"bounce": "chain_lightning",
 			"splash": {
 				"warm": "fire_orb",
 				"sonst": "energy_orb"
-			}
+			},
+			"chain": "chain_lightning"
 		},
 		"hue": [
 			[
@@ -114,6 +115,76 @@
 			"size": 1.0,
 			"add": true,
 			"brightness": 1.3
+		},
+		"stone_arc": {
+			"name": "stone_arc",
+			"kind": "projectile",
+			"procedural": "stone_arc",
+			"arc": 0.8,
+			"length": 0.42,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"arrow": {
+			"name": "arrow",
+			"kind": "projectile",
+			"procedural": "arrow",
+			"arc": 0,
+			"length": 0.42,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"cannonball": {
+			"name": "cannonball",
+			"kind": "projectile",
+			"procedural": "cannonball",
+			"arc": 0.25,
+			"length": 0.42,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"frost_bolt": {
+			"name": "frost_bolt",
+			"kind": "projectile",
+			"procedural": "frost_bolt",
+			"arc": 0,
+			"length": 0.42,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"poison_glob": {
+			"name": "poison_glob",
+			"kind": "projectile",
+			"procedural": "poison_glob",
+			"arc": 0.35,
+			"length": 0.42,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"water_jet": {
+			"name": "water_jet",
+			"kind": "line",
+			"procedural": "water_jet",
+			"arc": 0,
+			"length": 0.22,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
+		},
+		"chain_lightning": {
+			"name": "chain_lightning",
+			"kind": "line",
+			"procedural": "chain_lightning",
+			"arc": 0,
+			"length": 0.22,
+			"hue": 0.55,
+			"saturation": 0.6,
+			"width": 0.15
 		}
 	}
 }

@@ -18,6 +18,8 @@ static func look(mode: String, key: String) -> Dictionary:
 		if _data == null:
 			_data = {}
 	var v = _data.get(mode, {}).get(key)
+	if v is Dictionary and v.has("effect_tower"):
+		return {"model": "", "effect_tower": v.effect_tower}
 	if v == null or (v is String and v == "haus") or (v is Dictionary and v.has("fehlt")):
 		return {}
 	if v is String:

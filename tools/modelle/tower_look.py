@@ -10,6 +10,8 @@ _data = json.load(open(os.path.join(ROOT, "data", "tower_models.json")))
 def look(mode, key):
     """{"model", "model_tint", "model_solid", …} oder {} (fehlt, haus, kein Eintrag)."""
     v = _data.get(mode, {}).get(key)
+    if isinstance(v, dict) and "effect_tower" in v:
+        return {"model": "", "effect_tower": v["effect_tower"]}
     if v is None or v == "haus" or (isinstance(v, dict) and "fehlt" in v):
         return {}
     if isinstance(v, str):

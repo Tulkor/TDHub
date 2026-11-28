@@ -1,0 +1,245 @@
+{
+  "basis_commit": "5ac6475",
+  "gpu": "AMD Radeon RX 9070 XT",
+  "godot": "4.3",
+  "grafik": 2,
+  "sekunden": 8,
+  "parameter": [
+    "--map=<modus>",
+    "--phase=welle",
+    "--treffer",
+    "--messen=8",
+    "--grafik=2"
+  ],
+  "hinweis": "Ein Lauf je Stand, reale PC-Fremdlast nicht kontrolliert. Am Ende jeder Messung 0 Gegner; kein Dauerlast-Benchmark. PR145 nennt 9.3 ms eeve in anderer Szene und einen verfälschten Kontrolllauf. Keine belastbare Aussage zu +0.3 ms gegenüber dessen Referenz.",
+  "werte": {
+    "eeve": {
+      "basis": {
+        "bild_ms": {
+          "mittel": 13.01,
+          "p95": 17.77,
+          "max": 22.68
+        },
+        "prozess_ms": {
+          "mittel": 20.93,
+          "p95": 22.67,
+          "max": 22.67
+        },
+        "physik_ms": {
+          "mittel": 0.07,
+          "p95": 0.11,
+          "max": 0.11
+        },
+        "draw_calls": {
+          "mittel": 2098.2,
+          "p95": 2121.0,
+          "max": 2121.0
+        },
+        "objekte": {
+          "mittel": 2169.2,
+          "p95": 2192.0,
+          "max": 2192.0
+        },
+        "dreiecke": {
+          "mittel": 1339516.2,
+          "p95": 1339597.0,
+          "max": 1339601.0
+        },
+        "knoten": {
+          "mittel": 2226.46,
+          "p95": 2235.0,
+          "max": 2235.0
+        }
+      },
+      "a2": {
+        "bild_ms": {
+          "mittel": 12.52,
+          "p95": 16.56,
+          "max": 21.43
+        },
+        "prozess_ms": {
+          "mittel": 19.07,
+          "p95": 21.42,
+          "max": 21.42
+        },
+        "physik_ms": {
+          "mittel": 0.04,
+          "p95": 0.1,
+          "max": 0.1
+        },
+        "draw_calls": {
+          "mittel": 2089.94,
+          "p95": 2112.0,
+          "max": 2112.0
+        },
+        "objekte": {
+          "mittel": 2160.94,
+          "p95": 2183.0,
+          "max": 2183.0
+        },
+        "dreiecke": {
+          "mittel": 1339500.53,
+          "p95": 1339579.0,
+          "max": 1339581.0
+        },
+        "knoten": {
+          "mittel": 2226.38,
+          "p95": 2235.0,
+          "max": 2235.0
+        }
+      }
+    },
+    "youtd": {
+      "basis": {
+        "bild_ms": {
+          "mittel": 13.2,
+          "p95": 17.99,
+          "max": 23.31
+        },
+        "prozess_ms": {
+          "mittel": 21.71,
+          "p95": 23.29,
+          "max": 23.29
+        },
+        "physik_ms": {
+          "mittel": 0.06,
+          "p95": 0.14,
+          "max": 0.14
+        },
+        "draw_calls": {
+          "mittel": 2233.75,
+          "p95": 2318.0,
+          "max": 2432.0
+        },
+        "objekte": {
+          "mittel": 2279.75,
+          "p95": 2364.0,
+          "max": 2478.0
+        },
+        "dreiecke": {
+          "mittel": 1120357.57,
+          "p95": 1127704.0,
+          "max": 1127800.0
+        },
+        "knoten": {
+          "mittel": 2082.43,
+          "p95": 2102.0,
+          "max": 2110.0
+        }
+      },
+      "a2": {
+        "bild_ms": {
+          "mittel": 12.73,
+          "p95": 16.94,
+          "max": 21.95
+        },
+        "prozess_ms": {
+          "mittel": 20.17,
+          "p95": 21.94,
+          "max": 21.94
+        },
+        "physik_ms": {
+          "mittel": 0.07,
+          "p95": 0.11,
+          "max": 0.11
+        },
+        "draw_calls": {
+          "mittel": 2509.03,
+          "p95": 2620.0,
+          "max": 2652.0
+        },
+        "objekte": {
+          "mittel": 2555.03,
+          "p95": 2666.0,
+          "max": 2698.0
+        },
+        "dreiecke": {
+          "mittel": 1121451.81,
+          "p95": 1128116.0,
+          "max": 1128418.0
+        },
+        "knoten": {
+          "mittel": 2088.93,
+          "p95": 2107.0,
+          "max": 2109.0
+        }
+      }
+    },
+    "randgruppen": {
+      "basis": {
+        "bild_ms": {
+          "mittel": 19.47,
+          "p95": 26.66,
+          "max": 33.06
+        },
+        "prozess_ms": {
+          "mittel": 29.71,
+          "p95": 33.05,
+          "max": 33.05
+        },
+        "physik_ms": {
+          "mittel": 0.03,
+          "p95": 0.11,
+          "max": 0.11
+        },
+        "draw_calls": {
+          "mittel": 4929.22,
+          "p95": 4932.0,
+          "max": 5154.0
+        },
+        "objekte": {
+          "mittel": 4954.22,
+          "p95": 4957.0,
+          "max": 5179.0
+        },
+        "dreiecke": {
+          "mittel": 7288978.7,
+          "p95": 7291412.0,
+          "max": 7294498.0
+        },
+        "knoten": {
+          "mittel": 1713.48,
+          "p95": 1728.0,
+          "max": 1736.0
+        }
+      },
+      "a2": {
+        "bild_ms": {
+          "mittel": 14.61,
+          "p95": 23.1,
+          "max": 27.27
+        },
+        "prozess_ms": {
+          "mittel": 23.04,
+          "p95": 27.25,
+          "max": 27.25
+        },
+        "physik_ms": {
+          "mittel": 0.04,
+          "p95": 0.12,
+          "max": 0.12
+        },
+        "draw_calls": {
+          "mittel": 4931.15,
+          "p95": 4932.0,
+          "max": 5154.0
+        },
+        "objekte": {
+          "mittel": 4956.15,
+          "p95": 4957.0,
+          "max": 5179.0
+        },
+        "dreiecke": {
+          "mittel": 7288984.45,
+          "p95": 7291436.0,
+          "max": 7294498.0
+        },
+        "knoten": {
+          "mittel": 1713.5,
+          "p95": 1728.0,
+          "max": 1744.0
+        }
+      }
+    }
+  }
+}
