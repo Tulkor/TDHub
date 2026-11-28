@@ -59,6 +59,7 @@ extends Node
 ##   --koop=Name1,Name2      als Koop-Partie mit diesen Spielern (ohne Netz), --gast = Bild aus Sicht von Spieler 2
 ##   --rasse=kleingarten     Randgruppen TD (--map=randgruppen): Rasse für das Bild, --bauen=N Bauvorschau Tower N
 ##   --vitrine               eeveTD: viele verschiedene Tower auf den Mauern (Modelle ansehen)
+##   --vitrine-direkt        nur Vorschau: exakte Vitrinentower ohne Bauvoraussetzungen setzen
 ##   --einstellungen         Einstellungsfenster vor Runde 1 offen lassen (z. B. eeveTD)
 ##   --aufstieg=N            Aufstiegsstufen bis +N frei und gewählt, höchste Schwierigkeit vorausgewählt (Startfenster ansehen)
 ##   --rezepte, --elemente   YouTD: Fenster „Rezepte“ bzw. „Elemente“ in der Mitte öffnen (sonst bleiben beide zu)
@@ -1037,6 +1038,10 @@ func _prepare_eeve(game: Node) -> void:
 	for c in plan:
 		var t: Tower = game.towers.get(c)
 		if t == null:
+			continue
+		if opts.has("vitrine-direkt") and opts.has("vitrine"):
+			t.set_tower(str(plan[c][-1]), 0)
+			print("VITRINE ", t.tower_id, " effekt=", t.def.get("effect_tower", ""))
 			continue
 		for id in plan[c]:
 			var opts: Array = game.tower_options(t)

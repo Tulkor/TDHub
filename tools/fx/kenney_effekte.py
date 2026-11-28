@@ -394,6 +394,8 @@ def main():
 	# Treffer aus Brackeys/Kronbits wieder eintragen (hits.json wurde oben neu geschrieben)
 	import zusatz_effekte
 	zusatz_effekte.main([])
+	import prozedurale_effekte
+	prozedurale_effekte.main([])
 
 
 if __name__ == "__main__":

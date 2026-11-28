@@ -4,7 +4,7 @@
 	"name_original": "Natural Maelstrom",
 	"category": "eeve",
 	"color": "#62c1af",
-	"model": "res://assets/models/crystals/crystal_13.glb",
+	"model": "",
 	"damage_type": "chaos",
 	"targets": "both",
 	"eeve": {
@@ -41,5 +41,6 @@
 				}
 			]
 		}
-	]
+	],
+	"effect_tower": "natural_maelstrom"
 }

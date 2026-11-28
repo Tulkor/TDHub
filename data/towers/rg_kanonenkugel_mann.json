@@ -37,5 +37,6 @@
 		}
 	],
 	"element": "physisch",
-	"shot_sfx": "shot_blast@0.7"
+	"shot_sfx": "shot_blast@0.7",
+	"shot_fx": "cannonball"
 }

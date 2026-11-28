@@ -9,7 +9,7 @@
 		}
 	},
 	"blitz": {
-		"shot": "lightning_arc",
+		"shot": "chain_lightning",
 		"hit": "kb_shock_ring",
 		"splash": "cyan_shock",
 		"sound": {
@@ -18,7 +18,7 @@
 		}
 	},
 	"wasser": {
-		"shot": "energy_orb",
+		"shot": "water_jet",
 		"hit": "kb_splash",
 		"splash": "kb_splash",
 		"sound": {
@@ -27,34 +27,34 @@
 		}
 	},
 	"eis": {
-		"shot": "energy_orb",
-		"hit": "blue_ring",
-		"splash": "blue_ring",
+		"shot": "frost_bolt",
+		"hit": "frost_ring",
+		"splash": "frost_ring",
 		"sound": {
 			"sound": "shot_pew",
 			"pitch": 1.3
 		}
 	},
 	"gift": {
-		"shot": "energy_orb",
-		"hit": "green_poison",
-		"splash": "green_poison",
+		"shot": "poison_glob",
+		"hit": "acid_cloud",
+		"splash": "acid_cloud",
 		"sound": {
 			"sound": "shot_blip",
 			"pitch": 0.6
 		}
 	},
 	"erde": {
-		"shot": "energy_orb",
-		"hit": "brown_dirt",
-		"splash": "brown_dirt",
+		"shot": "stone_arc",
+		"hit": "stone_dust",
+		"splash": "stone_dust",
 		"sound": {
 			"sound": "thud",
 			"pitch": 1
 		}
 	},
 	"physisch": {
-		"shot": "magic_beam",
+		"shot": "arrow",
 		"hit": "white_slash",
 		"splash": "bk_explosion",
 		"sound": {

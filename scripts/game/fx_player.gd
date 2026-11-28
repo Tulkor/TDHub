@@ -9,6 +9,7 @@ extends Node3D
 
 const SHADER_ADD := preload("res://assets/shaders/fx_add.gdshader")
 const SHADER_MIX := preload("res://assets/shaders/fx_mix.gdshader")
+const PROCEDURAL := preload("res://scripts/game/fx_procedural.gd")
 ## Größe der Unity-Effekte im Spiel (Unity-Einheiten → Spielfeld; ein Gegner ist ~0,4 groß).
 const HIT_SCALE := 0.4
 ## Treffer etwas zur Kamera hin versetzen, damit der Gegnerkörper sie nicht verdeckt.
@@ -43,6 +44,7 @@ var _cam_basis := Basis()
 ## verschöben sie die Würfe der Tower (Krit, Betäubung, Nova …), und 4× machte anderen Schaden als 1×.
 var _rng := RandomNumberGenerator.new()
 var _lights: Array = []  ## {node, t, energy}
+var _procedural: RefCounted
 
 
 ## Treffer-Effekt am Punkt pos. fx = {"id", "shift", "sat"} aus FxData.for_tower; optional "light": false.
@@ -56,13 +58,17 @@ func play_hit(fx: Dictionary, pos: Vector3, scale_factor: float = 1.0, delay: fl
 	for l in layers:
 		state.append({"acc": 0.0, "bursts": [], "alive": 0})
 	var basis := _camera_basis()
+	if e.get("ground", false):
+		basis = Basis()
+		pos.y = 0.05 * Board3D.CELL
 	var light := {}
-	if lights_enabled and is_inside_tree() and bool(fx.get("light", e.get("light", true))):
+	if lights_enabled and Display.quality != Display.LOW and is_inside_tree() and bool(fx.get("light", e.get("light", true))):
 		light = {"pos": pos, "color": _light_color(e, float(fx.get("shift", 0.0)), float(fx.get("sat", 1.0))),
 			"scale": scale_factor}
 	_effects.append({"kind": "hit", "def": e, "layers": layers, "state": state, "t": -maxf(delay, 0.0), "light": light,
-		"pos": pos + basis.z * HIT_TOWARD_CAMERA * scale_factor, "basis": basis, "scale": HIT_SCALE * scale_factor, "shift": float(fx.get("shift", 0.0)),
-		"sat": float(fx.get("sat", 1.0)), "length": float(e.get("length", 1.0))})
+		"pos": pos + (Vector3.ZERO if e.get("ground", false) else basis.z * HIT_TOWARD_CAMERA * scale_factor), "basis": basis, "scale": HIT_SCALE * scale_factor, "shift": float(fx.get("shift", 0.0)),
+		"sat": float(fx.get("sat", 1.0)), "length": float(e.get("length", 1.0)),
+		"budget": int(e.get("budget", -1)) / 2 if Display.quality == Display.LOW and e.has("budget") else int(e.get("budget", -1))})
 
 
 ## Schuss von from nach to (Strahl oder Geschoss, Sprite-Sheet aus shots.json).
@@ -115,6 +121,8 @@ func _camera_basis() -> Basis:
 # --- Ablauf -------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	if _procedural != null:
+		_procedural.begin_frame()
 	_update_lights(delta)
 	if _effects.is_empty() and _sprites.is_empty() and lights_active() == 0:
 		for b in _batches.values():
@@ -146,6 +154,8 @@ func _process(delta: float) -> void:
 	_draw_glows()
 	for b in _batches.values():
 		_flush(b)
+	if _procedural != null:
+		_procedural.flush()
 
 
 func _alive(fx: Dictionary) -> bool:
@@ -196,8 +206,10 @@ func _rand(r: Array) -> float:
 
 
 func _spawn(fx: Dictionary, i: int) -> void:
-	if _sprites.size() >= MAX_SPRITES:
+	if _sprites.size() >= MAX_SPRITES or fx.budget == 0:
 		return
+	if fx.budget > 0:
+		fx.budget -= 1
 	var l: Dictionary = fx.layers[i]
 	var sc: float = fx.scale
 	var q_arr: Array = l.get("rot", [0, 0, 0, 1])
@@ -343,6 +355,11 @@ func _update_particle(s: Dictionary, delta: float) -> void:
 
 func _draw_shot(s: Dictionary) -> void:
 	var e: Dictionary = s.shot
+	if e.has("procedural"):
+		if _procedural == null:
+			_procedural = PROCEDURAL.new(self)
+		_procedural.draw(s, _cam_basis)
+		return
 	var t: float = s.age / s.life
 	var frames := int(e.get("frames", 1))
 	var frame := float(mini(int(t * frames), frames - 1))

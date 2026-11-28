@@ -96,10 +96,12 @@
 		"element": "wasser"
 	},
 	"eeve_hydro_cannon": {
-		"element": "wasser"
+		"element": "wasser",
+		"shot_fx": "water_jet"
 	},
 	"eeve_tsunami_cannon": {
-		"element": "wasser"
+		"element": "wasser",
+		"shot_fx": "water_jet"
 	},
 	"eeve_water_base_tower": {
 		"element": "wasser"
@@ -178,7 +180,8 @@
 	},
 	"rg_kanonenkugel_mann": {
 		"element": "physisch",
-		"shot_sfx": "shot_blast@0.7"
+		"shot_sfx": "shot_blast@0.7",
+		"shot_fx": "cannonball"
 	},
 	"rg_steinschleuder": {
 		"element": "erde"
